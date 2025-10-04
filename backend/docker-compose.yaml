@@ -2,22 +2,18 @@ version: '3.8'
 
 services:
   ydb:
-    image: ydbplatform/local-ydb:latest
-    container_name: ydb-server
+    image: ghcr.io/ydb-platform/local-ydb:nightly
     ports:
-      - "2135:2135"
-      - "2136:2136"
-    volumes:
-      - ./ydb-data:/var/lib/ydb
+      - "2136:2136"  # Основной порт YDB
+      - "8765:8765"  # Порт веб-интерфейса
+      - "5432:5432"  # Порт PostgreSQL-совместимого режима
     environment:
-      YDB_SERVER_CONFIG__ADMIN_ACCESS_KEY: "your-admin-access-key"
-      YDB_SERVER_CONFIG__ADMIN_SECRET_KEY: "your-admin-secret-key"
-      YDB_SERVER_CONFIG__ENDPOINT: "http://localhost:2135"
-    restart: always
-    privileged: true
-    shm_size: '1gb'
-
-networks:
-  default:
-    name: ydb-network
-    driver: bridge
+      - YDB_USE_IN_MEMORY_PDISKS=true
+      - GRPC_PORT=2136
+      - GRPC_TLS_PORT=2135
+      - MON_PORT=8765
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${YDB_PG_USER:-root}
+      - POSTGRES_PASSWORD=${YDB_PG_PASSWORD:-1234}
+      - YDB_DEFAULT_LOG_LEVEL=NOTICE
+      - YDB_EXPERIMENTAL_PG=1
