@@ -6,6 +6,7 @@ export default function PageSearch() {
       <label>Страница поиска</label>
       <Search />
       <button>Поиск</button>
+      <Search />
     </div>
   );
 }

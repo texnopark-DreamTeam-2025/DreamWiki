@@ -12,8 +12,10 @@ export default function Search() {
   // }
   // const debouncedSetSearch = debounce((value: string) => {Search(value)}, 500)
   let [word, setWord] = useState("")
+  let [result, setResult] = useState("")
   const handleSearch = () => {
-    search(word)
+    const res = search(word)
+    setResult(res)
   };
 
 
@@ -30,6 +32,7 @@ export default function Search() {
         onKeyDown={handleKeyPress}
         onChange={ (event: { target: { value: string } }) => {setWord(event.target.value)}}
       ></input>
+      {result ? <div>{result}</div> : <div></div>}
     </div>
   );
 }
