@@ -1,6 +1,6 @@
 module github.com/texnopark-DreamTeam-2025/DreamWiki
 
-go 1.25.0
+go 1.24.0
 
 tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
