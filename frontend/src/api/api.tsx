@@ -80,23 +80,3 @@ export async function fetchCSRFToken() {
 
   return csrfToken;
 }
-<<<<<<< HEAD
-
-export async function searchForm(keyword: string) {
-  const data = await apiFetch(`/v1/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ keyword }),
-  });
-  return data?.bucket_courses || [];
-}
-
-export async function ListOfSearching() {
-  const data = await apiFetch("/", {
-    method: "GET",
-    headers: { "Content-Type": "application/json" },
-  });
-  return data
-    ? data
-    : "Ошибка"
-}
