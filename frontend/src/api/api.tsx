@@ -1,4 +1,4 @@
-export const IP = "http://dreamteam.zhugeo.ru";
+export const IP = "https://dreamwiki.zhugeo.ru";
 
 export type FetchResponse<T> = {
   data?: T;
@@ -13,7 +13,6 @@ export async function apiFetch<T = any>(
 ): Promise<FetchResponse<T>> {
   try {
     const response = await fetch(`${IP}/api${url}`, {
-      credentials: "include",
       ...options,
     });
 
