@@ -1,4 +1,4 @@
-export const IP = "http://localhost:8080";
+export const IP = "http://dreamteam.zhugeo.ru";
 
 export type FetchResponse<T> = {
   data?: T;
