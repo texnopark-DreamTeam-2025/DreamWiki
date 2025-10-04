@@ -1,4 +1,4 @@
-import { apiFetchGET, FetchResponse } from "@/api/api";
+import { apiFetchGET, type FetchResponse } from "@/api/api";
 
 export async function search(word: string): Promise<FetchResponse<any>> {
   const res = await apiFetchGET("/search");
