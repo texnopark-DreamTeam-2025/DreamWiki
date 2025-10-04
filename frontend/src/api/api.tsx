@@ -55,7 +55,7 @@ export async function fetchCSRFToken() {
 }
 
 export async function searchForm(keyword: string) {
-  const data = await apiFetch(`/searchCourses?keywords=${keyword}`, {
+  const data = await apiFetch(`/v1/search`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ keyword }),
@@ -63,4 +63,13 @@ export async function searchForm(keyword: string) {
   return data?.bucket_courses || [];
 }
 
+export async function ListOfSearching() {
+  const data = await apiFetch("/", {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
+  });
+  return data
+    ? data
+    : "Ошибка"
+}
 
