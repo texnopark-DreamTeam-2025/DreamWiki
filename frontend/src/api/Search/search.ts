@@ -1,7 +1,7 @@
-import { apiFetchGET, type FetchResponse } from "@/api/api";
+import { apiFetchPOST, type FetchResponse } from "@/api/api";
 
 export async function search(word: string): Promise<FetchResponse<any>> {
-  const res = await apiFetchGET("/search");
+  const res = await apiFetchPOST("/v1/search", { word });
   if (res.ok && res.data) {
     return {
       ok: true,

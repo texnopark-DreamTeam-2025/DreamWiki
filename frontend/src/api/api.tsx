@@ -1,4 +1,4 @@
-export const IP = "https://skill-force.ru";
+export const IP = "http://localhost:8080";
 
 export type FetchResponse<T> = {
   data?: T;
@@ -55,19 +55,20 @@ export async function apiFetchPOST<T = any>(
   url: string,
   body: any
 ): Promise<FetchResponse<T>> {
-  const csrfToken = await fetchCSRFToken();
+  // const csrfToken = await fetchCSRFToken();
   return apiFetch<T>(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRF-Token": csrfToken || "",
+      // "X-CSRF-Token": csrfToken || "",
+      "X-CSRF-Token": "",
     },
     body: JSON.stringify(body),
   });
 }
 
 export async function fetchCSRFToken() {
-  const response = await fetch(`${IP}/api/updateProfile`, {
+  const response = await fetch(`${IP}/v1/search`, {
     method: "GET",
     credentials: "include",
   });
