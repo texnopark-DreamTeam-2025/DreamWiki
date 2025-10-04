@@ -44,6 +44,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/V1DiagnosticInfoGetResponse'
+  
+  v1/indexate-page:
+    post:
+      summary: Принудительная индексация страницы
+      operationId: indexate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1IndexatePageRequest'
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1IndexatePageResponse'
 
 components:
   schemas:
@@ -109,3 +127,19 @@ components:
         - content
         - title
         - created_at
+    
+    V1IndexatePageRequest:
+      type: object
+      properties:
+        page_id:
+          type: string
+      required:
+        - page_id
+
+    V1IndexatePageResponse:
+      type: object
+      properties:
+        page_id:
+          type: string
+      required:
+        - page_id
