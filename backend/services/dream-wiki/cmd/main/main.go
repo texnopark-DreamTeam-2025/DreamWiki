@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
@@ -65,10 +66,16 @@ func main() {
 
 	router.Use(middleware.LoggingMiddleware)
 
+	cors := handlers.CORS(
+		handlers.AllowedOrigins([]string{"http://localhost:5173", "http://localhost:3000"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
+	)
+
 	port := ":" + "8080"
 	server := &http.Server{
 		Addr:    port,
-		Handler: router,
+		Handler: cors(router),
 	}
 
 	serverErr := make(chan error, 1)
