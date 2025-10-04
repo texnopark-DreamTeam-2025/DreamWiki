@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/usecase"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
@@ -39,15 +39,8 @@ func main() {
 	appDelivery := delivery.NewAppDelivery(appUsecase)
 
 	router := mux.NewRouter()
-	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:5173", "http://localhost:3000", "*"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With"}),
-		handlers.AllowCredentials(),
-		handlers.OptionStatusCode(200),
-	)
 
-	router.Use(cors)
+	router.Use(cors.CORS)
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -55,6 +48,10 @@ func main() {
 	}).Methods("GET")
 
 	apiRouter := router.PathPrefix("/api").Subrouter()
+
+	apiRouter.HandleFunc("/v1/search", optionsHandler).Methods("OPTIONS")
+	apiRouter.HandleFunc("/v1/diagnostic-info/get", optionsHandler).Methods("OPTIONS")
+	apiRouter.HandleFunc("/v1/indexate-page", optionsHandler).Methods("OPTIONS")
 
 	strictHandler := api.NewStrictHandler(appDelivery, []api.StrictMiddlewareFunc{})
 	api.HandlerWithOptions(strictHandler, api.GorillaServerOptions{
@@ -103,4 +100,8 @@ func main() {
 
 		logger.Info("server stopped")
 	}
+}
+
+func optionsHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }
