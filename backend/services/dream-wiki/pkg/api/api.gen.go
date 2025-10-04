@@ -4,15 +4,112 @@
 package api
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	strictnethttp "github.com/oapi-codegen/runtime/strictmiddleware/nethttp"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// DiagnosticInfoRequest defines model for DiagnosticInfoRequest.
+type DiagnosticInfoRequest struct {
+	// PageId UUID страницы для диагностики
+	PageId openapi_types.UUID `json:"page_id"`
+}
+
+// DiagnosticInfoResponse defines model for DiagnosticInfoResponse.
+type DiagnosticInfoResponse struct {
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+
+	// DiagnosticData Дополнительная диагностическая информация
+	DiagnosticData *map[string]interface{} `json:"diagnostic_data,omitempty"`
+	Links          *[]Link                 `json:"links,omitempty"`
+	PageId         *openapi_types.UUID     `json:"page_id,omitempty"`
+	Title          *string                 `json:"title,omitempty"`
+	UpdatedAt      *time.Time              `json:"updated_at,omitempty"`
+	ViewCount      *int                    `json:"view_count,omitempty"`
+}
+
+// Error defines model for Error.
+type Error struct {
+	// Code Код ошибки
+	Code *string `json:"code,omitempty"`
+
+	// Details Дополнительные детали ошибки
+	Details *map[string]interface{} `json:"details,omitempty"`
+
+	// Error Сообщение об ошибке
+	Error *string `json:"error,omitempty"`
+}
+
+// Link defines model for Link.
+type Link struct {
+	// Href URL связанного ресурса
+	Href *string `json:"href,omitempty"`
+
+	// Rel Тип связи
+	Rel *string `json:"rel,omitempty"`
+}
+
+// SearchRequest defines model for SearchRequest.
+type SearchRequest struct {
+	// Filters Дополнительные фильтры поиска
+	Filters *struct {
+		Category   *string `json:"category,omitempty"`
+		MaxResults *int    `json:"max_results,omitempty"`
+	} `json:"filters,omitempty"`
+
+	// Query Поисковый запрос
+	Query string `json:"query"`
+}
+
+// SearchResponse defines model for SearchResponse.
+type SearchResponse struct {
+	Results *[]SearchResult `json:"results,omitempty"`
+
+	// SearchTime Время выполнения поиска
+	SearchTime *string `json:"search_time,omitempty"`
+
+	// TotalCount Общее количество найденных результатов
+	TotalCount *int `json:"total_count,omitempty"`
+}
+
+// SearchResult defines model for SearchResult.
+type SearchResult struct {
+	// Category Категория страницы
+	Category *string `json:"category,omitempty"`
+
+	// Id UUID страницы
+	Id *openapi_types.UUID `json:"id,omitempty"`
+
+	// RelevanceScore Оценка релевантности (0-1)
+	RelevanceScore *float32 `json:"relevance_score,omitempty"`
+
+	// Snippet Сниппет текста с выделенным запросом
+	Snippet *string `json:"snippet,omitempty"`
+
+	// Title Заголовок страницы
+	Title *string `json:"title,omitempty"`
+}
+
+// GetDiagnosticInfoJSONRequestBody defines body for GetDiagnosticInfo for application/json ContentType.
+type GetDiagnosticInfoJSONRequestBody = DiagnosticInfoRequest
+
+// SearchJSONRequestBody defines body for Search for application/json ContentType.
+type SearchJSONRequestBody = SearchRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Получение диагностической информации по странице
+	// (POST /diagnostic-info/get)
+	GetDiagnosticInfo(w http.ResponseWriter, r *http.Request)
+	// Поиск информации в базе знаний
+	// (POST /search)
+	Search(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -23,6 +120,34 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetDiagnosticInfo operation middleware
+func (siw *ServerInterfaceWrapper) GetDiagnosticInfo(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDiagnosticInfo(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// Search operation middleware
+func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.Search(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 type UnescapedCookieParamError struct {
 	ParamName string
@@ -131,12 +256,97 @@ func HandlerWithOptions(si ServerInterface, options GorillaServerOptions) http.H
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 	}
+	wrapper := ServerInterfaceWrapper{
+		Handler:            si,
+		HandlerMiddlewares: options.Middlewares,
+		ErrorHandlerFunc:   options.ErrorHandlerFunc,
+	}
+
+	r.HandleFunc(options.BaseURL+"/diagnostic-info/get", wrapper.GetDiagnosticInfo).Methods("POST")
+
+	r.HandleFunc(options.BaseURL+"/search", wrapper.Search).Methods("POST")
 
 	return r
 }
 
+type GetDiagnosticInfoRequestObject struct {
+	Body *GetDiagnosticInfoJSONRequestBody
+}
+
+type GetDiagnosticInfoResponseObject interface {
+	VisitGetDiagnosticInfoResponse(w http.ResponseWriter) error
+}
+
+type GetDiagnosticInfo200JSONResponse DiagnosticInfoResponse
+
+func (response GetDiagnosticInfo200JSONResponse) VisitGetDiagnosticInfoResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDiagnosticInfo404JSONResponse Error
+
+func (response GetDiagnosticInfo404JSONResponse) VisitGetDiagnosticInfoResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetDiagnosticInfo500JSONResponse Error
+
+func (response GetDiagnosticInfo500JSONResponse) VisitGetDiagnosticInfoResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SearchRequestObject struct {
+	Body *SearchJSONRequestBody
+}
+
+type SearchResponseObject interface {
+	VisitSearchResponse(w http.ResponseWriter) error
+}
+
+type Search200JSONResponse SearchResponse
+
+func (response Search200JSONResponse) VisitSearchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Search400JSONResponse Error
+
+func (response Search400JSONResponse) VisitSearchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type Search500JSONResponse Error
+
+func (response Search500JSONResponse) VisitSearchResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Получение диагностической информации по странице
+	// (POST /diagnostic-info/get)
+	GetDiagnosticInfo(ctx context.Context, request GetDiagnosticInfoRequestObject) (GetDiagnosticInfoResponseObject, error)
+	// Поиск информации в базе знаний
+	// (POST /search)
+	Search(ctx context.Context, request SearchRequestObject) (SearchResponseObject, error)
 }
 
 type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
@@ -166,4 +376,66 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// GetDiagnosticInfo operation middleware
+func (sh *strictHandler) GetDiagnosticInfo(w http.ResponseWriter, r *http.Request) {
+	var request GetDiagnosticInfoRequestObject
+
+	var body GetDiagnosticInfoJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetDiagnosticInfo(ctx, request.(GetDiagnosticInfoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetDiagnosticInfo")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetDiagnosticInfoResponseObject); ok {
+		if err := validResponse.VisitGetDiagnosticInfoResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// Search operation middleware
+func (sh *strictHandler) Search(w http.ResponseWriter, r *http.Request) {
+	var request SearchRequestObject
+
+	var body SearchJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.Search(ctx, request.(SearchRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "Search")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SearchResponseObject); ok {
+		if err := validResponse.VisitSearchResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }

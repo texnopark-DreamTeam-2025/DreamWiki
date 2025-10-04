@@ -1,5 +1,4 @@
 openapi: 3.0.3
-
 info:
   title: Dream Wiki API
   description: API Specification for Dream Wiki API
@@ -8,3 +7,180 @@ info:
 servers:
   - url: http://localhost:8080/api/v1
     description: Development server
+
+paths:
+  /search:
+    post:
+      summary: Поиск информации в базе знаний
+      operationId: search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Успешный поиск
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Неверный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /diagnostic-info/get:
+    post:
+      summary: Получение диагностической информации по странице
+      operationId: getDiagnosticInfo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosticInfoRequest'
+      responses:
+        '200':
+          description: Диагностическая информация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosticInfoResponse'
+        '404':
+          description: Страница не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    SearchRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          example: "сколько стоит арбуз?"
+          description: Поисковый запрос
+        filters:
+          type: object
+          description: Дополнительные фильтры поиска
+          properties:
+            category:
+              type: string
+            max_results:
+              type: integer
+              default: 10
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchResult'
+        total_count:
+          type: integer
+          description: Общее количество найденных результатов
+        search_time:
+          type: string
+          description: Время выполнения поиска
+
+    SearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID страницы
+        title:
+          type: string
+          description: Заголовок страницы
+        snippet:
+          type: string
+          description: Сниппет текста с выделенным запросом
+        relevance_score:
+          type: number
+          format: float
+          description: Оценка релевантности (0-1)
+        category:
+          type: string
+          description: Категория страницы
+
+    DiagnosticInfoRequest:
+      type: object
+      required:
+        - page_id
+      properties:
+        page_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+          description: UUID страницы для диагностики
+
+    DiagnosticInfoResponse:
+      type: object
+      properties:
+        page_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        view_count:
+          type: integer
+        diagnostic_data:
+          type: object
+          additionalProperties: true
+          description: Дополнительная диагностическая информация
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/Link'
+
+    Link:
+      type: object
+      properties:
+        rel:
+          type: string
+          description: Тип связи
+        href:
+          type: string
+          description: URL связанного ресурса
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Сообщение об ошибке
+        code:
+          type: string
+          description: Код ошибки
+        details:
+          type: object
+          additionalProperties: true
+          description: Дополнительные детали ошибки
