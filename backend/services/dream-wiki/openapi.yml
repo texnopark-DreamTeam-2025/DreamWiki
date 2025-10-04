@@ -1,0 +1,10 @@
+openapi: 3.0.3
+
+info:
+  title: Dream Wiki API
+  description: API Specification for Dream Wiki API
+  version: 0.0.1
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Development server
