@@ -25,6 +25,12 @@ services:
       dockerfile: Dockerfile
     network_mode: host
 
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile.prod
+    network_mode: host
+
   nginx:
     image: nginx:alpine
     ports:
@@ -34,3 +40,4 @@ services:
     network_mode: host
     depends_on:
       - dream-wiki
+      - frontend
