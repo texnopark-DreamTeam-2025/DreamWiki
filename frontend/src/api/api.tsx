@@ -61,7 +61,6 @@ export async function apiFetchPOST<T = any>(
     headers: {
       "Content-Type": "application/json",
       // "X-CSRF-Token": csrfToken || "",
-      "X-CSRF-Token": "",
     },
     body: JSON.stringify(body),
   });

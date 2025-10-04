@@ -5,8 +5,6 @@ export default function PageSearch() {
     <div>
       <label>Страница поиска</label>
       <Search />
-      <button>Поиск</button>
-      <Search />
     </div>
   );
 }
