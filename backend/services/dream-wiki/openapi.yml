@@ -18,14 +18,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SearchRequest'
+              $ref: '#/components/schemas/V1SearchRequest'
       responses:
         '200':
           description: Успешный поиск
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SearchResponse'
+                $ref: '#/components/schemas/V1SearchResponse'
 
   /v1/diagnostic-info/get:
     post:
