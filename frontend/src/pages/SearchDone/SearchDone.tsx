@@ -1,14 +1,11 @@
-import React from "react";
 import Search from "@/modules/Search/Search";
-import { Link } from "react-router-dom";
 
 export default function PageSearch() {
-
   return (
     <div>
       <label>Страница поиска</label>
-      <Search/>
+      <Search />
       <button>Поиск</button>
     </div>
-  )
+  );
 }
