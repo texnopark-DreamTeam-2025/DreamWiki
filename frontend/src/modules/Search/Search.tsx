@@ -16,11 +16,11 @@ export default function Search() {
 
   return (
     <div className={styles.searchForm}>
-      <img class={styles.searchSearchForm__icon} src={search}></img>
+      <img className={styles.searchSearchForm__icon} src={search}></img>
       <input
         type="text"
         placeholder="Поиск"
-        class={styles.searchForm__input}
+        className={styles.searchForm__input}
       ></input>
     </div>
   );
