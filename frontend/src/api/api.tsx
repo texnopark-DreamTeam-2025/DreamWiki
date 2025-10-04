@@ -68,7 +68,7 @@ export async function apiFetchPOST<T = any>(
 }
 
 export async function fetchCSRFToken() {
-  const response = await fetch(`${IP}/v1/search`, {
+  const response = await fetch(`${IP}/api/v1/search`, {
     method: "GET",
     credentials: "include",
   });
