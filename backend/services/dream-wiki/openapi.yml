@@ -5,11 +5,11 @@ info:
   version: 0.0.1
 
 servers:
-  - url: http://localhost:8080/api/v1
+  - url: http://localhost:8080/api
     description: Development server
 
 paths:
-  /search:
+  /v1/search:
     post:
       summary: Поиск информации в базе знаний
       operationId: search
@@ -26,20 +26,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResponse'
-        '400':
-          description: Неверный запрос
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Внутренняя ошибка сервера
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
 
-  /diagnostic-info/get:
+  /v1/diagnostic-info/get:
     post:
       summary: Получение диагностической информации по странице
       operationId: getDiagnosticInfo
@@ -48,139 +36,76 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DiagnosticInfoRequest'
+              $ref: '#/components/schemas/V1DiagnosticInfoGetRequest'
       responses:
         '200':
           description: Диагностическая информация
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DiagnosticInfoResponse'
-        '404':
-          description: Страница не найдена
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '500':
-          description: Внутренняя ошибка сервера
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/V1DiagnosticInfoGetResponse'
 
 components:
   schemas:
-    SearchRequest:
+    V1SearchRequest:
       type: object
-      required:
-        - query
       properties:
         query:
           type: string
-          example: "сколько стоит арбуз?"
-          description: Поисковый запрос
-        filters:
-          type: object
-          description: Дополнительные фильтры поиска
-          properties:
-            category:
-              type: string
-            max_results:
-              type: integer
-              default: 10
+          description: Запрос
+      required:
+        - query
 
-    SearchResponse:
+    V1SearchResponse:
       type: object
       properties:
-        results:
+        result_items:
           type: array
           items:
-            $ref: '#/components/schemas/SearchResult'
-        total_count:
-          type: integer
-          description: Общее количество найденных результатов
-        search_time:
-          type: string
-          description: Время выполнения поиска
+            $ref: '#/components/schemas/SearchResultItem'
+      required:
+        - result_items
 
-    SearchResult:
+    SearchResultItem:
       type: object
       properties:
-        id:
-          type: string
-          format: uuid
-          description: UUID страницы
         title:
           type: string
-          description: Заголовок страницы
-        snippet:
+          description: Заголовок
+        description:
           type: string
-          description: Сниппет текста с выделенным запросом
-        relevance_score:
-          type: number
-          format: float
-          description: Оценка релевантности (0-1)
-        category:
+          description: Описание
+        page_id:
           type: string
-          description: Категория страницы
+          description: Идентификатор страницы
+      required:
+        - title
+        - description
+        - page_id
 
-    DiagnosticInfoRequest:
+    V1DiagnosticInfoGetRequest:
       type: object
+      properties:
+        page_id:
+          type: string
+          description: Идентификатор страницы
       required:
         - page_id
-      properties:
-        page_id:
-          type: string
-          format: uuid
-          example: "123e4567-e89b-12d3-a456-426614174000"
-          description: UUID страницы для диагностики
 
-    DiagnosticInfoResponse:
+    V1DiagnosticInfoGetResponse:
       type: object
       properties:
         page_id:
           type: string
-          format: uuid
+        content:
+          type: string
         title:
           type: string
         created_at:
           type: string
           format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        view_count:
-          type: integer
-        diagnostic_data:
-          type: object
-          additionalProperties: true
-          description: Дополнительная диагностическая информация
-        links:
-          type: array
-          items:
-            $ref: '#/components/schemas/Link'
-
-    Link:
-      type: object
-      properties:
-        rel:
-          type: string
-          description: Тип связи
-        href:
-          type: string
-          description: URL связанного ресурса
-
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-          description: Сообщение об ошибке
-        code:
-          type: string
-          description: Код ошибки
-        details:
-          type: object
-          additionalProperties: true
-          description: Дополнительные детали ошибки
+      required:
+        - page_id
+        - content
+        - title
+        - created_at
