@@ -2,159 +2,130 @@ package logger
 
 import (
 	"bytes"
-	"fmt"
-	"log"
-	"os"
-	"strings"
-	"sync"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
-func TestLoggerInitialization(t *testing.T) {
-	logger1 := Init()
-	logger2 := Init()
+func TestInit(t *testing.T) {
+	t.Run("development mode", func(t *testing.T) {
+		err := Init("dev")
+		require.NoError(t, err)
+		assert.NotNil(t, Log)
+		assert.NotNil(t, Sugar)
+		assert.True(t, Log.Core().Enabled(zapcore.DebugLevel))
+	})
 
-	if logger1 != logger2 {
-		t.Error("Init() should return the same logger instance")
-	}
+	t.Run("production mode", func(t *testing.T) {
+		err := Init("prod")
+		require.NoError(t, err)
+		assert.NotNil(t, Log)
+		assert.NotNil(t, Sugar)
+		assert.False(t, Log.Core().Enabled(zapcore.DebugLevel))
+		assert.True(t, Log.Core().Enabled(zapcore.InfoLevel))
+	})
+
+	t.Run("invalid mode", func(t *testing.T) {
+		err := Init("invalid")
+		require.NoError(t, err)
+		assert.NotNil(t, Log)
+		assert.NotNil(t, Sugar)
+	})
 }
 
-func TestLogLevels(t *testing.T) {
-	buf := bytes.Buffer{}
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
+func TestLoggingFunctions(t *testing.T) {
+	core, recorded := observer.New(zapcore.DebugLevel)
+	Log = zap.New(core)
+	Sugar = Log.Sugar()
 
-	Info("test info", nil)
-	Warn("test warn", nil)
-	Error("test error", nil, nil)
-	Infof("test infof: %d", 42)
-	Warnf("test warnf: %s", "value")
-	Errorf("test errorf: %v", "error")
+	t.Run("structured logging", func(t *testing.T) {
+		recorded.TakeAll()
 
-	time.Sleep(100 * time.Millisecond)
+		msg := "test message"
+		field := zap.String("key", "value")
+
+		Debug(msg, field)
+		Info(msg, field)
+		Warn(msg, field)
+		Error(msg, field)
+
+		logs := recorded.All()
+		require.Len(t, logs, 4)
+
+		assert.Equal(t, zapcore.DebugLevel, logs[0].Level)
+		assert.Equal(t, msg, logs[0].Message)
+		assert.Equal(t, "value", logs[0].ContextMap()["key"])
+
+		assert.Equal(t, zapcore.InfoLevel, logs[1].Level)
+		assert.Equal(t, zapcore.WarnLevel, logs[2].Level)
+		assert.Equal(t, zapcore.ErrorLevel, logs[3].Level)
+	})
+
+	t.Run("formatted logging", func(t *testing.T) {
+		recorded.TakeAll()
+
+		format := "formatted %s"
+		arg := "message"
+
+		Debugf(format, arg)
+		Infof(format, arg)
+		Warnf(format, arg)
+		Errorf(format, arg)
+
+		logs := recorded.All()
+		require.Len(t, logs, 4)
+
+		assert.Equal(t, "formatted message", logs[0].Message)
+		assert.Equal(t, zapcore.DebugLevel, logs[0].Level)
+		assert.Equal(t, "formatted message", logs[1].Message)
+		assert.Equal(t, zapcore.InfoLevel, logs[1].Level)
+		assert.Equal(t, "formatted message", logs[2].Message)
+		assert.Equal(t, zapcore.WarnLevel, logs[2].Level)
+		assert.Equal(t, "formatted message", logs[3].Message)
+		assert.Equal(t, zapcore.ErrorLevel, logs[3].Level)
+	})
+}
+
+func TestSync(t *testing.T) {
+	var buf bytes.Buffer
+	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+	core := zapcore.NewCore(encoder, zapcore.AddSync(&buf), zapcore.DebugLevel)
+	Log = zap.New(core)
+	Sugar = Log.Sugar()
+
+	Info("test sync message")
+	err := Sync()
+	assert.NoError(t, err)
+	assert.Contains(t, buf.String(), "test sync message")
+}
+
+func TestInitTestLogger(t *testing.T) {
+	InitTestLogger()
+	assert.NotNil(t, Log)
+	assert.NotNil(t, Sugar)
+	assert.True(t, Log.Core().Enabled(zapcore.DebugLevel))
+}
+
+func TestLoggerOutput(t *testing.T) {
+	var buf bytes.Buffer
+	encoderCfg := zap.NewDevelopmentEncoderConfig()
+	encoderCfg.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
+	encoderCfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+
+	core := zapcore.NewCore(
+		zapcore.NewConsoleEncoder(encoderCfg),
+		zapcore.AddSync(&buf),
+		zapcore.DebugLevel,
+	)
+	Log = zap.New(core)
+	Sugar = Log.Sugar()
+
+	Info("test output message")
 	output := buf.String()
-
-	expected := []string{
-		"INFO",
-		"test info",
-		"WARN",
-		"test warn",
-		"ERROR",
-		"test error",
-		"test infof: 42",
-		"test warnf: value",
-		"test errorf: error",
-	}
-
-	for _, exp := range expected {
-		if !strings.Contains(output, exp) {
-			t.Errorf("Expected log output to contain %q", exp)
-		}
-	}
-}
-
-func TestLogWithFields(t *testing.T) {
-	buf := bytes.Buffer{}
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-
-	fields := map[string]any{
-		"user_id": 123,
-		"action":  "login",
-	}
-	Info("user action", fields)
-
-	time.Sleep(100 * time.Millisecond)
-
-	output := buf.String()
-
-	expectedFields := []string{
-		"user_id=123",
-		"action=login",
-	}
-
-	for _, exp := range expectedFields {
-		if !strings.Contains(output, exp) {
-			t.Errorf("Expected log output to contain field %q", exp)
-		}
-	}
-}
-
-func TestErrorLogging(t *testing.T) {
-	buf := bytes.Buffer{}
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-
-	err := fmt.Errorf("database connection failed")
-	Error("db operation", err, nil)
-
-	time.Sleep(100 * time.Millisecond)
-
-	output := buf.String()
-
-	if !strings.Contains(output, "database connection failed") {
-		t.Error("Expected error message in log output")
-	}
-}
-
-func TestConcurrentLogging(t *testing.T) {
-	buf := bytes.Buffer{}
-	log.SetOutput(&buf)
-	defer func() {
-		log.SetOutput(os.Stderr)
-	}()
-
-	var wg sync.WaitGroup
-	count := 100
-
-	for i := 0; i < count; i++ {
-		wg.Add(1)
-		go func(n int) {
-			defer wg.Done()
-			Infof("concurrent log %d", n)
-		}(i)
-	}
-
-	wg.Wait()
-	time.Sleep(100 * time.Millisecond)
-
-	output := buf.String()
-
-	for i := range count {
-		if !strings.Contains(output, fmt.Sprintf("concurrent log %d", i)) {
-			t.Errorf("Missing log message for iteration %d", i)
-		}
-	}
-}
-
-func TestLoggerClose(t *testing.T) {
-	logger := Init()
-
-	var closed bool
-	go func() {
-		logger.Close()
-		closed = true
-	}()
-
-	time.Sleep(100 * time.Millisecond)
-
-	if !closed {
-		t.Error("Logger should be closed")
-	}
-
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Error("Logging after close should not panic")
-			}
-		}()
-		logger.log(LevelInfo, "test after close", nil)
-	}()
+	assert.Contains(t, output, "test output message")
+	assert.Contains(t, output, "INFO")
 }

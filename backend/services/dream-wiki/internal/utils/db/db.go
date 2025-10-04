@@ -28,7 +28,7 @@ func CreateYDBDriver(config *config.Config) (*ydb.Driver, error) {
 		return nil, err
 	}
 
-	logger.Info("successful connection to YDB", nil)
+	logger.Info("successful connection to YDB")
 
 	return driver, nil
 }

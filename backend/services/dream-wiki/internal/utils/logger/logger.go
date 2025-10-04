@@ -1,156 +1,114 @@
 package logger
 
 import (
-	"fmt"
-	"log"
-	"os"
-	"sync"
-	"time"
-)
-
-const (
-	LevelInfo  = "INFO"
-	LevelWarn  = "WARN"
-	LevelError = "ERROR"
-	LevelFatal = "FATAL"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
-	globalLogger *Logger
-	initOnce     sync.Once
+	Log   *zap.Logger
+	Sugar *zap.SugaredLogger
 )
 
-var osExit = os.Exit
+func Init(mode string) error {
+	var cfg zap.Config
 
-type LogEntry struct {
-	Level     string
-	Message   string
-	Timestamp time.Time
-	Fields    map[string]any
-}
-
-type Logger struct {
-	logChan  chan LogEntry
-	stopChan chan struct{}
-	wg       sync.WaitGroup
-}
-
-func Init() *Logger {
-	initOnce.Do(func() {
-		globalLogger = &Logger{
-			logChan:  make(chan LogEntry, 100),
-			stopChan: make(chan struct{}),
+	switch mode {
+	case "dev":
+		cfg = zap.Config{
+			Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
+			Development:      true,
+			Encoding:         "console",
+			EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
+			OutputPaths:      []string{"stdout"},
+			ErrorOutputPaths: []string{"stderr"},
 		}
+		cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
+		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
-		globalLogger.wg.Add(1)
-		go globalLogger.processLogs()
-	})
-	return globalLogger
-}
-
-func Get() *Logger {
-	if globalLogger == nil {
-		return Init()
-	}
-	return globalLogger
-}
-
-func Close() {
-	if globalLogger != nil {
-		globalLogger.Close()
-	}
-}
-
-func (l *Logger) processLogs() {
-	defer l.wg.Done()
-
-	for {
-		select {
-		case entry := <-l.logChan:
-			logMsg := formatLogEntry(entry)
-			log.Println(logMsg)
-
-			if entry.Level == LevelFatal {
-				osExit(1)
-			}
-		case <-l.stopChan:
-			return
+	case "prod":
+		cfg = zap.Config{
+			Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
+			Development:      false,
+			Encoding:         "json",
+			EncoderConfig:    zap.NewProductionEncoderConfig(),
+			OutputPaths:      []string{"stdout"},
+			ErrorOutputPaths: []string{"stderr"},
 		}
+	default:
+		cfg = zap.NewDevelopmentConfig()
 	}
+
+	logger, err := cfg.Build()
+	if err != nil {
+		return err
+	}
+
+	Log = logger
+	Sugar = logger.Sugar()
+	return nil
 }
 
-func Info(message string, fields map[string]any) {
-	Get().log(LevelInfo, message, fields)
+func Sync() error {
+	return Log.Sync()
+}
+
+func Debug(msg string, fields ...zap.Field) {
+	Log.Debug(msg, fields...)
+}
+
+func Info(msg string, fields ...zap.Field) {
+	Log.Info(msg, fields...)
+}
+
+func Warn(msg string, fields ...zap.Field) {
+	Log.Warn(msg, fields...)
+}
+
+func Error(msg string, fields ...zap.Field) {
+	Log.Error(msg, fields...)
+}
+
+func Fatal(msg string, fields ...zap.Field) {
+	Log.Fatal(msg, fields...)
+}
+
+func Debugf(format string, args ...any) {
+	Sugar.Debugf(format, args...)
 }
 
 func Infof(format string, args ...any) {
-	Get().log(LevelInfo, fmt.Sprintf(format, args...), nil)
-}
-
-func Warn(message string, fields map[string]any) {
-	Get().log(LevelWarn, message, fields)
+	Sugar.Infof(format, args...)
 }
 
 func Warnf(format string, args ...any) {
-	Get().log(LevelWarn, fmt.Sprintf(format, args...), nil)
-}
-
-func Error(message string, err error, fields map[string]any) {
-	if fields == nil {
-		fields = make(map[string]any)
-	}
-	if err != nil {
-		fields["error"] = err.Error()
-	}
-	Get().log(LevelError, message, fields)
+	Sugar.Warnf(format, args...)
 }
 
 func Errorf(format string, args ...any) {
-	Get().log(LevelError, fmt.Sprintf(format, args...), nil)
-}
-
-func Fatal(message string, err error, fields map[string]any) {
-	if fields == nil {
-		fields = make(map[string]any)
-	}
-	if err != nil {
-		fields["error"] = err.Error()
-	}
-	Get().log(LevelFatal, message, fields)
+	Sugar.Errorf(format, args...)
 }
 
 func Fatalf(format string, args ...any) {
-	Get().log(LevelFatal, fmt.Sprintf(format, args...), nil)
+	Sugar.Fatalf(format, args...)
 }
 
-func (l *Logger) log(level, message string, fields map[string]any) {
-	if fields == nil {
-		fields = make(map[string]any)
+func InitTestLogger() {
+	cfg := zap.Config{
+		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		Development:      true,
+		Encoding:         "console",
+		EncoderConfig:    zap.NewDevelopmentEncoderConfig(),
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
 	}
-	l.logChan <- LogEntry{
-		Level:     level,
-		Message:   message,
-		Timestamp: time.Now(),
-		Fields:    fields,
-	}
-}
+	cfg.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout("2006-01-02 15:04:05")
 
-func (l *Logger) Close() {
-	close(l.stopChan)
-	l.wg.Wait()
-}
-
-func formatLogEntry(entry LogEntry) string {
-	fieldsStr := ""
-	for k, v := range entry.Fields {
-		fieldsStr += fmt.Sprintf("%s=%v ", k, v)
+	logger, err := cfg.Build()
+	if err != nil {
+		panic(err)
 	}
 
-	return fmt.Sprintf(
-		"[%s] %s: %s %s",
-		entry.Timestamp.Format(time.RFC3339),
-		entry.Level,
-		entry.Message,
-		fieldsStr,
-	)
+	Log = logger
+	Sugar = logger.Sugar()
 }

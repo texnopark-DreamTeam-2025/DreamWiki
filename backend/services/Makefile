@@ -1,6 +1,6 @@
 # Базовые команды
 run:
-	go run dream-wiki/cmd/main/main.go
+	cd dream-wiki && go run cmd/main/main.go
 
 # Генерация кода из OpenAPI спецификации
 generate:
@@ -8,24 +8,19 @@ generate:
 	cd dream-wiki && oapi-codegen --config=oapi-codegen.yml openapi.yml
 
 # Тестирование
-TEST_PKGS := $(shell cd dream-wiki && go list ./... | \
-    grep -v /mocks)
-
 run_tests:
 	@echo "==> Running tests..."
-	@cd dream-wiki && go test $(GOFLAGS) -coverprofile coverage_raw.out -v $(TEST_PKGS)
+	cd dream-wiki && go test -coverprofile coverage_raw.out -v ./...
 
 test: run_tests
 	@echo "==> Calculating coverage..."
-	@cd dream-wiki && grep -v "mock" coverage_raw.out > coverage.out
-	@cd dream-wiki && go tool cover -func=coverage.out
-	@cd dream-wiki && go tool cover -html=coverage.out -o=coverage.html
+	cd dream-wiki && grep -v "mock" coverage_raw.out > coverage.out
+	cd dream-wiki && go tool cover -func=coverage.out
+	cd dream-wiki && go tool cover -html=coverage.out -o=coverage.html
 	@echo "==> Done! Check dream-wiki/coverage.html file!"
 
 short_test:
-	@cd dream-wiki && go list ./... | \
-	grep -v /mocks | \
-	xargs go test -cover
+	cd dream-wiki && go test -cover ./...
 
 # Docker команды
 docker_build:

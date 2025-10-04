@@ -1,23 +1,19 @@
-package logging
+package middleware
 
 import (
 	"net/http"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"go.uber.org/zap"
 )
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.Info("request started", map[string]any{
-			"method": r.Method,
-			"path":   r.URL.Path,
-		})
-
+		logger.Debug("incoming request",
+			zap.String("method", r.Method),
+			zap.String("path", r.URL.Path),
+			zap.String("remote_addr", r.RemoteAddr),
+		)
 		next.ServeHTTP(w, r)
-
-		logger.Info("request completed", map[string]any{
-			"method": r.Method,
-			"path":   r.URL.Path,
-		})
 	})
 }
