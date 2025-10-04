@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  ydb:
+    image: yandex/ydb-server:latest
+    container_name: ydb-server
+    ports:
+      - "2135:2135"
+      - "2136:2136"
+    volumes:
+      - ./ydb-data:/var/lib/ydb
+    environment:
+      YDB_SERVER_CONFIG__ADMIN_ACCESS_KEY: "your-admin-access-key"
+      YDB_SERVER_CONFIG__ADMIN_SECRET_KEY: "your-admin-secret-key"
+      YDB_SERVER_CONFIG__ENDPOINT: "http://localhost:2135"
+    restart: always
+    privileged: true
+    shm_size: '1gb'
+
+networks:
+  default:
+    name: ydb-network
+    driver: bridge
