@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SearchDone from "@/pages/SearchDone";
 import Search from "./modules/Search/Search";
-import PageSearch from "./pages/PageSearch/PageSearch";
 
 function App() {
   return (

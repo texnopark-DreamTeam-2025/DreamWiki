@@ -1,3 +1,4 @@
+import { search } from '@/api/Search/search';
 import React, { useState } from 'react';
 
 export default function Search() {
@@ -12,14 +13,9 @@ export default function Search() {
   // const debouncedSetSearch = debounce((value: string) => {Search(value)}, 500)
   let [word, setWord] = useState("")
   const handleSearch = () => {
-    console.log('Performing search:', searchValue);
-    // Здесь логика поиска
-    // fetchSearchResults(searchValue);
+    search(word)
   };
 
-  const handleInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(event.target.value);
-  };
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'Enter') {
@@ -32,7 +28,7 @@ export default function Search() {
         type="text"
         placeholder="Поиск"
         onKeyDown={handleKeyPress}
-        onChange={ (event: { target: { value: string } }) => {setevent.target.value}}
+        onChange={ (event: { target: { value: string } }) => {setWord(event.target.value)}}
       ></input>
     </div>
   );
