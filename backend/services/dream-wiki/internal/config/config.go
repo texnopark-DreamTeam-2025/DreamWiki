@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	ServerPort string
+	YDBDSN     string
 }
 
 func loadEnv(filename string) error {
@@ -62,6 +63,7 @@ func checkEnv(envVars []string) error {
 func validateEnv() error {
 	err := checkEnv([]string{
 		"SERVER_PORT",
+		"YDB_DSN",
 	})
 	if err != nil {
 		return err
@@ -92,5 +94,6 @@ func LoadConfig(envFile string) (*Config, error) {
 
 	return &Config{
 		ServerPort: os.Getenv("SERVER_PORT"),
+		YDBDSN:     os.Getenv("YDB_DSN"),
 	}, nil
 }

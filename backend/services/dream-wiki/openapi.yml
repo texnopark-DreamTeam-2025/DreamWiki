@@ -45,7 +45,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/V1DiagnosticInfoGetResponse'
   
-  v1/indexate-page:
+  /v1/indexate-page:
     post:
       summary: Принудительная индексация страницы
       operationId: indexate

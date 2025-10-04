@@ -11,7 +11,9 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
 	recovery "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/panic"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/db"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -24,6 +26,12 @@ func main() {
 	}
 
 	logger.Info("configuration loaded successfully", nil)
+
+	driver, err := db.CreateYDBDriver(cfg)
+	if err != nil {
+		logger.Fatalf("failed to connect to DB %w", zap.Error(err))
+	}
+	defer driver.Close(context.Background())
 
 	// layers
 
