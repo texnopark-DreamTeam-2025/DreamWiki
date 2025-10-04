@@ -21,12 +21,6 @@ import (
 )
 
 func main() {
-	// cfg, err := config.LoadConfig()
-	// if err != nil {
-	// 	fmt.Printf("error initializing config: %v\n", err)
-	// 	os.Exit(1)
-	// }
-
 	err := logger.Init("dev")
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v\n", err)
@@ -40,17 +34,20 @@ func main() {
 		zap.String("server_port", "8080"),
 	)
 
-	// driver, err := db.CreateYDBDriver(cfg)
-	// if err != nil {
-	// 	logger.Fatalf("failed to connect to DB %w", zap.Error(err))
-	// }
-	// defer driver.Close(context.Background())
-
 	appRepo := repository.NewAppRepository()
 	appUsecase := usecase.NewAppUsecase(appRepo)
 	appDelivery := delivery.NewAppDelivery(appUsecase)
 
 	router := mux.NewRouter()
+	cors := handlers.CORS(
+		handlers.AllowedOrigins([]string{"http://localhost:5173", "http://localhost:3000", "*"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
+		handlers.AllowedHeaders([]string{"Content-Type", "Authorization", "X-Requested-With"}),
+		handlers.AllowCredentials(),
+		handlers.OptionStatusCode(200),
+	)
+
+	router.Use(cors)
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -66,16 +63,10 @@ func main() {
 
 	router.Use(middleware.LoggingMiddleware)
 
-	cors := handlers.CORS(
-		handlers.AllowedOrigins([]string{"http://localhost:5173", "http://localhost:3000"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
-		handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}),
-	)
-
-	port := ":" + "8080"
+	port := ":8080"
 	server := &http.Server{
 		Addr:    port,
-		Handler: cors(router),
+		Handler: router,
 	}
 
 	serverErr := make(chan error, 1)
