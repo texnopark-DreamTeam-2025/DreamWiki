@@ -11,9 +11,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/usecase"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
@@ -57,9 +56,13 @@ func main() {
 	logger.Info("connected to ydb")
 	defer db.Close(ctx)
 
-	appRepo := repository.NewAppRepository()
-	appUsecase := usecase.NewAppUsecase(appRepo)
-	appDelivery := delivery.NewAppDelivery(appUsecase)
+	dbTable := db.Table()
+
+	deps := deps.Deps{
+		DB: dbTable,
+	}
+
+	appDelivery := delivery.NewAppDelivery(&deps)
 
 	router := mux.NewRouter()
 
@@ -113,7 +116,7 @@ func main() {
 			zap.String("signal", sig.String()),
 		)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		if err := server.Shutdown(ctx); err != nil {

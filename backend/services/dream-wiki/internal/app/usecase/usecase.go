@@ -5,19 +5,23 @@ import (
 	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
 type AppUsecase struct {
-	repo *repository.AppRepository
+	deps *deps.Deps
 }
 
-func NewAppUsecase(repo *repository.AppRepository) *AppUsecase {
-	return &AppUsecase{repo: repo}
+func NewAppUsecase(deps *deps.Deps) *AppUsecase {
+	return &AppUsecase{deps: deps}
 }
 
 func (u *AppUsecase) Search(ctx context.Context, req api.V1SearchRequest) (*api.V1SearchResponse, error) {
-	results, err := u.repo.Search(ctx, req.Query)
+	repo := repository.StartTransaction(ctx, u.deps)
+	defer repo.Commit()
+
+	results, err := repo.Search(ctx, req.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +41,10 @@ func (u *AppUsecase) Search(ctx context.Context, req api.V1SearchRequest) (*api.
 }
 
 func (u *AppUsecase) GetDiagnosticInfo(ctx context.Context, req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
-	info, err := u.repo.GetDiagnosticInfo(ctx, req.PageId)
+	repo := repository.StartTransaction(ctx, u.deps)
+	defer repo.Commit()
+
+	info, err := repo.GetDiagnosticInfo(ctx, req.PageId)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +58,10 @@ func (u *AppUsecase) GetDiagnosticInfo(ctx context.Context, req api.V1Diagnostic
 }
 
 func (u *AppUsecase) IndexatePage(ctx context.Context, req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
-	err := u.repo.IndexatePage(ctx, req.PageId)
+	repo := repository.StartTransaction(ctx, u.deps)
+	defer repo.Commit()
+
+	err := repo.IndexatePage(ctx, req.PageId)
 	if err != nil {
 		return nil, err
 	}

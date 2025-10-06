@@ -3,16 +3,20 @@ package delivery
 import (
 	"context"
 
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/usecase"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
 type AppDelivery struct {
-	usecase *usecase.AppUsecase
+	deps    *deps.Deps
+	usecase app.AppUsecase
 }
 
-func NewAppDelivery(usecase *usecase.AppUsecase) *AppDelivery {
-	return &AppDelivery{usecase: usecase}
+func NewAppDelivery(deps *deps.Deps) *AppDelivery {
+	return &AppDelivery{deps: deps,
+		usecase: usecase.NewAppUsecase(deps)}
 }
 
 func (d *AppDelivery) Search(ctx context.Context, request api.SearchRequestObject) (api.SearchResponseObject, error) {
