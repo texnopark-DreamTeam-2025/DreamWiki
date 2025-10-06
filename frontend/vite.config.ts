@@ -11,4 +11,7 @@ export default defineConfig({
     },
   },
   plugins: [react()],
+  build: {
+    outDir: "../infra/nginx/frontend-dist",
+  },
 });

@@ -17,27 +17,33 @@ services:
       - POSTGRES_PASSWORD=${YDB_PG_PASSWORD:-1234}
       - YDB_DEFAULT_LOG_LEVEL=NOTICE
       - YDB_EXPERIMENTAL_PG=1
-    network_mode: host
+    networks:
+      - dreamwiki-net
 
   dream-wiki:
+    hostname: dream-wiki
+    container_name: dream-wiki
     build:
-      context: ./services/dream-wiki
+      context: ../../backend/services/dream-wiki
       dockerfile: Dockerfile
-    network_mode: host
-
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile.prod
-    network_mode: host
+    ports:
+      - "8081:8080"
+    networks:
+      - dreamwiki-net
+    depends_on:
+      - ydb
 
   nginx:
-    image: nginx:alpine
+    build:
+      context: ../nginx
+      dockerfile: Dockerfile
     ports:
-      - "80:8099"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    network_mode: host
+      - "8080:8080"
+    networks:
+      - dreamwiki-net
     depends_on:
       - dream-wiki
-      - frontend
+
+networks:
+  dreamwiki-net:
+    driver: bridge

@@ -1,4 +1,7 @@
-.PHONY: start-backend
+.PHONY: build-frontend build-backend start-all
 
-start-backend:
-	docker compose -f backend/docker-compose.yaml --env-file .env up --build -d
+build-frontend:
+	cd frontend && make build
+
+start-all: build-frontend
+	docker compose -f infra/docker-compose/docker-compose.yaml --env-file .env up --build -d

@@ -25,21 +25,21 @@ short_test:
 # Docker команды
 docker_build:
 	@echo "==> Building Docker images..."
-	docker-compose build
+	docker-compose -f ../../infra/docker/docker-compose.yaml build
 
 docker_up:
 	@echo "==> Starting containers..."
-	docker-compose up
+	docker-compose -f ../../infra/docker/docker-compose.yaml up
 
 docker_down:
 	@echo "==> Stopping containers..."
-	docker-compose down
+	docker-compose -f ../../infra/docker/docker-compose.yaml down
 
 docker_restart: docker_down docker_up
 
 docker_logs:
 	@echo "==> Showing logs..."
-	docker-compose logs -f
+	docker-compose -f ../../infra/docker/docker-compose.yaml logs -f
 
 docker_rebuild: docker_down docker_build docker_up
 
