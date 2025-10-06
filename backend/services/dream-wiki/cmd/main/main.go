@@ -29,7 +29,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = logger.Init(config.LogMode)
+	logger, err := logger.New(config.LogMode)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v\n", err)
 		os.Exit(1)
@@ -59,7 +59,8 @@ func main() {
 	dbTable := db.Table()
 
 	deps := deps.Deps{
-		DB: dbTable,
+		DB:     dbTable,
+		Logger: logger,
 	}
 
 	appDelivery := delivery.NewAppDelivery(&deps)
@@ -84,7 +85,7 @@ func main() {
 		BaseRouter: apiRouter,
 	})
 
-	router.Use(middleware.LoggingMiddleware)
+	router.Use(middleware.LoggingMiddleware(logger))
 
 	port := ":" + config.ServerPort
 	server := &http.Server{

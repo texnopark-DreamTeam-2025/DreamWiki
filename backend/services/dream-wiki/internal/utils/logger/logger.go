@@ -5,12 +5,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var (
-	Log   *zap.Logger
-	Sugar *zap.SugaredLogger
-)
+// Logger wraps zap.Logger and zap.SugaredLogger
+type Logger struct {
+	log   *zap.Logger
+	sugar *zap.SugaredLogger
+}
 
-func Init(mode string) error {
+// New creates a new Logger instance based on the mode
+func New(mode string) (*Logger, error) {
 	var cfg zap.Config
 
 	switch mode {
@@ -41,59 +43,62 @@ func Init(mode string) error {
 
 	logger, err := cfg.Build()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	Log = logger
-	Sugar = logger.Sugar()
-	return nil
+	return &Logger{
+		log:   logger,
+		sugar: logger.Sugar(),
+	}, nil
 }
 
-func Sync() error {
-	return Log.Sync()
+// Sync flushes any buffered log entries
+func (l *Logger) Sync() error {
+	return l.log.Sync()
 }
 
-func Debug(msg string, fields ...zap.Field) {
-	Log.Debug(msg, fields...)
+func (l *Logger) Debug(msg string, fields ...zap.Field) {
+	l.log.Debug(msg, fields...)
 }
 
-func Info(msg string, fields ...zap.Field) {
-	Log.Info(msg, fields...)
+func (l *Logger) Info(msg string, fields ...zap.Field) {
+	l.log.Info(msg, fields...)
 }
 
-func Warn(msg string, fields ...zap.Field) {
-	Log.Warn(msg, fields...)
+func (l *Logger) Warn(msg string, fields ...zap.Field) {
+	l.log.Warn(msg, fields...)
 }
 
-func Error(msg string, fields ...zap.Field) {
-	Log.Error(msg, fields...)
+func (l *Logger) Error(msg string, fields ...zap.Field) {
+	l.log.Error(msg, fields...)
 }
 
-func Fatal(msg string, fields ...zap.Field) {
-	Log.Fatal(msg, fields...)
+func (l *Logger) Fatal(msg string, fields ...zap.Field) {
+	l.log.Fatal(msg, fields...)
 }
 
-func Debugf(format string, args ...any) {
-	Sugar.Debugf(format, args...)
+func (l *Logger) Debugf(format string, args ...any) {
+	l.sugar.Debugf(format, args...)
 }
 
-func Infof(format string, args ...any) {
-	Sugar.Infof(format, args...)
+func (l *Logger) Infof(format string, args ...any) {
+	l.sugar.Infof(format, args...)
 }
 
-func Warnf(format string, args ...any) {
-	Sugar.Warnf(format, args...)
+func (l *Logger) Warnf(format string, args ...any) {
+	l.sugar.Warnf(format, args...)
 }
 
-func Errorf(format string, args ...any) {
-	Sugar.Errorf(format, args...)
+func (l *Logger) Errorf(format string, args ...any) {
+	l.sugar.Errorf(format, args...)
 }
 
-func Fatalf(format string, args ...any) {
-	Sugar.Fatalf(format, args...)
+func (l *Logger) Fatalf(format string, args ...any) {
+	l.sugar.Fatalf(format, args...)
 }
 
-func InitTestLogger() {
+// InitTestLogger creates a new Logger instance for testing
+func InitTestLogger() *Logger {
 	cfg := zap.Config{
 		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
 		Development:      true,
@@ -109,6 +114,8 @@ func InitTestLogger() {
 		panic(err)
 	}
 
-	Log = logger
-	Sugar = logger.Sugar()
+	return &Logger{
+		log:   logger,
+		sugar: logger.Sugar(),
+	}
 }
