@@ -2,23 +2,24 @@ version: '3.8'
 
 services:
   ydb:
-    image: ghcr.io/ydb-platform/local-ydb:nightly
+    image: ydbplatform/local-ydb:latest
+    container_name: ydb-local
+    hostname: localhost
+    platform: linux/amd64
     ports:
-      - "2136:2136"  # Основной порт YDB
-      - "8765:8765"  # Порт веб-интерфейса
-      - "5432:5432"  # Порт PostgreSQL-совместимого режима
+      - "2135:2135"
+      - "2136:2136"
+      - "8765:8765"
+      - "9092:9092"
+    volumes:
+      - ./ydb_certs:/ydb_certs
+      - ./ydb_data:/ydb_data
     environment:
-      - YDB_USE_IN_MEMORY_PDISKS=true
-      - GRPC_PORT=2136
       - GRPC_TLS_PORT=2135
+      - GRPC_PORT=2136
       - MON_PORT=8765
-      - POSTGRES_PORT=5432
-      - POSTGRES_USER=${YDB_PG_USER:-root}
-      - POSTGRES_PASSWORD=${YDB_PG_PASSWORD:-1234}
-      - YDB_DEFAULT_LOG_LEVEL=NOTICE
-      - YDB_EXPERIMENTAL_PG=1
-    networks:
-      - dreamwiki-net
+      - YDB_KAFKA_PROXY_PORT=9092
+    restart: unless-stopped
 
   dream-wiki:
     hostname: dream-wiki

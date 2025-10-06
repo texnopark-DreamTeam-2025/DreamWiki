@@ -18,6 +18,8 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"go.uber.org/zap"
+
+	"github.com/ydb-platform/ydb-go-sdk/v3"
 )
 
 func main() {
@@ -33,6 +35,21 @@ func main() {
 		zap.String("log_mode", "dev"),
 		zap.String("server_port", "8080"),
 	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	dsn := "grpc://localhost:2136/?database=/local"
+	fmt.Println("connecting to ydb")
+	db, err := ydb.Open(ctx, dsn,
+		ydb.WithDialTimeout(1*time.Second),
+	)
+	fmt.Println("connected to ydb")
+	if err != nil {
+		logger.Fatalf("failed to connect ydb: ", err.Error())
+	}
+	logger.Info("connected to ydb")
+	defer db.Close(ctx)
 
 	appRepo := repository.NewAppRepository()
 	appUsecase := usecase.NewAppUsecase(appRepo)

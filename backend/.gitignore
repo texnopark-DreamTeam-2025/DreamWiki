@@ -1,4 +1,0 @@
-services/dream-wiki/pkg/api/*.gen.go
-*.gen.go
-ydb_*
-ydb-*
