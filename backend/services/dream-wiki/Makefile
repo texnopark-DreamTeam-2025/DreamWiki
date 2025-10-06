@@ -1,6 +1,6 @@
 # Базовые команды
 run:
-	go run cmd/main/main.go
+	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://localhost:2136/?database=/local go run cmd/main/main.go
 
 # Генерация кода из OpenAPI спецификации
 generate:
@@ -22,7 +22,6 @@ test: run_tests
 short_test:
 	go test -cover ./...
 
-# Development команды
 dev: generate run
 
-.PHONY: run test run_tests short_test docker_build docker_up docker_down docker_restart docker_logs docker_rebuild run_docker dev generate
+.PHONY: run test run_tests short_test dev generate

@@ -13,6 +13,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/usecase"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
@@ -23,7 +24,13 @@ import (
 )
 
 func main() {
-	err := logger.Init("dev")
+	config, err := config.LoadConfig()
+	if err != nil {
+		fmt.Printf("failed to load config: %v\n", err)
+		os.Exit(1)
+	}
+
+	err = logger.Init(config.LogMode)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v\n", err)
 		os.Exit(1)
@@ -32,16 +39,15 @@ func main() {
 
 	logger.Info("configuration loaded successfully")
 	logger.Debug("debug mode enabled",
-		zap.String("log_mode", "dev"),
-		zap.String("server_port", "8080"),
+		zap.String("log_mode", config.LogMode),
+		zap.String("server_port", config.ServerPort),
 	)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	dsn := "grpc://localhost:2136/?database=/local"
 	fmt.Println("connecting to ydb")
-	db, err := ydb.Open(ctx, dsn,
+	db, err := ydb.Open(ctx, config.YDBDSN,
 		ydb.WithDialTimeout(1*time.Second),
 	)
 	fmt.Println("connected to ydb")
@@ -77,7 +83,7 @@ func main() {
 
 	router.Use(middleware.LoggingMiddleware)
 
-	port := ":8080"
+	port := ":" + config.ServerPort
 	server := &http.Server{
 		Addr:    port,
 		Handler: router,

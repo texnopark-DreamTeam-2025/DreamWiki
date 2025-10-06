@@ -54,5 +54,6 @@ func LoadConfig() (*Config, error) {
 	return &Config{
 		LogMode:    getEnv("LOG_MODE", "dev"),
 		ServerPort: getEnv("SERVER_PORT", "8080"),
+		YDBDSN:     getEnv("YDB_DSN", "grpc://localhost:2136/?database=/local"),
 	}, nil
 }
