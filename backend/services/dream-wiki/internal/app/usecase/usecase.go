@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -20,7 +19,7 @@ func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) *AppUsecaseImpl {
 
 func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
 	repo := repository.StartTransaction(u.ctx, u.deps)
-	defer repo.Commit()
+	defer repo.Rollback()
 
 	results, err := repo.Search(req.Query)
 	if err != nil {
@@ -43,24 +42,21 @@ func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 
 func (u *AppUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
 	repo := repository.StartTransaction(u.ctx, u.deps)
-	defer repo.Commit()
+	defer repo.Rollback()
 
-	info, err := repo.RetrievePageByID(req.PageId)
+	page, err := repo.RetrievePageByID(req.PageId)
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.V1DiagnosticInfoGetResponse{
-		PageId:    info.PageID,
-		Content:   info.Content,
-		Title:     info.Title,
-		CreatedAt: time.Now(),
+		Page: *page,
 	}, nil
 }
 
 func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
 	repo := repository.StartTransaction(u.ctx, u.deps)
-	defer repo.Commit()
+	defer repo.Rollback()
 
 	// err := repo.IndexatePage(u.ctx, req.PageId)
 	// if err != nil {

@@ -1,5 +1,5 @@
 CREATE TABLE Page (
-    page_id UUID,
+    page_id UUID NOT NULL,
     content TEXT NOT NULL,
     PRIMARY KEY (page_id)
 );

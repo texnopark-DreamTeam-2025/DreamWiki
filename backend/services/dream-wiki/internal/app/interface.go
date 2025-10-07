@@ -14,7 +14,7 @@ var (
 
 type AppRepository interface {
 	Search(query string) ([]models.SearchResult, error)
-	RetrievePageByID(pageID string) (*models.Page, error)
+	RetrievePageByID(pageID string) (*api.Page, error)
 }
 
 type AppUsecase interface {

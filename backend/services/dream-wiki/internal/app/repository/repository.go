@@ -1,20 +1,23 @@
 package repository
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"sync/atomic"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
 type AppRepositoryImpl struct {
 	ctx     context.Context
 	tx      table.TransactionActor
+	logger  *logger.Logger
 	success chan bool
 	closed  int32
 }
@@ -38,7 +41,7 @@ func StartTransaction(ctx context.Context, deps *deps.Deps) *AppRepositoryImpl {
 	tx := <-txRetriever
 	close(txRetriever)
 	return &AppRepositoryImpl{
-		ctx: ctx, tx: tx, success: success}
+		ctx: ctx, tx: tx, success: success, logger: deps.Logger}
 }
 
 func (r *AppRepositoryImpl) Commit() {
@@ -69,27 +72,45 @@ func (r *AppRepositoryImpl) Search(query string) ([]models.SearchResult, error) 
 	return results, nil
 }
 
-func (r *AppRepositoryImpl) RetrievePageByID(pageID string) (*models.Page, error) {
-	fmt.Println("GetDiagnosticInfo")
+func (r *AppRepositoryImpl) RetrievePageByID(pageID string) (*api.Page, error) {
+	yql := `
+		SELECT page_id, content FROM Page WHERE page_id=$pageID;
+	`
 
-	result, err := r.tx.Execute(r.ctx, "SELECT * FROM Page;", nil)
-	err1 := result.Err()
-	if err2 := cmp.Or(err, err1); err2 != nil {
-		return nil, fmt.Errorf("AppRepository.GetDiagnosticInfo: %w", err2)
+	pageUUID, err := uuid.Parse(pageID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
+		table.ValueParam("$pageID", types.UuidValue(pageUUID)),
+	))
+	if err != nil {
+		return nil, fmt.Errorf("AppRepository.GetDiagnosticInfo: %w", err)
+	}
+	err = result.Err()
+	if err != nil {
+		return nil, fmt.Errorf("AppRepository.GetDiagnosticInfo: %w", err)
 	}
 	defer result.Close()
 
 	var s1, s2 string
-	for result.NextResultSet(r.ctx) {
-		for result.NextRow() {
-			result.Scan(&s1, &s2)
+	result.NextResultSet(r.ctx)
+	rowCount := result.CurrentResultSet().RowCount()
+	if rowCount != 1 {
+		r.logger.Errorf("Invalid row count: %d, expected 1", rowCount)
+		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
+	}
+	for result.NextRow() {
+		err = result.Scan(&s1, &s2)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	return &models.Page{
-		PageID:    s2,
-		Content:   s1,
-		Title:     "Заголовок страницы " + pageID,
-		CreatedAt: time.Now().Add(-24 * time.Hour),
+	return &api.Page{
+		PageId:  s1,
+		Content: s2,
+		Title:   "Заголовок страницы " + pageID,
 	}, nil
 }

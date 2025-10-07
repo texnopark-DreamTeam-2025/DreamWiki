@@ -5,15 +5,17 @@ import (
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/usecase"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
 type AppDelivery struct {
 	deps *deps.Deps
+	log  *logger.Logger
 }
 
 func NewAppDelivery(deps *deps.Deps) *AppDelivery {
-	return &AppDelivery{deps: deps}
+	return &AppDelivery{deps: deps, log: deps.Logger}
 }
 
 func (d *AppDelivery) Search(ctx context.Context, request api.SearchRequestObject) (api.SearchResponseObject, error) {
@@ -30,6 +32,7 @@ func (d *AppDelivery) GetDiagnosticInfo(ctx context.Context, request api.GetDiag
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	resp, err := usecase.GetDiagnosticInfo(*request.Body)
 	if err != nil {
+		d.log.Error(err.Error())
 		return api.GetDiagnosticInfo200JSONResponse{}, nil
 	}
 
