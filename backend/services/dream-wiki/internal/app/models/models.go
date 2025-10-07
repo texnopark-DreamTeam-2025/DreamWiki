@@ -8,7 +8,7 @@ type SearchResult struct {
 	PageID      string
 }
 
-type DiagnosticInfo struct {
+type Page struct {
 	PageID    string
 	Content   string
 	Title     string

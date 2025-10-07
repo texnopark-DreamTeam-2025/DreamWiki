@@ -1,20 +1,24 @@
 package app
 
 import (
-	"context"
-
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/usecase"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
+var (
+	_ AppRepository = (*repository.AppRepositoryImpl)(nil)
+	_ AppUsecase    = (*usecase.AppUsecaseImpl)(nil)
+)
+
 type AppRepository interface {
-	Search(ctx context.Context, query string) ([]models.SearchResult, error)
-	GetDiagnosticInfo(ctx context.Context, pageID string) (*models.DiagnosticInfo, error)
-	IndexatePage(ctx context.Context, pageID string) error
+	Search(query string) ([]models.SearchResult, error)
+	RetrievePageByID(pageID string) (*models.Page, error)
 }
 
 type AppUsecase interface {
-	Search(ctx context.Context, req api.V1SearchRequest) (*api.V1SearchResponse, error)
-	GetDiagnosticInfo(ctx context.Context, req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error)
-	IndexatePage(ctx context.Context, req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error)
+	Search(req api.V1SearchRequest) (*api.V1SearchResponse, error)
+	GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error)
+	IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error)
 }

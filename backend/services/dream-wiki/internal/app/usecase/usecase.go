@@ -9,19 +9,20 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
-type AppUsecase struct {
+type AppUsecaseImpl struct {
+	ctx  context.Context
 	deps *deps.Deps
 }
 
-func NewAppUsecase(deps *deps.Deps) *AppUsecase {
-	return &AppUsecase{deps: deps}
+func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) *AppUsecaseImpl {
+	return &AppUsecaseImpl{ctx: ctx, deps: deps}
 }
 
-func (u *AppUsecase) Search(ctx context.Context, req api.V1SearchRequest) (*api.V1SearchResponse, error) {
-	repo := repository.StartTransaction(ctx, u.deps)
+func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
+	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Commit()
 
-	results, err := repo.Search(ctx, req.Query)
+	results, err := repo.Search(req.Query)
 	if err != nil {
 		return nil, err
 	}
@@ -40,11 +41,11 @@ func (u *AppUsecase) Search(ctx context.Context, req api.V1SearchRequest) (*api.
 	}, nil
 }
 
-func (u *AppUsecase) GetDiagnosticInfo(ctx context.Context, req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
-	repo := repository.StartTransaction(ctx, u.deps)
+func (u *AppUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
+	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Commit()
 
-	info, err := repo.GetDiagnosticInfo(ctx, req.PageId)
+	info, err := repo.RetrievePageByID(req.PageId)
 	if err != nil {
 		return nil, err
 	}
@@ -57,14 +58,15 @@ func (u *AppUsecase) GetDiagnosticInfo(ctx context.Context, req api.V1Diagnostic
 	}, nil
 }
 
-func (u *AppUsecase) IndexatePage(ctx context.Context, req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
-	repo := repository.StartTransaction(ctx, u.deps)
+func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
+	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Commit()
 
-	err := repo.IndexatePage(ctx, req.PageId)
-	if err != nil {
-		return nil, err
-	}
+	// err := repo.IndexatePage(u.ctx, req.PageId)
+	// if err != nil {
+	// 	repo.Rollback()
+	// 	return nil, err
+	// }
 
 	return &api.V1IndexatePageResponse{
 		PageId: req.PageId,
