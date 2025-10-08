@@ -6,9 +6,10 @@ import (
 )
 
 type Config struct {
-	LogMode    string
-	ServerPort string
-	YDBDSN     string
+	LogMode         string
+	ServerPort      string
+	YDBDSN          string
+	InferenceAPIURL string
 }
 
 func checkEnv(envVars []string) error {
@@ -31,6 +32,7 @@ func validateEnv() error {
 		"LOG_MODE",
 		"YDB_DSN",
 		"SERVER_PORT",
+		"INFERENCE_API_URL",
 	})
 	if err != nil {
 		return err
@@ -52,8 +54,9 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		LogMode:    getEnv("LOG_MODE", "dev"),
-		ServerPort: getEnv("SERVER_PORT", "8080"),
-		YDBDSN:     getEnv("YDB_DSN", "grpc://localhost:2136/?database=/local"),
+		LogMode:         getEnv("LOG_MODE", "dev"),
+		ServerPort:      getEnv("SERVER_PORT", "8080"),
+		YDBDSN:          getEnv("YDB_DSN", "grpc://localhost:2136/?database=/local"),
+		InferenceAPIURL: getEnv("INFERENCE_API_URL", "http://localhost:8000"),
 	}, nil
 }

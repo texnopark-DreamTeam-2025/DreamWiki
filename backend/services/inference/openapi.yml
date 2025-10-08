@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Inference API
+  description: API Specification for RuBERT Transformer Inference Service
+  version: 0.0.1
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+
+paths:
+  /v1/create-text-embedding:
+    post:
+      summary: Generate text embedding using RuBERT transformer
+      operationId: generateEmbedding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1EmbeddingRequest'
+      responses:
+        '200':
+          description: Successful embedding generation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1EmbeddingResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1ErrorResponse'
+
+components:
+  schemas:
+    V1EmbeddingRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Input text for embedding generation
+      required:
+        - text
+
+    V1EmbeddingResponse:
+      type: object
+      properties:
+        embedding:
+          type: array
+          items:
+            type: number
+            format: float
+          description: Generated embedding vector
+      required:
+        - embedding
+
+    V1ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      required:
+        - error

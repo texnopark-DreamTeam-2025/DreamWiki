@@ -29,12 +29,14 @@ services:
       dockerfile: Dockerfile
     environment:
       - SERVER_PORT=8080
+      - INFERENCE_API_URL=http://inference:8000
     ports:
       - "8081:8080"
     networks:
       - dreamwiki-net
     depends_on:
       - ydb
+      - inference
 
   nginx:
     build:
@@ -46,6 +48,16 @@ services:
       - dreamwiki-net
     depends_on:
       - dream-wiki
+
+  inference:
+    build:
+      context: ../../backend/services/inference
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8000"
+    networks:
+      - dreamwiki-net
+    restart: unless-stopped
 
 networks:
   dreamwiki-net:

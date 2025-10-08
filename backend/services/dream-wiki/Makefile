@@ -1,11 +1,14 @@
 # Базовые команды
 run:
-	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://localhost:2136/?database=/local go run cmd/main/main.go
+	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://localhost:2136/?database=/local \
+	INFERENCE_API_URL=http://localhost:8082 go run cmd/main/main.go
 
 # Генерация кода из OpenAPI спецификации
 generate:
-	@echo "==> Generating API code..."
+	@echo "==> Generating server API code..."
 	oapi-codegen --config=oapi-codegen.yml openapi.yml
+	@echo "==> Generating Inference client code..."
+	oapi-codegen --config=oapi-codegen-inference.yml ../../services/inference/openapi.yml
 
 # Тестирование
 run_tests:

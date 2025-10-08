@@ -13,6 +13,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
+	inference_client "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/inference"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
@@ -58,9 +59,16 @@ func main() {
 
 	dbTable := db.Table()
 
+	// Initialize inference client
+	inferenceClient, err := inference_client.NewClientWithResponses(config.InferenceAPIURL)
+	if err != nil {
+		logger.Fatalf("failed to initialize inference client: %v", err)
+	}
+
 	deps := deps.Deps{
-		DB:     dbTable,
-		Logger: logger,
+		DB:              dbTable,
+		Logger:          logger,
+		InferenceClient: inferenceClient,
 	}
 
 	appDelivery := delivery.NewAppDelivery(&deps)
