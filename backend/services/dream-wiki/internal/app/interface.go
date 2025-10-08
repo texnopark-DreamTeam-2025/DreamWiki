@@ -15,6 +15,8 @@ var (
 type AppRepository interface {
 	Search(query string) ([]models.SearchResult, error)
 	RetrievePageByID(pageID string) (*api.Page, error)
+	RemovePageIndexation(pageID string) error
+	AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error
 }
 
 type AppUsecase interface {

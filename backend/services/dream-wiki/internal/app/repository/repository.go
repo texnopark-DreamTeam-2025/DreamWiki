@@ -17,7 +17,7 @@ import (
 type AppRepositoryImpl struct {
 	ctx     context.Context
 	tx      table.TransactionActor
-	logger  *logger.Logger
+	log     *logger.Logger
 	success chan bool
 	closed  int32
 }
@@ -30,18 +30,19 @@ func StartTransaction(ctx context.Context, deps *deps.Deps) *AppRepositoryImpl {
 		txRetriever <- tx
 		shouldCommit := <-success
 		close(success)
-		deps.Logger.Info("transaction completed")
 		if shouldCommit {
+			deps.Logger.Info("transaction committed")
 			return nil
 		}
-		return fmt.Errorf("transaction cancelled by user")
+		deps.Logger.Info("transaction rolled back")
+		return fmt.Errorf("transaction rolled back")
 	}
 
 	go deps.DB.DoTx(context.Background(), action)
 	tx := <-txRetriever
 	close(txRetriever)
 	return &AppRepositoryImpl{
-		ctx: ctx, tx: tx, success: success, logger: deps.Logger}
+		ctx: ctx, tx: tx, success: success, log: deps.Logger}
 }
 
 func (r *AppRepositoryImpl) Commit() {
@@ -74,7 +75,7 @@ func (r *AppRepositoryImpl) Search(query string) ([]models.SearchResult, error) 
 
 func (r *AppRepositoryImpl) RetrievePageByID(pageID string) (*api.Page, error) {
 	yql := `
-		SELECT page_id, content FROM Page WHERE page_id=$pageID;
+		SELECT CAST(page_id AS String), content FROM Page WHERE page_id=$pageID;
 	`
 
 	pageUUID, err := uuid.Parse(pageID)
@@ -86,11 +87,11 @@ func (r *AppRepositoryImpl) RetrievePageByID(pageID string) (*api.Page, error) {
 		table.ValueParam("$pageID", types.UuidValue(pageUUID)),
 	))
 	if err != nil {
-		return nil, fmt.Errorf("AppRepository.GetDiagnosticInfo: %w", err)
+		return nil, err
 	}
 	err = result.Err()
 	if err != nil {
-		return nil, fmt.Errorf("AppRepository.GetDiagnosticInfo: %w", err)
+		return nil, err
 	}
 	defer result.Close()
 
@@ -98,7 +99,7 @@ func (r *AppRepositoryImpl) RetrievePageByID(pageID string) (*api.Page, error) {
 	result.NextResultSet(r.ctx)
 	rowCount := result.CurrentResultSet().RowCount()
 	if rowCount != 1 {
-		r.logger.Errorf("Invalid row count: %d, expected 1", rowCount)
+		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
 		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
 	}
 	for result.NextRow() {
@@ -113,4 +114,64 @@ func (r *AppRepositoryImpl) RetrievePageByID(pageID string) (*api.Page, error) {
 		Content: s2,
 		Title:   "Заголовок страницы " + pageID,
 	}, nil
+}
+
+func (r *AppRepositoryImpl) RemovePageIndexation(pageID string) error {
+	yql := `
+		DELETE FROM Paragraph WHERE page_id=$pageID;
+	`
+
+	pageUUID, err := uuid.Parse(pageID)
+	if err != nil {
+		return err
+	}
+
+	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
+		table.ValueParam("$pageID", types.UuidValue(pageUUID)),
+	))
+	if err != nil {
+		return err
+	}
+	err = result.Err()
+	if err != nil {
+		return err
+	}
+	defer result.Close()
+
+	return nil
+}
+
+func (r *AppRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error {
+	yql := `
+		INSERT INTO Paragraph (paragraph_id, page_id, line_number, content, embedding)
+		VALUES ($paragraphID, $pageID, $lineNumber, $content, $embedding);
+	`
+
+	paragraphUUID, err := uuid.Parse(paragraph.ParagraphID)
+	if err != nil {
+		return err
+	}
+
+	pageUUID, err := uuid.Parse(paragraph.PageID)
+	if err != nil {
+		return err
+	}
+
+	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
+		table.ValueParam("$paragraphID", types.UuidValue(paragraphUUID)),
+		table.ValueParam("$pageID", types.UuidValue(pageUUID)),
+		table.ValueParam("$lineNumber", types.Int32Value(int32(paragraph.LineNumber))),
+		table.ValueParam("$content", types.TextValue(paragraph.Content)),
+		table.ValueParam("$embedding", types.TextValue(paragraph.Embedding)),
+	))
+	if err != nil {
+		return err
+	}
+	err = result.Err()
+	if err != nil {
+		return err
+	}
+	defer result.Close()
+
+	return nil
 }

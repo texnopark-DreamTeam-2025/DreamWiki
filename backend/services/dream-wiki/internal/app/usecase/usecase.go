@@ -3,8 +3,11 @@ package usecase
 import (
 	"context"
 
+	"github.com/google/uuid"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
@@ -58,12 +61,38 @@ func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// err := repo.IndexatePage(u.ctx, req.PageId)
-	// if err != nil {
-	// 	repo.Rollback()
-	// 	return nil, err
-	// }
+	// Remove old indexing
+	err := repo.RemovePageIndexation(req.PageId)
+	if err != nil {
+		return nil, err
+	}
 
+	// Retrieve page content
+	page, err := repo.RetrievePageByID(req.PageId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Split page into paragraphs
+	paragraphs := indexing.SplitPageToParagraphs(page.Content)
+
+	// Load paragraphs into database
+	for i, paragraph := range paragraphs {
+		paragraphWithEmbedding := models.ParagraphWithEmbedding{
+			ParagraphID: uuid.New().String(),
+			PageID:      req.PageId,
+			LineNumber:  i,
+			Content:     paragraph,
+			Embedding:   "", // Placeholder for embedding
+		}
+
+		err := repo.AddIndexedParagraph(paragraphWithEmbedding)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	repo.Commit()
 	return &api.V1IndexatePageResponse{
 		PageId: req.PageId,
 	}, nil
