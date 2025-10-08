@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "dream-wiki",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,11 +8,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-api": "openapi-generator-cli generate -i http://localhost:8000/api/openapi.json -g typescript-axios -o src/api/generated",
-    "generate-api-local": "openapi-generator-cli generate -i ./openapi.json -g typescript-axios -o src/api/generated"
+    "openapi-ts": "openapi-ts"
   },
   "dependencies": {
-    "@openapitools/openapi-generator-cli": "^2.24.0",
+    "@hey-api/client-axios": "^0.9.1",
+    "@hey-api/openapi-ts": "^0.82.5",
+    "axios": "^1.12.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.3",
