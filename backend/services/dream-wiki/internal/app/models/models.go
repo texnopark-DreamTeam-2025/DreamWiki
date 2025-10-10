@@ -1,15 +1,10 @@
 package models
 
-type SearchResult struct {
-	Title       string
-	Description string
-	PageID      string
-}
+import "github.com/google/uuid"
 
 type ParagraphWithEmbedding struct {
-	ParagraphID string
-	PageID      string
-	LineNumber  int
-	Content     string
-	Embedding   string
+	PageID     uuid.UUID
+	LineNumber int
+	Content    string
+	Embedding  string
 }

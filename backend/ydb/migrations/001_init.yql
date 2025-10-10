@@ -1,0 +1,23 @@
+-- YDB, YQL
+CREATE TABLE Page (
+    page_id UUID NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    PRIMARY KEY (page_id)
+);
+
+CREATE TABLE Paragraph (
+    page_id UUID NOT NULL,
+    line_number INT NOT NULL,
+    content TEXT NOT NULL,
+    embedding String NOT NULL,
+    PRIMARY KEY (page_id, line_number)
+);
+
+CREATE TABLE IntegrationLogField (
+    field_id UUID NOT NULL,
+    integration_id TEXT NOT NULL,
+    log_text TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (field_id)
+);

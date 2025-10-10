@@ -8,9 +8,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/local_model"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
@@ -34,10 +36,10 @@ func StartTransaction(ctx context.Context, deps *deps.Deps) *AppRepositoryImpl {
 		shouldCommit := <-success
 		close(success)
 		if shouldCommit {
-			deps.Logger.Info("YDB transaction %s committed", tx.ID())
+			deps.Logger.Infof("YDB transaction %s committed", tx.ID())
 			return nil
 		}
-		deps.Logger.Info("YDB transaction %s rolled back", tx.ID())
+		deps.Logger.Infof("YDB transaction %s rolled back", tx.ID())
 		return fmt.Errorf("transaction rolled back")
 	}
 
@@ -60,77 +62,111 @@ func (r *AppRepositoryImpl) Rollback() {
 	}
 }
 
-func (r *AppRepositoryImpl) Search(query string) ([]models.SearchResult, error) {
-	results := []models.SearchResult{
-		{
-			Title:       "Результат поиска 1",
-			Description: "Описание результата поиска по запросу: " + query,
-			PageID:      "page-1",
-		},
-		{
-			Title:       "Результат поиска 2",
-			Description: "Еще один результат для: " + query,
-			PageID:      "page-2",
-		},
-	}
-	return results, nil
-}
-
-func (r *AppRepositoryImpl) RetrievePageByID(pageID string) (*api.Page, error) {
-	yql := `
-		SELECT CAST(page_id AS String), content FROM Page WHERE page_id=$pageID;
-	`
-
-	pageUUID, err := uuid.Parse(pageID)
+func (r *AppRepositoryImpl) execute(yql string, opts ...table.ParameterOption) (result result.Result, err error) {
+	r.log.Debug("executing yql: ", yql, opts)
+	result, err = r.tx.Execute(r.ctx, yql, table.NewQueryParameters(opts...))
 	if err != nil {
-		return nil, err
-	}
-
-	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
-		table.ValueParam("$pageID", types.UuidValue(pageUUID)),
-	))
-	if err != nil {
+		r.log.Error(err)
 		return nil, err
 	}
 	err = result.Err()
 	if err != nil {
+		r.log.Error(err)
 		return nil, err
 	}
+	return
+}
+
+func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]models.ParagraphWithEmbedding, error) {
+	yql := `
+		$K = 20;
+		$TargetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
+
+		SELECT
+			page_id,
+			line_number,
+			Knn::CosineDistance(embedding, $TargetEmbedding) As CosineDistance
+		FROM Paragraph
+		ORDER BY Knn::CosineDistance(embedding, $TargetEmbedding)
+		LIMIT $K;
+	`
+
+	embeddingValues := make([]types.Value, len(queryEmbedding))
+	for i := range queryEmbedding {
+		embeddingValues[i] = types.FloatValue(queryEmbedding[i])
+	}
+	yqlEmbedding := types.ListValue(embeddingValues...)
+
+	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
+		table.ValueParam("$queryEmbedding", yqlEmbedding),
+	))
+	// todo obrabotka oshibok
+
 	defer result.Close()
 
-	var s1, s2 string
-	result.NextResultSet(r.ctx)
+	var retrievedPageID uuid.UUID
+	var pageContent string
+	if ok := result.NextResultSet(r.ctx); !ok {
+		return nil, fmt.Errorf("no result set")
+	}
 	rowCount := result.CurrentResultSet().RowCount()
 	if rowCount != 1 {
 		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
 		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
 	}
 	for result.NextRow() {
-		err = result.Scan(&s1, &s2)
+		err = result.Scan(&retrievedPageID, &pageContent)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil // TODO
+}
+
+func (r *AppRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error) {
+	yql := `
+		SELECT CAST(page_id AS String), content FROM Page WHERE page_id=$pageID;
+	`
+
+	result, err := r.execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	if ok := result.NextResultSet(r.ctx); !ok {
+		return nil, fmt.Errorf("no result set")
+	}
+	rowCount := result.CurrentResultSet().RowCount()
+	if rowCount != 1 {
+		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
+		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
+	}
+
+	var retrievedPageID uuid.UUID
+	var pageContent string
+	for result.NextRow() {
+		err = result.Scan(&retrievedPageID, &pageContent)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return &api.Page{
-		PageId:  s1,
-		Content: s2,
-		Title:   "Заголовок страницы " + pageID,
+		PageId:  retrievedPageID,
+		Content: pageContent,
+		Title:   "Заголовок страницы",
 	}, nil
 }
 
-func (r *AppRepositoryImpl) RemovePageIndexation(pageID string) error {
+func (r *AppRepositoryImpl) RemovePageIndexation(pageID uuid.UUID) error {
 	yql := `
 		DELETE FROM Paragraph WHERE page_id=$pageID;
 	`
 
-	pageUUID, err := uuid.Parse(pageID)
-	if err != nil {
-		return err
-	}
-
 	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
-		table.ValueParam("$pageID", types.UuidValue(pageUUID)),
+		table.ValueParam("$pageID", types.UuidValue(pageID)),
 	))
 	if err != nil {
 		return err
@@ -146,23 +182,12 @@ func (r *AppRepositoryImpl) RemovePageIndexation(pageID string) error {
 
 func (r *AppRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error {
 	yql := `
-		INSERT INTO Paragraph (paragraph_id, page_id, line_number, content, embedding)
-		VALUES ($paragraphID, $pageID, $lineNumber, $content, $embedding);
+		INSERT INTO Paragraph (page_id, line_number, content, embedding)
+		VALUES ($pageID, $lineNumber, $content, $embedding);
 	`
 
-	paragraphUUID, err := uuid.Parse(paragraph.ParagraphID)
-	if err != nil {
-		return err
-	}
-
-	pageUUID, err := uuid.Parse(paragraph.PageID)
-	if err != nil {
-		return err
-	}
-
 	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
-		table.ValueParam("$paragraphID", types.UuidValue(paragraphUUID)),
-		table.ValueParam("$pageID", types.UuidValue(pageUUID)),
+		table.ValueParam("$pageID", types.UuidValue(paragraph.PageID)),
 		table.ValueParam("$lineNumber", types.Int32Value(int32(paragraph.LineNumber))),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
 		table.ValueParam("$embedding", types.TextValue(paragraph.Embedding)),

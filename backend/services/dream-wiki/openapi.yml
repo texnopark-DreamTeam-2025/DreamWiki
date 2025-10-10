@@ -21,7 +21,7 @@ paths:
               $ref: '#/components/schemas/V1SearchRequest'
       responses:
         '200':
-          description: Успешный поиск
+          description: OK
           content:
             application/json:
               schema:
@@ -29,7 +29,7 @@ paths:
 
   /v1/diagnostic-info/get:
     post:
-      summary: Получение диагностической информации по странице
+      summary: Диагностическая информация и исходный код последней ревизии
       operationId: getDiagnosticInfo
       requestBody:
         required: true
@@ -39,7 +39,7 @@ paths:
               $ref: '#/components/schemas/V1DiagnosticInfoGetRequest'
       responses:
         '200':
-          description: Диагностическая информация
+          description: OK
           content:
             application/json:
               schema:
@@ -47,8 +47,8 @@ paths:
 
   /v1/indexate-page:
     post:
-      summary: Принудительная индексация страницы
-      operationId: indexate
+      summary: Принудительно проиндексировать страницу. Синхронная ручка
+      operationId: indexatePage
       requestBody:
         required: true
         content:
@@ -57,7 +57,7 @@ paths:
               $ref: '#/components/schemas/V1IndexatePageRequest'
       responses:
         '200':
-          description: ok
+          description: OK
           content:
             application/json:
               schema:
@@ -70,7 +70,7 @@ components:
       properties:
         query:
           type: string
-          description: Запрос
+          description: Поисковый запрос на естественном языке
       required:
         - query
 
@@ -89,7 +89,7 @@ components:
       properties:
         page_id:
           type: string
-          description: Идентификатор страницы
+          format: uuid
       required:
         - page_id
 
@@ -106,6 +106,7 @@ components:
       properties:
         page_id:
           type: string
+          format: uuid
       required:
         - page_id
 
@@ -114,21 +115,21 @@ components:
       properties:
         page_id:
           type: string
+          format: uuid
       required:
         - page_id
 
     SearchResultItem:
       type: object
       properties:
-        title:
-          type: string
-          description: Заголовок
-        description:
-          type: string
-          description: Описание
         page_id:
           type: string
-          description: Идентификатор страницы
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          description: Описание поискового результата в формате MD
       required:
         - title
         - description
@@ -139,6 +140,7 @@ components:
       properties:
         page_id:
           type: string
+          format: uuid
         content:
           type: string
         title:

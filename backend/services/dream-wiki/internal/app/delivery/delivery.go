@@ -39,12 +39,12 @@ func (d *AppDelivery) GetDiagnosticInfo(ctx context.Context, request api.GetDiag
 	return api.GetDiagnosticInfo200JSONResponse(*resp), nil
 }
 
-func (d *AppDelivery) Indexate(ctx context.Context, request api.IndexateRequestObject) (api.IndexateResponseObject, error) {
+func (d *AppDelivery) IndexatePage(ctx context.Context, request api.IndexatePageRequestObject) (api.IndexatePageResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	resp, err := usecase.IndexatePage(*request.Body)
 	if err != nil {
-		return api.Indexate200JSONResponse{}, nil
+		return api.IndexatePage200JSONResponse{}, nil
 	}
 
-	return api.Indexate200JSONResponse(*resp), nil
+	return api.IndexatePage200JSONResponse(*resp), nil
 }

@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -26,7 +25,7 @@ func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	results, err := repo.Search(req.Query)
+	results, err := repo.SearchByEmbedding(req.Query, make([]float32, 1))
 	if err != nil {
 		return nil, err
 	}
@@ -34,8 +33,8 @@ func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	apiResults := make([]api.SearchResultItem, len(results))
 	for i, result := range results {
 		apiResults[i] = api.SearchResultItem{
-			Title:       result.Title,
-			Description: result.Description,
+			Title:       "",
+			Description: "",
 			PageId:      result.PageID,
 		}
 	}
@@ -65,29 +64,24 @@ func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Remove old indexing
 	err := repo.RemovePageIndexation(req.PageId)
 	if err != nil {
 		return nil, err
 	}
 
-	// Retrieve page content
 	page, err := repo.RetrievePageByID(req.PageId)
 	if err != nil {
 		return nil, err
 	}
 
-	// Split page into paragraphs
 	paragraphs := indexing.SplitPageToParagraphs(page.Content)
 
-	// Load paragraphs into database
 	for i, paragraph := range paragraphs {
 		paragraphWithEmbedding := models.ParagraphWithEmbedding{
-			ParagraphID: uuid.New().String(),
-			PageID:      req.PageId,
-			LineNumber:  i,
-			Content:     paragraph,
-			Embedding:   "", // Placeholder for embedding
+			PageID:     req.PageId,
+			LineNumber: i,
+			Content:    paragraph,
+			Embedding:  "", // Placeholder for embedding
 		}
 
 		err := repo.AddIndexedParagraph(paragraphWithEmbedding)
