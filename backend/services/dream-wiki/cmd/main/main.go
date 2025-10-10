@@ -43,19 +43,15 @@ func main() {
 		zap.String("server_port", config.ServerPort),
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	fmt.Println("connecting to ydb")
-	db, err := ydb.Open(ctx, config.YDBDSN,
-		ydb.WithDialTimeout(1*time.Second),
+	logger.Info("connecting to ydb")
+	db, err := ydb.Open(context.Background(), config.YDBDSN,
+		ydb.WithDialTimeout(10*time.Second),
 	)
-	fmt.Println("connected to ydb")
 	if err != nil {
 		logger.Fatalf("failed to connect ydb: ", err.Error())
 	}
 	logger.Info("connected to ydb")
-	defer db.Close(ctx)
+	defer db.Close(context.Background())
 
 	dbTable := db.Table()
 

@@ -23,6 +23,7 @@ type AppRepositoryImpl struct {
 }
 
 func StartTransaction(ctx context.Context, deps *deps.Deps) *AppRepositoryImpl {
+	deps.Logger.Info("start YDB transaction")
 	success := make(chan bool)
 	txRetriever := make(chan table.TransactionActor)
 

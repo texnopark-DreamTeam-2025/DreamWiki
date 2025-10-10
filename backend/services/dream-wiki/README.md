@@ -1,8 +1,5 @@
 Здесь будет монолит на golang
 
-todo:
-oapi-codegen
-
 ### Установка oapi-codegen
 
 ```bash
