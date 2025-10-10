@@ -8,6 +8,6 @@ import (
 
 type Deps struct {
 	DB              table.Client
-	Logger          *logger.Logger
+	Logger          logger.Logger
 	InferenceClient *inference_client.ClientWithResponses
 }

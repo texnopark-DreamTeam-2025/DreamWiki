@@ -16,21 +16,20 @@ import (
 	inference_client "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/inference"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/db"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"go.uber.org/zap"
-
-	"github.com/ydb-platform/ydb-go-sdk/v3"
 )
 
 func main() {
-	config, err := config.LoadConfig()
+	appConfig, err := config.LoadConfig()
 	if err != nil {
 		fmt.Printf("failed to load config: %v\n", err)
 		os.Exit(1)
 	}
 
-	logger, err := logger.New(config.LogMode)
+	logger, err := logger.New(appConfig.LogMode)
 	if err != nil {
 		fmt.Printf("failed to initialize logger: %v\n", err)
 		os.Exit(1)
@@ -38,17 +37,12 @@ func main() {
 	defer logger.Sync()
 
 	logger.Info("configuration loaded successfully")
-	logger.Debug("debug mode enabled",
-		zap.String("log_mode", config.LogMode),
-		zap.String("server_port", config.ServerPort),
-	)
+	config.LogConfig(appConfig, logger)
 
-	logger.Info("connecting to ydb")
-	db, err := ydb.Open(context.Background(), config.YDBDSN,
-		ydb.WithDialTimeout(10*time.Second),
-	)
+	logger.Debug("connecting to ydb")
+	db, err := db.ConnectToYDB(appConfig, logger)
 	if err != nil {
-		logger.Fatalf("failed to connect ydb: ", err.Error())
+		logger.Fatalf("failed to connect to ydb: %v", err)
 	}
 	logger.Info("connected to ydb")
 	defer db.Close(context.Background())
@@ -56,7 +50,7 @@ func main() {
 	dbTable := db.Table()
 
 	// Initialize inference client
-	inferenceClient, err := inference_client.NewClientWithResponses(config.InferenceAPIURL)
+	inferenceClient, err := inference_client.NewClientWithResponses(appConfig.InferenceAPIURL)
 	if err != nil {
 		logger.Fatalf("failed to initialize inference client: %v", err)
 	}
@@ -91,7 +85,7 @@ func main() {
 
 	router.Use(middleware.LoggingMiddleware(logger))
 
-	port := ":" + config.ServerPort
+	port := ":" + appConfig.ServerPort
 	server := &http.Server{
 		Addr:    port,
 		Handler: router,

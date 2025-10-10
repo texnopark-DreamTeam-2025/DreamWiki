@@ -17,25 +17,27 @@ import (
 type AppRepositoryImpl struct {
 	ctx     context.Context
 	tx      table.TransactionActor
-	log     *logger.Logger
+	log     logger.Logger
 	success chan bool
 	closed  int32
 }
 
 func StartTransaction(ctx context.Context, deps *deps.Deps) *AppRepositoryImpl {
-	deps.Logger.Info("start YDB transaction")
+	deps.Logger.Debug("starting YDB transaction...")
 	success := make(chan bool)
 	txRetriever := make(chan table.TransactionActor)
 
 	action := func(ctx context.Context, tx table.TransactionActor) error {
 		txRetriever <- tx
+		deps.Logger.Infof("YDB transaction %s started", tx.ID())
+
 		shouldCommit := <-success
 		close(success)
 		if shouldCommit {
-			deps.Logger.Info("transaction committed")
+			deps.Logger.Info("YDB transaction %s committed", tx.ID())
 			return nil
 		}
-		deps.Logger.Info("transaction rolled back")
+		deps.Logger.Info("YDB transaction %s rolled back", tx.ID())
 		return fmt.Errorf("transaction rolled back")
 	}
 

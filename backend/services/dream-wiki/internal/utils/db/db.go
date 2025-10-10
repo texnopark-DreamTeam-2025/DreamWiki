@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
@@ -9,26 +10,31 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 )
 
-func CreateYDBDriver(config *config.Config) (*ydb.Driver, error) {
+// ConnectToYDB establishes a connection to YDB using the provided configuration and logger
+func ConnectToYDB(config *config.Config, logger logger.Logger) (*ydb.Driver, error) {
 	ydbDSN := config.YDBDSN
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	logger.Info("Connecting to YDB with DSN: ", ydbDSN)
 
 	driver, err := ydb.Open(ctx, ydbDSN)
 	if err != nil {
-		logger.Fatalf("failed to connect to YDB with DSN: %s, error: %v", ydbDSN, err)
+		logger.Error("Failed to connect to YDB: ", err)
 		return nil, err
 	}
 
+	// Test the connection
 	err = driver.Table().Do(ctx, func(ctx context.Context, s table.Session) error {
 		return nil
 	})
 	if err != nil {
-		logger.Fatalf("failed to ping YDB: %v", err)
+		logger.Error("Failed to ping YDB: ", err)
+		driver.Close(context.Background())
 		return nil, err
 	}
 
-	logger.Info("successful connection to YDB")
-
+	logger.Info("Successfully connected to YDB")
 	return driver, nil
 }

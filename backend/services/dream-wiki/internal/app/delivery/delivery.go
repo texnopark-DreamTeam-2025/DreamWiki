@@ -11,7 +11,7 @@ import (
 
 type AppDelivery struct {
 	deps *deps.Deps
-	log  *logger.Logger
+	log  logger.Logger
 }
 
 func NewAppDelivery(deps *deps.Deps) *AppDelivery {

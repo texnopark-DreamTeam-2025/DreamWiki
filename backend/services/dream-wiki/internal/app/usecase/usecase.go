@@ -8,16 +8,18 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
 type AppUsecaseImpl struct {
 	ctx  context.Context
 	deps *deps.Deps
+	log  logger.Logger
 }
 
 func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) *AppUsecaseImpl {
-	return &AppUsecaseImpl{ctx: ctx, deps: deps}
+	return &AppUsecaseImpl{ctx: ctx, deps: deps, log: deps.Logger}
 }
 
 func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
@@ -37,6 +39,8 @@ func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 			PageId:      result.PageID,
 		}
 	}
+
+	u.log.Info("usecase is ready")
 
 	return &api.V1SearchResponse{
 		ResultItems: apiResults,

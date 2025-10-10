@@ -5,11 +5,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// Logger wraps zap.Logger and zap.SugaredLogger
-type Logger = zap.SugaredLogger
+type Logger = *zap.SugaredLogger
 
 // New creates a new Logger instance based on the mode
-func New(mode string) (*Logger, error) {
+func New(mode string) (Logger, error) {
 	var cfg zap.Config
 
 	switch mode {
@@ -47,7 +46,7 @@ func New(mode string) (*Logger, error) {
 }
 
 // InitTestLogger creates a new Logger instance for testing
-func InitTestLogger() *Logger {
+func InitTestLogger() Logger {
 	cfg := zap.Config{
 		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
 		Development:      true,

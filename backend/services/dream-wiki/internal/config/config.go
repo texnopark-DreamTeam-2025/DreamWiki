@@ -3,6 +3,9 @@ package config
 import (
 	"fmt"
 	"os"
+
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"go.uber.org/zap"
 )
 
 type Config struct {
@@ -59,4 +62,18 @@ func LoadConfig() (*Config, error) {
 		YDBDSN:          getEnv("YDB_DSN", "grpc://localhost:2136/?database=/local"),
 		InferenceAPIURL: getEnv("INFERENCE_API_URL", "http://localhost:8000"),
 	}, nil
+}
+func LogConfig(config *Config, log logger.Logger) {
+	loggedFields := []string{
+		"LOG_MODE",
+		"YDB_DSN",
+		"SERVER_PORT",
+		"INFERENCE_API_URL",
+	}
+	fields := make([]any, 0, len(loggedFields)+1)
+	fields = append(fields, "config loaded")
+	for _, field := range loggedFields {
+		fields = append(fields, zap.String(field, os.Getenv(field)))
+	}
+	log.Info(fields...)
 }
