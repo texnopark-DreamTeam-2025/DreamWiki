@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getPageInfo } from "./getDocument";
+import { Button } from "@gravity-ui/uikit";
+import { indexatePage, type V1DiagnosticInfoGetResponse } from "@/client";
 
 export default function PageDetails() {
   const { id } = useParams<{ id: string }>();
-  const [page, setPage] = useState<any>(null);
+  const [page, setPage] = useState<V1DiagnosticInfoGetResponse | undefined>(
+    undefined
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!id) return;
     const fetchData = async () => {
       const res = await getPageInfo(id);
-      if (res.ok && res.data) {
+      if (res.data) {
         setPage(res.data);
       }
       setLoading(false);
@@ -24,9 +28,14 @@ export default function PageDetails() {
 
   return (
     <div>
-      <h1>{page.title}</h1>
-      <p>{page.description}</p>
-      <div dangerouslySetInnerHTML={{ __html: page.content }} />
+      <Button
+        view="action"
+        onClick={() => indexatePage({ body: { page_id: id! } })}
+      >
+        Проиндексировать
+      </Button>
+      <h1>{page.page.title}</h1>
+      <p>{page.page.content}</p>
     </div>
   );
 }
