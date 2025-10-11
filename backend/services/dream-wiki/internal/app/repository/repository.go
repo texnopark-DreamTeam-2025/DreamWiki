@@ -77,36 +77,57 @@ func (r *AppRepositoryImpl) execute(yql string, opts ...table.ParameterOption) (
 	return
 }
 
-func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]models.ParagraphWithEmbedding, error) {
-	yql := `
-		$K = 20;
-		$TargetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
+func (r *AppRepositoryImpl) nextResultSet(result result.Result) bool {
+	ok := result.NextResultSet(r.ctx)
+	if ok {
+		r.log.Debug("Result set has ", result.CurrentResultSet().RowCount(), " rows")
+	} else {
+		r.log.Debug("Result set requested, but not exists")
+	}
+	return ok
+}
 
+func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]models.ParagraphWithEmbedding, error) {
+	// yql := `
+	// 	$K = 20;
+	// 	$TargetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
+
+	// 	SELECT
+	// 		page_id,
+	// 		line_number,
+	// 		Knn::CosineDistance(embedding, $TargetEmbedding) As CosineDistance
+	// 	FROM Paragraph
+	// 	ORDER BY Knn::CosineDistance(embedding, $TargetEmbedding)
+	// 	LIMIT $K;
+	// `
+
+	temporaryYQL := `
 		SELECT
 			page_id,
-			line_number,
-			Knn::CosineDistance(embedding, $TargetEmbedding) As CosineDistance
-		FROM Paragraph
-		ORDER BY Knn::CosineDistance(embedding, $TargetEmbedding)
-		LIMIT $K;
+			title,
+			Unwrap(CAST(SUBSTRING(CAST(content AS String), NULL, 100) AS TEXT))
+		FROM Page
 	`
 
 	embeddingValues := make([]types.Value, len(queryEmbedding))
 	for i := range queryEmbedding {
 		embeddingValues[i] = types.FloatValue(queryEmbedding[i])
 	}
-	yqlEmbedding := types.ListValue(embeddingValues...)
+	//yqlEmbedding := types.ListValue(embeddingValues...)
 
-	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
-		table.ValueParam("$queryEmbedding", yqlEmbedding),
-	))
-	// todo obrabotka oshibok
-
+	// result, err := r.execute(yql,
+	// 	table.ValueParam("$queryEmbedding", yqlEmbedding),
+	// )
+	result, err := r.execute(temporaryYQL)
+	if err != nil {
+		return nil, err
+	}
 	defer result.Close()
 
 	var retrievedPageID uuid.UUID
+	var title string
 	var pageContent string
-	if ok := result.NextResultSet(r.ctx); !ok {
+	if ok := r.nextResultSet(result); !ok {
 		return nil, fmt.Errorf("no result set")
 	}
 	rowCount := result.CurrentResultSet().RowCount()
@@ -114,19 +135,28 @@ func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local
 		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
 		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
 	}
+	searchResult := make([]models.ParagraphWithEmbedding, 0)
 	for result.NextRow() {
-		err = result.Scan(&retrievedPageID, &pageContent)
+		fmt.Println("row here")
+		err = result.Scan(&retrievedPageID, &title, &pageContent)
 		if err != nil {
 			return nil, err
 		}
+		searchResult = append(searchResult, models.ParagraphWithEmbedding{
+			PageID:  retrievedPageID,
+			Content: pageContent,
+		})
 	}
 
-	return nil, nil // TODO
+	return searchResult, nil
 }
 
 func (r *AppRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error) {
 	yql := `
-		SELECT CAST(page_id AS String), content FROM Page WHERE page_id=$pageID;
+	SELECT
+		page_id,
+		content
+	FROM Page WHERE page_id=$pageID;
 	`
 
 	result, err := r.execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))

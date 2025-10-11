@@ -26,6 +26,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/V1SearchResponse'
+        '500':
+          $ref: '#/components/responses/InternalErrorResponse'
 
   /v1/diagnostic-info/get:
     post:
@@ -44,6 +46,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/V1DiagnosticInfoGetResponse'
+        '500':
+          $ref: '#/components/responses/InternalErrorResponse'
 
   /v1/indexate-page:
     post:
@@ -62,7 +66,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/V1IndexatePageResponse'
-  
+
   /v1/fetch-from-external-source:
     post:
       summary: Удалить все старые pages, запросить страницы с yandex wiki + INSERT
@@ -161,3 +165,19 @@ components:
         - page_id
         - content
         - title
+
+    ErrorResponseBody:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+  responses:
+    InternalErrorResponse:
+      description: 500 Internal error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponseBody'

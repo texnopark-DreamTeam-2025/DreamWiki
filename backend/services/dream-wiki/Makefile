@@ -1,6 +1,6 @@
 # Базовые команды
 run:
-	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://localhost:2136/?database=/local \
+	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://127.0.0.1:2136/?database=/local \
 	INFERENCE_API_URL=http://localhost:8082 go run cmd/main/main.go
 
 # Генерация кода из OpenAPI спецификации

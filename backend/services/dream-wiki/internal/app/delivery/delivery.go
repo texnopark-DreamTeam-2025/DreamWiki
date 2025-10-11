@@ -22,7 +22,8 @@ func (d *AppDelivery) Search(ctx context.Context, request api.SearchRequestObjec
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	resp, err := usecase.Search(*request.Body)
 	if err != nil {
-		return api.Search200JSONResponse{}, nil
+		d.log.Error(err.Error())
+		return api.Search500JSONResponse{InternalErrorResponseJSONResponse: api.InternalErrorResponseJSONResponse{Message: "internal error"}}, nil
 	}
 
 	return api.Search200JSONResponse(*resp), nil
@@ -33,7 +34,7 @@ func (d *AppDelivery) GetDiagnosticInfo(ctx context.Context, request api.GetDiag
 	resp, err := usecase.GetDiagnosticInfo(*request.Body)
 	if err != nil {
 		d.log.Error(err.Error())
-		return api.GetDiagnosticInfo200JSONResponse{}, nil
+		return api.GetDiagnosticInfo500JSONResponse{InternalErrorResponseJSONResponse: api.InternalErrorResponseJSONResponse{Message: "internal error"}}, nil
 	}
 
 	return api.GetDiagnosticInfo200JSONResponse(*resp), nil
