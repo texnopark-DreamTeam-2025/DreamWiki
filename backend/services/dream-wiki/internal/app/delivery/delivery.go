@@ -44,7 +44,8 @@ func (d *AppDelivery) IndexatePage(ctx context.Context, request api.IndexatePage
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	resp, err := usecase.IndexatePage(*request.Body)
 	if err != nil {
-		return api.IndexatePage200JSONResponse{}, nil
+		d.log.Error(err.Error())
+		return api.IndexatePage500JSONResponse{InternalErrorResponseJSONResponse: api.InternalErrorResponseJSONResponse{Message: "internal error"}}, nil
 	}
 
 	return api.IndexatePage200JSONResponse(*resp), nil

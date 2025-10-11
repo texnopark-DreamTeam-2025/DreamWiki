@@ -87,7 +87,7 @@ func (r *AppRepositoryImpl) nextResultSet(result result.Result) bool {
 	return ok
 }
 
-func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]models.ParagraphWithEmbedding, error) {
+func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]api.SearchResultItem, error) {
 	// yql := `
 	// 	$K = 20;
 	// 	$TargetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
@@ -113,7 +113,7 @@ func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local
 	for i := range queryEmbedding {
 		embeddingValues[i] = types.FloatValue(queryEmbedding[i])
 	}
-	//yqlEmbedding := types.ListValue(embeddingValues...)
+	// yqlEmbedding := types.ListValue(embeddingValues...)
 
 	// result, err := r.execute(yql,
 	// 	table.ValueParam("$queryEmbedding", yqlEmbedding),
@@ -130,21 +130,16 @@ func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local
 	if ok := r.nextResultSet(result); !ok {
 		return nil, fmt.Errorf("no result set")
 	}
-	rowCount := result.CurrentResultSet().RowCount()
-	if rowCount != 1 {
-		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
-		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
-	}
-	searchResult := make([]models.ParagraphWithEmbedding, 0)
+	searchResult := make([]api.SearchResultItem, 0)
 	for result.NextRow() {
-		fmt.Println("row here")
 		err = result.Scan(&retrievedPageID, &title, &pageContent)
 		if err != nil {
 			return nil, err
 		}
-		searchResult = append(searchResult, models.ParagraphWithEmbedding{
-			PageID:  retrievedPageID,
-			Content: pageContent,
+		searchResult = append(searchResult, api.SearchResultItem{
+			PageId:      retrievedPageID,
+			Title:       title,
+			Description: pageContent,
 		})
 	}
 
@@ -155,6 +150,7 @@ func (r *AppRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error
 	yql := `
 	SELECT
 		page_id,
+		title,
 		content
 	FROM Page WHERE page_id=$pageID;
 	`
@@ -175,9 +171,10 @@ func (r *AppRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error
 	}
 
 	var retrievedPageID uuid.UUID
+	var title string
 	var pageContent string
 	for result.NextRow() {
-		err = result.Scan(&retrievedPageID, &pageContent)
+		err = result.Scan(&retrievedPageID, &title, &pageContent)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +183,7 @@ func (r *AppRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error
 	return &api.Page{
 		PageId:  retrievedPageID,
 		Content: pageContent,
-		Title:   "Заголовок страницы",
+		Title:   title,
 	}, nil
 }
 

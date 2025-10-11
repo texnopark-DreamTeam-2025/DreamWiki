@@ -66,6 +66,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/V1IndexatePageResponse'
+        '500':
+          $ref: '#/components/responses/InternalErrorResponse'
 
   /v1/fetch-from-external-source:
     post:
