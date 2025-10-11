@@ -62,6 +62,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/V1IndexatePageResponse'
+  
+  /v1/fetch-from-external-source:
+    post:
+      summary: Удалить все старые pages, запросить страницы с yandex wiki + INSERT
+      operationId: fetchFromExternalSource
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
 
 components:
   schemas:

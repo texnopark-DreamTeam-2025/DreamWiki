@@ -203,3 +203,23 @@ func (r *AppRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEm
 
 	return nil
 }
+
+func (r *AppRepositoryImpl) DeletePage() error {
+	yql := `
+		DELETE FROM Paragraph;
+		DELETE FROM Page;
+	`
+
+	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters())
+	if err != nil {
+		return err
+	}
+	err = result.Err()
+	if err != nil {
+		return err
+	}
+	defer result.Close()
+
+	r.log.Info("All pages and paragraphs deleted successfully")
+	return nil
+}

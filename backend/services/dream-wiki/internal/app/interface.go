@@ -1,9 +1,11 @@
 package app
 
 import (
+	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/usecase"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/local_model"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
@@ -13,10 +15,11 @@ var (
 )
 
 type AppRepository interface {
-	Search(query string) ([]models.SearchResult, error)
-	RetrievePageByID(pageID string) (*api.Page, error)
-	RemovePageIndexation(pageID string) error
+	SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]models.ParagraphWithEmbedding, error)
+	RetrievePageByID(pageID uuid.UUID) (*api.Page, error)
+	RemovePageIndexation(pageID uuid.UUID) error
 	AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error
+	DeletePage() error
 }
 
 type AppUsecase interface {

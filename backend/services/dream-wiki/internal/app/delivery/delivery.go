@@ -48,3 +48,9 @@ func (d *AppDelivery) IndexatePage(ctx context.Context, request api.IndexatePage
 
 	return api.IndexatePage200JSONResponse(*resp), nil
 }
+
+func (d *AppDelivery) FetchFromExternalSource(ctx context.Context, request api.FetchFromExternalSourceRequestObject) (api.FetchFromExternalSourceResponseObject, error) {
+	// usecase:= usecase.NewAppUsecaseImpl(ctx, d.deps)
+	var resp map[string]interface{}
+	return api.FetchFromExternalSource200JSONResponse(resp), nil
+}
