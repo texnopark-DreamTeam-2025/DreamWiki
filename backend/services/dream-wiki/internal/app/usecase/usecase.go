@@ -95,3 +95,16 @@ func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 		PageId: req.PageId,
 	}, nil
 }
+
+func (u *AppUsecaseImpl) FetchFromExternalSource() (*api.V1FetchFromExternalSourceResponse, error) {
+	repo := repository.StartTransaction(u.ctx, u.deps)
+	defer repo.Rollback()
+
+	// удаляем все pages и paragraphs
+	err := repo.DeleteAllPages()
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}

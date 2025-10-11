@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: Yandex Wiki API Client
+  description: Клиент для работы с API Яндекс Вики
+  version: 1.0.0
+
+servers:
+  - url: https://api.wiki.yandex.net
+    description: Yandex Wiki API server
+
+paths:
+  /v1/pages:
+    get:
+      summary: Получить страницу по slug
+      description: Возвращает содержимое страницы по её slug
+      operationId: getPage
+      tags:
+        - Pages
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: OAuth токен в формате "OAuth <token>"
+          schema:
+            type: string
+          example: "OAuth y0__xCdfgdfg342_FGDFGFDfdjgd_dfgdfgdfg_dkfgjdkfgfdj"
+        - name: X-Cloud-Org-Id
+          in: header
+          required: true
+          description: Идентификатор организации Yandex Cloud
+          schema:
+            type: string
+          example: "bpffjdfgfdfg843r"
+        - name: slug
+          in: query
+          required: true
+          description: Slug страницы
+          schema:
+            type: string
+          example: homepage
+        - name: fields
+          in: query
+          required: false
+          description: Дополнительные поля (content, attributes, breadcrumbs)
+          schema:
+            type: string
+          example: "content,attributes"
+      responses:
+        '200':
+          description: Успешный ответ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1PageResponse'
+        '401':
+          description: Не авторизован
+        '404':
+          description: Страница не найдена
+        '500':
+          description: Внутренняя ошибка сервера
+
+components:
+  schemas:
+    V1PageResponse:
+      type: object
+      required:
+        - id
+        - page_type
+        - slug
+        - title
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID страницы
+        page_type:
+          type: string
+          enum: [page, grid, cloud_page, wysiwyg, template]
+          description: Тип страницы
+        slug:
+          type: string
+          description: Slug страницы
+        title:
+          type: string
+          description: Заголовок страницы
+        content:
+          type: string
+          description: Содержимое страницы. Укажите content в fields
+        attributes:
+          $ref: '#/components/schemas/PageAttributes'
+          description: Атрибуты страницы. Укажите attributes в fields
+
+    PageAttributes:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+          description: Дата создания
+        modified_at:
+          type: string
+          format: date-time
+          description: Дата изменения
+        is_readonly:
+          type: boolean
+          description: Только для чтения
+        comments_count:
+          type: integer
+          description: Количество комментариев
+        comments_enabled:
+          type: boolean
+          description: Включены ли комментарии

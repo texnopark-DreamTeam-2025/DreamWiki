@@ -19,7 +19,7 @@ type AppRepository interface {
 	RetrievePageByID(pageID uuid.UUID) (*api.Page, error)
 	RemovePageIndexation(pageID uuid.UUID) error
 	AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error
-	DeletePage() error
+	DeleteAllPages() error
 }
 
 type AppUsecase interface {

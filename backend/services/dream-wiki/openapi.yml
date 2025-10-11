@@ -73,13 +73,19 @@ paths:
     post:
       summary: Удалить все старые pages, запросить страницы с yandex wiki + INSERT
       operationId: fetchFromExternalSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1FetchFromExternalSourceRequest'
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/V1FetchFromExternalSourceResponse'
 
 components:
   schemas:
@@ -136,6 +142,17 @@ components:
           format: uuid
       required:
         - page_id
+    
+    V1FetchFromExternalSourceRequest:
+      type: object
+      properties:
+        page_url:
+          type: string
+      required:
+        - page_url
+
+    V1FetchFromExternalSourceResponse:
+      type: object
 
     SearchResultItem:
       type: object

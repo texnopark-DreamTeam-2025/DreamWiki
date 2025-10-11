@@ -231,7 +231,7 @@ func (r *AppRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEm
 	return nil
 }
 
-func (r *AppRepositoryImpl) DeletePage() error {
+func (r *AppRepositoryImpl) DeleteAllPages() error {
 	yql := `
 		DELETE FROM Paragraph;
 		DELETE FROM Page;

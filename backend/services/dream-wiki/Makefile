@@ -9,6 +9,8 @@ generate:
 	oapi-codegen --config=oapi-codegen.yml openapi.yml
 	@echo "==> Generating Inference client code..."
 	oapi-codegen --config=oapi-codegen-inference.yml ../../services/inference/openapi.yml
+	@echo "==> Generating Yandex Wiki Client..."
+	oapi-codegen --config=oapi-codegen-ywiki.yml openapi-ywiki.yml
 
 # Тестирование
 run_tests:
