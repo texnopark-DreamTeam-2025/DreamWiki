@@ -1,11 +1,13 @@
-import { apiFetchPOST, type FetchResponse } from "@/api/api";
+import { getDiagnosticInfo } from "@/client";
 
-export async function getPageInfo(pageId: string): Promise<FetchResponse<any>> {
-  const res = await apiFetchPOST("/v1/diagnostic-info/get", {
-    page_id: pageId,
+export async function getPageInfo(pageId: string) {
+  const res = await getDiagnosticInfo({
+    body: {
+      page_id: pageId,
+    },
   });
 
-  if (res.ok && res.data) {
+  if (!res.error && res.data) {
     return {
       ok: true,
       status: res.status,

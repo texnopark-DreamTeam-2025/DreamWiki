@@ -1,5 +1,5 @@
+import { search } from "@/client";
 import styles from "./Search.module.scss";
-import { search } from "@/api/Search/search";
 import CardInformation from "@/components/CardInformation/CardInformation";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -12,8 +12,8 @@ export default function Search() {
 
   const handleSearch = async () => {
     setLoading(true);
-    const res = await search(word);
-    setResults(res.ok && res.data?.result_items ? res.data.result_items : []);
+    const res = await search({ body: { query: word } });
+    setResults(!res.error && res.data?.result_items ? res.data.result_items : []);
     setLoading(false);
   };
 
