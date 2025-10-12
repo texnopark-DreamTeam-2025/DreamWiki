@@ -15,9 +15,16 @@ CREATE TABLE Paragraph (
 );
 
 CREATE TABLE IntegrationLogField (
-    field_id UUID NOT NULL,
-    integration_id TEXT NOT NULL,
+    field_id Serial8 NOT NULL,
+    integration_id TEXT NOT NULL, -- ywiki, github
     log_text TEXT NOT NULL,
     created_at TEXT NOT NULL,
     PRIMARY KEY (field_id)
+);
+
+CREATE TABLE User (
+    user_id UUID NOT NULL,
+    login TEXT NOT NULL,
+    password_hash_bcrypt TEXT NOT NULL,
+    PRIMARY KEY (user_id)
 );

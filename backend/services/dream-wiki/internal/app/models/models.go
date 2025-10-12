@@ -11,3 +11,9 @@ type ParagraphWithEmbedding struct {
 	Content    string
 	Embedding  local_model.Embedding
 }
+
+type User struct {
+	ID           uuid.UUID
+	Login        string
+	PasswordHash string
+}

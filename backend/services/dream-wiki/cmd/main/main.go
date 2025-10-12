@@ -14,6 +14,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	inference_client "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/inference"
+	auth_middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/auth"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/db"
@@ -57,6 +58,7 @@ func main() {
 
 	deps := deps.Deps{
 		DB:              dbTable,
+		Config:          appConfig,
 		Logger:          logger,
 		InferenceClient: inferenceClient,
 	}
@@ -83,6 +85,7 @@ func main() {
 		BaseRouter: apiRouter,
 	})
 
+	router.Use(auth_middleware.AuthMiddleware(&deps))
 	router.Use(middleware.LoggingMiddleware(logger))
 
 	port := ":" + appConfig.ServerPort

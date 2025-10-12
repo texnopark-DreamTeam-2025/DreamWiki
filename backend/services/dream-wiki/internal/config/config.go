@@ -13,6 +13,7 @@ type Config struct {
 	ServerPort      string
 	YDBDSN          string
 	InferenceAPIURL string
+	JWTSecretKey    string
 }
 
 func checkEnv(envVars []string) error {
@@ -36,6 +37,7 @@ func validateEnv() error {
 		"YDB_DSN",
 		"SERVER_PORT",
 		"INFERENCE_API_URL",
+		"JWT_SECRET_KEY",
 	})
 	if err != nil {
 		return err
@@ -43,11 +45,12 @@ func validateEnv() error {
 	return nil
 }
 
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+func getEnv(key string) string {
+	result := os.Getenv(key)
+	if result == "" {
+		panic("Invalid env key")
 	}
-	return defaultValue
+	return result
 }
 
 func LoadConfig() (*Config, error) {
@@ -57,10 +60,11 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		LogMode:         getEnv("LOG_MODE", "dev"),
-		ServerPort:      getEnv("SERVER_PORT", "8080"),
-		YDBDSN:          getEnv("YDB_DSN", "grpc://localhost:2136/?database=/local"),
-		InferenceAPIURL: getEnv("INFERENCE_API_URL", "http://localhost:8000"),
+		LogMode:         getEnv("LOG_MODE"),
+		ServerPort:      getEnv("SERVER_PORT"),
+		YDBDSN:          getEnv("YDB_DSN"),
+		InferenceAPIURL: getEnv("INFERENCE_API_URL"),
+		JWTSecretKey:    getEnv("JWT_SECRET_KEY"),
 	}, nil
 }
 func LogConfig(config *Config, log logger.Logger) {

@@ -252,3 +252,68 @@ func (r *AppRepositoryImpl) DeleteAllPages() error {
 	r.log.Info("All pages and paragraphs deleted successfully")
 	return nil
 }
+
+func (r *AppRepositoryImpl) GetUserByLogin(login string) (*models.User, error) {
+	yql := `
+	SELECT
+		user_id,
+		login,
+		password_hash_bcrypt
+	FROM User WHERE login=$login;
+	`
+
+	result, err := r.execute(yql, table.ValueParam("$login", types.TextValue(login)))
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	if ok := r.nextResultSet(result); !ok {
+		return nil, fmt.Errorf("no result set")
+	}
+
+	rowCount := result.CurrentResultSet().RowCount()
+	if rowCount != 1 {
+		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
+		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
+	}
+
+	var userID uuid.UUID
+	var userLogin string
+	var passwordHash string
+	for result.NextRow() {
+		err = result.Scan(&userID, &userLogin, &passwordHash)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &models.User{
+		ID:           userID,
+		Login:        userLogin,
+		PasswordHash: passwordHash,
+	}, nil
+}
+
+func (r *AppRepositoryImpl) CreateUser(user models.User) error {
+	yql := `
+		INSERT INTO User (user_id, login, password_hash_bcrypt)
+		VALUES ($userID, $login, $passwordHash);
+	`
+
+	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
+		table.ValueParam("$userID", types.UuidValue(user.ID)),
+		table.ValueParam("$login", types.TextValue(user.Login)),
+		table.ValueParam("$passwordHash", types.TextValue(user.PasswordHash)),
+	))
+	if err != nil {
+		return err
+	}
+	err = result.Err()
+	if err != nil {
+		return err
+	}
+	defer result.Close()
+
+	return nil
+}

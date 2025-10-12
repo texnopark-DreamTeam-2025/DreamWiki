@@ -1,7 +1,8 @@
 # Базовые команды
 run:
 	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://127.0.0.1:2136/?database=/local \
-	INFERENCE_API_URL=http://localhost:8082 go run cmd/main/main.go
+	INFERENCE_API_URL=http://localhost:8082 JWT_SECRET_KEY=secret \
+	_go run cmd/main/main.go
 
 # Генерация кода из OpenAPI спецификации
 generate:

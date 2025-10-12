@@ -9,10 +9,48 @@ servers:
     description: Development server
 
 paths:
+  /v1/login:
+    post:
+      summary: Аутентифицировать пользователя
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1LoginResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/logout:
+    post:
+      summary: Выйти из пользователя
+      operationId: logout
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
   /v1/search:
     post:
       summary: Поиск информации в базе знаний
       operationId: search
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -27,12 +65,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/V1SearchResponse"
         "500":
-          $ref: "#/components/responses/InternalErrorResponse"
+          $ref: "#/components/responses/ErrorResponse"
 
   /v1/diagnostic-info/get:
     post:
       summary: Диагностическая информация и исходный код последней ревизии
       operationId: getDiagnosticInfo
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -47,12 +87,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/V1DiagnosticInfoGetResponse"
         "500":
-          $ref: "#/components/responses/InternalErrorResponse"
+          $ref: "#/components/responses/ErrorResponse"
 
   /v1/indexate-page:
     post:
       summary: Принудительно проиндексировать страницу. Синхронная ручка
       operationId: indexatePage
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -67,12 +109,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/V1IndexatePageResponse"
         "500":
-          $ref: "#/components/responses/InternalErrorResponse"
+          $ref: "#/components/responses/ErrorResponse"
 
   /v1/ywiki/add-page:
     post:
       summary: Добавление новой страницы из ywiki
       operationId: ywikiAddPage
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -87,12 +131,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/V1YwikiAddPageResponse"
         "500":
-          $ref: "#/components/responses/InternalErrorResponse"
+          $ref: "#/components/responses/ErrorResponse"
 
   /v1/github/account-pr:
     post:
       summary: Обновить информацию по PR из github
       operationId: githubAccountPR
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -107,22 +153,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/V1GithubAccountPRResponse"
         "500":
-          $ref: "#/components/responses/InternalErrorResponse"
+          $ref: "#/components/responses/ErrorResponse"
 
   /v1/ywiki/fetch-all:
     post:
       summary: Выгрузить все известные статьи с Яндекс Wiki и обновить индексацию
       operationId: ywikiFetchAll
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: OK
         "500":
-          $ref: "#/components/responses/InternalErrorResponse"
+          $ref: "#/components/responses/ErrorResponse"
 
   /v1/integration-logs/get:
     post:
       summary: Получить логи указанной интеграции
       operationId: integrationLogsGet
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -137,10 +187,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/V1IntegrationLogsGetResponse"
         "500":
-          $ref: "#/components/responses/InternalErrorResponse"
+          $ref: "#/components/responses/ErrorResponse"
 
 components:
   schemas:
+    V1LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    V1LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+      required:
+        - token
+
     V1SearchRequest:
       type: object
       properties:
@@ -288,9 +357,15 @@ components:
         - github
 
   responses:
-    InternalErrorResponse:
-      description: 500 Internal error
+    ErrorResponse:
+      description: 4xx or 5xx code
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponseBody"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
