@@ -60,19 +60,12 @@ func (u *AppUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, er
 	}
 
 	// Generate a JWT token
-	token, err := u.generateJWTToken(0, req.Username) // TODO: get userID from user
+	token, err := u.generateJWTToken(user.ID.String(), req.Username)
 	if err != nil {
 		return nil, err
 	}
 
 	return &api.V1LoginResponse{Token: token}, nil
-}
-
-func (u *AppUsecaseImpl) Logout() error {
-	// In a stateless JWT implementation, logout is typically handled on the client side
-	// by deleting the token. Server side, we don't need to do anything.
-	// However, you could implement a token blacklist here if needed.
-	return nil
 }
 
 func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {

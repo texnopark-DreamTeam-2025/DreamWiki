@@ -25,18 +25,6 @@ func (d *AppDelivery) Login(ctx context.Context, request api.LoginRequestObject)
 	return api.Login200JSONResponse(*resp), nil
 }
 
-func (d *AppDelivery) Logout(ctx context.Context, request api.LogoutRequestObject) (api.LogoutResponseObject, error) {
-	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
-	err := usecase.Logout()
-	if err != nil {
-		d.log.Error(err.Error())
-		return api.Logout500JSONResponse{Message: "Internal server error"}, nil
-	}
-
-	return api.Logout200Response{}, nil
-}
-
-// YwikiFetchAll implements api.StrictServerInterface.
 func (d *AppDelivery) YwikiFetchAll(ctx context.Context, request api.YwikiFetchAllRequestObject) (api.YwikiFetchAllResponseObject, error) {
 	panic("unimplemented")
 }

@@ -294,26 +294,3 @@ func (r *AppRepositoryImpl) GetUserByLogin(login string) (*models.User, error) {
 		PasswordHash: passwordHash,
 	}, nil
 }
-
-func (r *AppRepositoryImpl) CreateUser(user models.User) error {
-	yql := `
-		INSERT INTO User (user_id, login, password_hash_bcrypt)
-		VALUES ($userID, $login, $passwordHash);
-	`
-
-	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
-		table.ValueParam("$userID", types.UuidValue(user.ID)),
-		table.ValueParam("$login", types.TextValue(user.Login)),
-		table.ValueParam("$passwordHash", types.TextValue(user.PasswordHash)),
-	))
-	if err != nil {
-		return err
-	}
-	err = result.Err()
-	if err != nil {
-		return err
-	}
-	defer result.Close()
-
-	return nil
-}
