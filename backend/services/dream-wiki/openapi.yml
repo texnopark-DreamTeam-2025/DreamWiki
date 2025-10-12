@@ -18,16 +18,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/V1SearchRequest'
+              $ref: "#/components/schemas/V1SearchRequest"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/V1SearchResponse'
-        '500':
-          $ref: '#/components/responses/InternalErrorResponse'
+                $ref: "#/components/schemas/V1SearchResponse"
+        "500":
+          $ref: "#/components/responses/InternalErrorResponse"
 
   /v1/diagnostic-info/get:
     post:
@@ -38,16 +38,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/V1DiagnosticInfoGetRequest'
+              $ref: "#/components/schemas/V1DiagnosticInfoGetRequest"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/V1DiagnosticInfoGetResponse'
-        '500':
-          $ref: '#/components/responses/InternalErrorResponse'
+                $ref: "#/components/schemas/V1DiagnosticInfoGetResponse"
+        "500":
+          $ref: "#/components/responses/InternalErrorResponse"
 
   /v1/indexate-page:
     post:
@@ -58,34 +58,86 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/V1IndexatePageRequest'
+              $ref: "#/components/schemas/V1IndexatePageRequest"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/V1IndexatePageResponse'
-        '500':
-          $ref: '#/components/responses/InternalErrorResponse'
+                $ref: "#/components/schemas/V1IndexatePageResponse"
+        "500":
+          $ref: "#/components/responses/InternalErrorResponse"
 
-  /v1/fetch-from-external-source:
+  /v1/ywiki/add-page:
     post:
-      summary: Удалить все старые pages, запросить страницы с yandex wiki + INSERT
-      operationId: fetchFromExternalSource
+      summary: Добавление новой страницы из ywiki
+      operationId: ywikiAddPage
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/V1FetchFromExternalSourceRequest'
+              $ref: "#/components/schemas/V1YwikiAddPageRequest"
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/V1FetchFromExternalSourceResponse'
+                $ref: "#/components/schemas/V1YwikiAddPageResponse"
+        "500":
+          $ref: "#/components/responses/InternalErrorResponse"
+
+  /v1/github/account-pr:
+    post:
+      summary: Обновить информацию по PR из github
+      operationId: githubAccountPR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1GithubAccountPRRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1GithubAccountPRResponse"
+        "500":
+          $ref: "#/components/responses/InternalErrorResponse"
+
+  /v1/ywiki/fetch-all:
+    post:
+      summary: Выгрузить все известные статьи с Яндекс Wiki и обновить индексацию
+      operationId: ywikiFetchAll
+      responses:
+        "200":
+          description: OK
+        "500":
+          $ref: "#/components/responses/InternalErrorResponse"
+
+  /v1/integration-logs/get:
+    post:
+      summary: Получить логи указанной интеграции
+      operationId: integrationLogsGet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1IntegrationLogsGetRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1IntegrationLogsGetResponse"
+        "500":
+          $ref: "#/components/responses/InternalErrorResponse"
 
 components:
   schemas:
@@ -104,7 +156,7 @@ components:
         result_items:
           type: array
           items:
-            $ref: '#/components/schemas/SearchResultItem'
+            $ref: "#/components/schemas/SearchResultItem"
       required:
         - result_items
 
@@ -121,7 +173,7 @@ components:
       type: object
       properties:
         page:
-          $ref: '#/components/schemas/Page'
+          $ref: "#/components/schemas/Page"
       required:
         - page
 
@@ -142,17 +194,53 @@ components:
           format: uuid
       required:
         - page_id
-    
-    V1FetchFromExternalSourceRequest:
+
+    V1YwikiAddPageRequest:
       type: object
       properties:
         page_url:
           type: string
+          format: uri
       required:
         - page_url
 
-    V1FetchFromExternalSourceResponse:
+    V1YwikiAddPageResponse:
       type: object
+
+    V1GithubAccountPRRequest:
+      type: object
+      properties:
+        pr_url:
+          type: string
+          format: uri
+      required:
+        - pr_url
+
+    V1GithubAccountPRResponse:
+      type: object
+
+    V1IntegrationLogsGetRequest:
+      type: object
+      properties:
+        integration_id:
+          $ref: "#/components/schemas/IntegrationID"
+        cursor:
+          type: string
+      required:
+        - integration_id
+
+    V1IntegrationLogsGetResponse:
+      type: object
+      properties:
+        cursor:
+          type: string
+        log_fields:
+          type: array
+          items:
+            type: string
+      required:
+        - cursor
+        - log_fields
 
     SearchResultItem:
       type: object
@@ -193,10 +281,16 @@ components:
       required:
         - message
 
+    IntegrationID:
+      type: string
+      enum:
+        - ywiki
+        - github
+
   responses:
     InternalErrorResponse:
       description: 500 Internal error
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponseBody'
+            $ref: "#/components/schemas/ErrorResponseBody"
