@@ -14,6 +14,11 @@ type AppDelivery struct {
 	log  logger.Logger
 }
 
+// YwikiFetchAll implements api.StrictServerInterface.
+func (d *AppDelivery) YwikiFetchAll(ctx context.Context, request api.YwikiFetchAllRequestObject) (api.YwikiFetchAllResponseObject, error) {
+	panic("unimplemented")
+}
+
 func NewAppDelivery(deps *deps.Deps) *AppDelivery {
 	return &AppDelivery{deps: deps, log: deps.Logger}
 }
@@ -51,8 +56,14 @@ func (d *AppDelivery) IndexatePage(ctx context.Context, request api.IndexatePage
 	return api.IndexatePage200JSONResponse(*resp), nil
 }
 
-func (d *AppDelivery) FetchFromExternalSource(ctx context.Context, request api.FetchFromExternalSourceRequestObject) (api.FetchFromExternalSourceResponseObject, error) {
-	// usecase:= usecase.NewAppUsecaseImpl(ctx, d.deps)
-	var resp map[string]interface{}
-	return api.FetchFromExternalSource200JSONResponse(resp), nil
+func (d *AppDelivery) GithubAccountPR(ctx context.Context, request api.GithubAccountPRRequestObject) (api.GithubAccountPRResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) IntegrationLogsGet(ctx context.Context, request api.IntegrationLogsGetRequestObject) (api.IntegrationLogsGetResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) YwikiAddPage(ctx context.Context, request api.YwikiAddPageRequestObject) (api.YwikiAddPageResponseObject, error) {
+	return api.YwikiAddPage500JSONResponse{InternalErrorResponseJSONResponse: api.InternalErrorResponseJSONResponse{Message: "not implemented"}}, nil
 }
