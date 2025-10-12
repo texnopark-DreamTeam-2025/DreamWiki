@@ -7,6 +7,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
+	inference_client "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/inference"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
@@ -22,10 +23,15 @@ func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) *AppUsecaseImpl {
 }
 
 func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
+	embedding, err := u.deps.InferenceClient.GenerateEmbeddingWithResponse(u.ctx,
+		inference_client.GenerateEmbeddingJSONRequestBody{Text: req.Query})
+	if err != nil {
+		return nil, err
+	}
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	results, err := repo.SearchByEmbedding(req.Query, make([]float32, 1))
+	results, err := repo.SearchByEmbedding(req.Query, embedding.JSON200.Embedding)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +44,6 @@ func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 			Description: result.Description,
 		}
 	}
-
-	u.log.Info("usecase is ready")
 
 	return &api.V1SearchResponse{
 		ResultItems: apiResults,
@@ -77,14 +81,20 @@ func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 	paragraphs := indexing.SplitPageToParagraphs(page.Content)
 
 	for i, paragraph := range paragraphs {
+		embedding, err := u.deps.InferenceClient.GenerateEmbeddingWithResponse(u.ctx,
+			inference_client.GenerateEmbeddingJSONRequestBody{Text: paragraph},
+		)
+		if err != nil {
+			return nil, err
+		}
 		paragraphWithEmbedding := models.ParagraphWithEmbedding{
 			PageID:     req.PageId,
 			LineNumber: i,
 			Content:    paragraph,
-			Embedding:  "", // Placeholder for embedding
+			Embedding:  embedding.JSON200.Embedding,
 		}
 
-		err := repo.AddIndexedParagraph(paragraphWithEmbedding)
+		err = repo.AddIndexedParagraph(paragraphWithEmbedding)
 		if err != nil {
 			return nil, err
 		}

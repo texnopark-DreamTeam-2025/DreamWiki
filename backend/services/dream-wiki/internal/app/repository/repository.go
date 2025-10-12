@@ -87,55 +87,57 @@ func (r *AppRepositoryImpl) nextResultSet(result result.Result) bool {
 	return ok
 }
 
+func embeddingToYDBList(embedding local_model.Embedding) types.Value {
+	embeddingValues := make([]types.Value, len(embedding))
+	for i := range embedding {
+		embeddingValues[i] = types.FloatValue(embedding[i])
+	}
+	return types.ListValue(embeddingValues...)
+}
+
 func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]api.SearchResultItem, error) {
-	// yql := `
-	// 	$K = 20;
-	// 	$TargetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
+	yql := `
+		$K = 20;
+		$targetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
 
-	// 	SELECT
-	// 		page_id,
-	// 		line_number,
-	// 		Knn::CosineDistance(embedding, $TargetEmbedding) As CosineDistance
-	// 	FROM Paragraph
-	// 	ORDER BY Knn::CosineDistance(embedding, $TargetEmbedding)
-	// 	LIMIT $K;
-	// `
-
-	temporaryYQL := `
 		SELECT
-			page_id,
-			title,
-			Unwrap(CAST(SUBSTRING(CAST(content AS String), NULL, 100) AS TEXT))
-		FROM Page
+			par.page_id,
+			page.title,
+			par.content,
+			Unwrap(Knn::CosineDistance(Unwrap(par.embedding), $targetEmbedding)) As CosineDistance
+		FROM Paragraph par
+		JOIN Page page USING(page_id)
+		ORDER BY Knn::CosineDistance(embedding, $targetEmbedding)
+		LIMIT $K;
 	`
 
 	embeddingValues := make([]types.Value, len(queryEmbedding))
 	for i := range queryEmbedding {
 		embeddingValues[i] = types.FloatValue(queryEmbedding[i])
 	}
-	// yqlEmbedding := types.ListValue(embeddingValues...)
-
-	// result, err := r.execute(yql,
-	// 	table.ValueParam("$queryEmbedding", yqlEmbedding),
-	// )
-	result, err := r.execute(temporaryYQL)
+	yqlEmbedding := embeddingToYDBList(queryEmbedding)
+	result, err := r.execute(yql,
+		table.ValueParam("$queryEmbedding", yqlEmbedding))
 	if err != nil {
 		return nil, err
 	}
 	defer result.Close()
 
-	var retrievedPageID uuid.UUID
-	var title string
-	var pageContent string
 	if ok := r.nextResultSet(result); !ok {
 		return nil, fmt.Errorf("no result set")
 	}
+
 	searchResult := make([]api.SearchResultItem, 0)
 	for result.NextRow() {
-		err = result.Scan(&retrievedPageID, &title, &pageContent)
+		var retrievedPageID uuid.UUID
+		var title string
+		var pageContent string
+		var distance float32
+		err = result.Scan(&retrievedPageID, &title, &pageContent, &distance)
 		if err != nil {
 			return nil, err
 		}
+		r.log.Debug("Distance is ", distance)
 		searchResult = append(searchResult, api.SearchResultItem{
 			PageId:      retrievedPageID,
 			Title:       title,
@@ -210,14 +212,14 @@ func (r *AppRepositoryImpl) RemovePageIndexation(pageID uuid.UUID) error {
 func (r *AppRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error {
 	yql := `
 		INSERT INTO Paragraph (page_id, line_number, content, embedding)
-		VALUES ($pageID, $lineNumber, $content, $embedding);
+		VALUES ($pageID, $lineNumber, $content, Untag(Knn::ToBinaryStringFloat($embedding), "FloatVector"));
 	`
 
 	result, err := r.tx.Execute(r.ctx, yql, table.NewQueryParameters(
 		table.ValueParam("$pageID", types.UuidValue(paragraph.PageID)),
 		table.ValueParam("$lineNumber", types.Int32Value(int32(paragraph.LineNumber))),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
-		table.ValueParam("$embedding", types.TextValue(paragraph.Embedding)),
+		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
 	))
 	if err != nil {
 		return err
