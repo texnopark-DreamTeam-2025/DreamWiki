@@ -22,21 +22,27 @@ export default function Search() {
     setLoading(true);
     try {
       const res = await search({ body: { query: word.trim() } });
-      
+
       if (res.error) {
         console.error("Ошибка поиска:", res.error);
-        showError("Ошибка поиска", "Не удалось выполнить поиск. Попробуйте еще раз.");
+        showError(
+          "Ошибка поиска",
+          "Не удалось выполнить поиск. Попробуйте еще раз."
+        );
         setResults([]);
         return;
       }
 
       const searchResults = res.data?.result_items || [];
       setResults(searchResults);
-      
+
       if (searchResults.length === 0) {
         showSuccess("Поиск завершен", "По вашему запросу ничего не найдено");
       } else {
-        showSuccess("Поиск завершен", `Найдено результатов: ${searchResults.length}`);
+        showSuccess(
+          "Поиск завершен",
+          `Найдено результатов: ${searchResults.length}`
+        );
       }
     } catch (error) {
       console.error("Ошибка при выполнении поиска:", error);
@@ -67,7 +73,7 @@ export default function Search() {
           className={styles.searchInput}
           disabled={loading}
         />
-        <button 
+        <button
           onClick={handleSearch}
           disabled={loading || !word.trim()}
           className={styles.searchButton}
@@ -105,7 +111,9 @@ export default function Search() {
       {!loading && word && results.length === 0 && (
         <div className={styles.noResults}>
           <p>По запросу "{word}" ничего не найдено</p>
-          <p>Попробуйте изменить запрос или использовать другие ключевые слова</p>
+          <p>
+            Попробуйте изменить запрос или использовать другие ключевые слова
+          </p>
         </div>
       )}
     </div>
