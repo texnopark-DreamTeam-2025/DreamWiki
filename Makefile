@@ -4,7 +4,7 @@ build-frontend:
 	cd frontend && make build
 
 start-all: build-frontend
-	docker compose -f infra/docker-compose/docker-compose.yaml --env-file .env up --build -d
+	docker compose -f infra/docker-compose/docker-compose.yaml --env-file=.env up --build -d
 
 down-all:
 	docker compose -f infra/docker-compose/docker-compose.yaml down

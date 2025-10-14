@@ -67,18 +67,12 @@ func main() {
 
 	router := mux.NewRouter()
 
-	router.Use(cors.CORS)
-
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
 	apiRouter := router.PathPrefix("/api").Subrouter()
-
-	apiRouter.HandleFunc("/v1/search", optionsHandler).Methods("OPTIONS")
-	apiRouter.HandleFunc("/v1/diagnostic-info/get", optionsHandler).Methods("OPTIONS")
-	apiRouter.HandleFunc("/v1/indexate-page", optionsHandler).Methods("OPTIONS")
 
 	strictHandler := api.NewStrictHandler(appDelivery, []api.StrictMiddlewareFunc{})
 	api.HandlerWithOptions(strictHandler, api.GorillaServerOptions{
@@ -87,11 +81,12 @@ func main() {
 
 	router.Use(auth_middleware.AuthMiddleware(&deps))
 	router.Use(middleware.LoggingMiddleware(logger))
+	routerWithCORS := cors.CORSMiddleware(router)
 
 	port := ":" + appConfig.ServerPort
 	server := &http.Server{
 		Addr:    port,
-		Handler: router,
+		Handler: routerWithCORS,
 	}
 
 	serverErr := make(chan error, 1)
@@ -128,8 +123,4 @@ func main() {
 
 		logger.Info("server stopped")
 	}
-}
-
-func optionsHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }

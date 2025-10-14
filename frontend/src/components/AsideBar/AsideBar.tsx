@@ -7,7 +7,6 @@ import {
   Gear,
   Clock,
   FileText,
-  Square,
   Person,
   Plus,
   ArrowRightFromSquare,

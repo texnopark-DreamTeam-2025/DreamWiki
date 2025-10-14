@@ -9,7 +9,7 @@ var allowedOrigins = map[string]bool{
 	"https://dreamwiki.zhugeo.ru": true,
 }
 
-func CORS(next http.Handler) http.Handler {
+func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
 		if origin != "" {
