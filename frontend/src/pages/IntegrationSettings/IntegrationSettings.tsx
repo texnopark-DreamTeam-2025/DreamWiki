@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { Select, Button } from "@gravity-ui/uikit";
+import { ywikiAddPage } from "@/client";
+import { useToast } from "@/hooks/useToast";
 import styles from "./IntegrationSettings.module.scss";
 
 export default function IntegrationSettings() {
+  const { showSuccess, showError } = useToast();
   const [selectedIntegration, setSelectedIntegration] = useState<string[]>([
     "GitHub",
   ]);
@@ -24,14 +27,29 @@ export default function IntegrationSettings() {
 
     setIsAddingPage(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      console.log("Добавляем страницу:", pageUrl);
+      const response = await ywikiAddPage({
+        body: {
+          page_url: pageUrl,
+        },
+      });
+
+      if (response.error) {
+        console.error("Ошибка добавления страницы:", response.error);
+        showError(
+          "Ошибка",
+          "Не удалось добавить страницу. Проверьте URL и попробуйте снова."
+        );
+        return;
+      }
+
+      console.log("Страница успешно добавлена:", response.data);
       setPageUrl("");
       // Увеличиваем счетчик проиндексированных страниц
       setIndexedPagesCount((prev) => prev + 1);
-      alert("Страница успешно добавлена!");
+      showSuccess("Успешно", "Страница успешно добавлена!");
     } catch (error) {
       console.error("Ошибка добавления страницы:", error);
+      showError("Ошибка", "Произошла ошибка при добавлении страницы.");
     } finally {
       setIsAddingPage(false);
     }
@@ -40,11 +58,13 @@ export default function IntegrationSettings() {
   const handleUpdateIndex = async () => {
     setIsUpdating(true);
     try {
+      // TODO: Здесь должен быть вызов API для обновления индекса
       await new Promise((resolve) => setTimeout(resolve, 3000));
       console.log("Обновляем индекс");
-      alert("Индекс успешно обновлен!");
+      showSuccess("Успешно", "Индекс успешно обновлен!");
     } catch (error) {
       console.error("Ошибка обновления индекса:", error);
+      showError("Ошибка", "Не удалось обновить индекс.");
     } finally {
       setIsUpdating(false);
     }
@@ -67,11 +87,13 @@ export default function IntegrationSettings() {
   const handleCheckSettings = async () => {
     setIsLoading(true);
     try {
+      // TODO: Здесь должен быть вызов API для проверки настроек
       await new Promise((resolve) => setTimeout(resolve, 1000));
       console.log("Проверяем настройки");
-      alert("Настройки корректны!");
+      showSuccess("Успешно", "Настройки корректны!");
     } catch (error) {
       console.error("Ошибка проверки:", error);
+      showError("Ошибка", "Не удалось проверить настройки.");
     } finally {
       setIsLoading(false);
     }
@@ -80,11 +102,13 @@ export default function IntegrationSettings() {
   const handleApplySettings = async () => {
     setIsLoading(true);
     try {
+      // TODO: Здесь должен быть вызов API для применения настроек
       await new Promise((resolve) => setTimeout(resolve, 1500));
       console.log("Применяем настройки");
-      alert("Настройки успешно применены!");
+      showSuccess("Успешно", "Настройки успешно применены!");
     } catch (error) {
       console.error("Ошибка применения:", error);
+      showError("Ошибка", "Не удалось применить настройки.");
     } finally {
       setIsLoading(false);
     }
