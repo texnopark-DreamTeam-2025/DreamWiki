@@ -231,8 +231,14 @@ func (r *appRepositoryImpl) RemovePageIndexation(pageID uuid.UUID) error {
 
 func (r *appRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error {
 	yql := `
-		INSERT INTO Paragraph (page_id, line_number, content, embedding)
-		VALUES ($pageID, $lineNumber, $content, Untag(Knn::ToBinaryStringFloat($embedding), "FloatVector"));
+		INSERT INTO Paragraph (page_id, line_number, content, embedding, anchor_link_slug)
+		VALUES (
+			$pageID,
+			$lineNumber,
+			$content,
+			Untag(Knn::ToBinaryStringFloat($embedding), "FloatVector"),
+			$anchorLineSlug
+		);
 	`
 
 	result, err := r.execute(yql,
@@ -240,6 +246,7 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEm
 		table.ValueParam("$lineNumber", types.Int32Value(int32(paragraph.LineNumber))),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
+		table.ValueParam("$anchorLineSlug", types.TextValue("")), // TODO
 	)
 	if err != nil {
 		return err
@@ -333,7 +340,7 @@ func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) (pageID 
 	SET
 		title=$title,
 		content=$content
-	WHERE ywiki_slug=$ywikiSlug
+	WHERE ywiki_slug=$yWikiSlug
 	RETURNING page_id;`
 
 	yql2 := `
@@ -375,6 +382,7 @@ func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) (pageID 
 	if err := r.scanSingleRowResultSet(result2, pageID); err != nil {
 		return nil, err
 	}
+	r.log.Debug("Inserted page with id ", pageID)
 
 	return pageID, nil
 }

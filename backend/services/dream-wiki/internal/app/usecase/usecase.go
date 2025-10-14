@@ -124,6 +124,10 @@ func (u *appUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
+	return u.indexatePageInTransaction(repo, req)
+}
+
+func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository, req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
 	err := repo.RemovePageIndexation(req.PageId)
 	if err != nil {
 		return nil, err
@@ -185,7 +189,7 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 		// 	return err
 		// }
 		// repo.Commit()
-		u.log.Errorf("Failed to fetch page from YWiki: %v", err)
+		u.log.Errorf("Failed to fetch page from YWiki: %w", err)
 		return err
 	}
 
@@ -197,7 +201,7 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	}
 	pageID, err := repo.UpsertPage(page, slug)
 	if err != nil {
-		u.log.Errorf("Failed to upsert page: %v", err)
+		u.log.Errorf("Failed to upsert page: %w", err)
 		return err
 	}
 
@@ -205,9 +209,9 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	indexateReq := api.V1IndexatePageRequest{
 		PageId: *pageID,
 	}
-	_, err = u.IndexatePage(indexateReq)
+	_, err = u.indexatePageInTransaction(repo, indexateReq)
 	if err != nil {
-		u.log.Errorf("Failed to indexate page: %v", err)
+		u.log.Errorf("Failed to indexate page: %w", err)
 		return err
 	}
 
