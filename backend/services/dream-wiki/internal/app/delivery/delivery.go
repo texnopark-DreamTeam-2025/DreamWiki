@@ -75,5 +75,10 @@ func (d *AppDelivery) IntegrationLogsGet(ctx context.Context, request api.Integr
 }
 
 func (d *AppDelivery) YwikiAddPage(ctx context.Context, request api.YwikiAddPageRequestObject) (api.YwikiAddPageResponseObject, error) {
-	return api.YwikiAddPage500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: "not implemented"}}, nil
+	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
+	err := usecase.FetchPageFromYWiki(request.Body.PageUrl)
+	if err != nil {
+		return nil, err
+	}
+	return api.YwikiAddPage200JSONResponse{}, nil
 }

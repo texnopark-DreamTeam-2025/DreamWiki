@@ -4,7 +4,8 @@ CREATE TABLE Page (
     title TEXT NOT NULL,
     ywiki_slug TEXT NOT NULL,
     content TEXT NOT NULL,
-    PRIMARY KEY (page_id)
+    PRIMARY KEY (page_id),
+    INDEX UNIQUE (ywiki_slug)
 );
 
 CREATE TABLE Paragraph (
@@ -20,7 +21,7 @@ CREATE TABLE IntegrationLogField (
     field_id Serial8 NOT NULL,
     integration_id TEXT NOT NULL, -- ywiki, github
     log_text TEXT NOT NULL,
-    created_at TEXT NOT NULL,
+    created_at TIMESTAMP64 NOT NULL, -- warning
     PRIMARY KEY (field_id)
 );
 

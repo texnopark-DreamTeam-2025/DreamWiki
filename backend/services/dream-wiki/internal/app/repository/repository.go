@@ -353,9 +353,8 @@ func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) error {
 	yql = `
 	INSERT INTO Page (page_id, title, ywiki_slug, content)
 	SELECT $pageID, $title, $yWikiSlug, $content
-	WHERE NOT EXISTS (
-		SELECT 1 FROM Page WHERE ywiki_slug = $yWikiSlug
-	);
+	FROM Page
+	WHERE ywiki_slug = $yWikiSlug;
 	`
 
 	_, err = r.execute(yql,
@@ -378,7 +377,7 @@ func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
 
 func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error {
 	yql := `INSERT INTO IntegrationLogField (integration_id, log_text, created_at)
-	VALUES ($integrationID, $logText, NOW())`
+	VALUES ($integrationID, $logText, CurrentUtcDate())`
 
 	_, err := r.execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(string(integrationID))),

@@ -223,11 +223,7 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 }
 
 func (u *appUsecaseImpl) extractSlugFromURL(pageURL string) string {
-	// Parse URL and extract slug
-	// https://wiki.yandex.ru/homepage/required-notification/ -> required-notification
-	parts := strings.Split(strings.Trim(pageURL, "/"), "/")
-	if len(parts) > 0 {
-		return parts[len(parts)-1]
-	}
-	return ""
+	const prefix = "https://wiki.yandex.ru/"
+
+	return strings.TrimSuffix(strings.TrimPrefix(pageURL, prefix), "/")
 }

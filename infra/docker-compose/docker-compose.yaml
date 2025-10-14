@@ -36,6 +36,7 @@ services:
       - YDB_DSN=grpc://ydb:2136/?database=/local
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - YWIKI_TOKEN=${YWIKI_TOKEN}
+      - YANDEX_CLOUD_ORG_ID=${YANDEX_CLOUD_ORG_ID}
     ports:
       - "8081:8080"
     networks:
