@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AsideHeader, type MenuItem, FooterItem, type SubheaderMenuItem } from "@gravity-ui/navigation";
+import {
+  AsideHeader,
+  type MenuItem,
+  FooterItem,
+  type SubheaderMenuItem,
+} from "@gravity-ui/navigation";
 import {
   House,
   Magnifier,
@@ -125,7 +130,7 @@ export default function AsideBar({ children }: AsideBarProps) {
           item={{
             id: "logout",
             title: "Выйти",
-            icon:   ArrowRightFromSquare,
+            icon: ArrowRightFromSquare,
             onItemClick: () => {
               logout();
               navigate("/login");

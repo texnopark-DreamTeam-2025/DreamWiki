@@ -36,7 +36,7 @@ export default function IntegrationSettings() {
       setIsAddingPage(false);
     }
   };
-
+  
   const handleUpdateIndex = async () => {
     setIsUpdating(true);
     try {
