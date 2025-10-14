@@ -5,7 +5,12 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import { createConfig } from "./client/client";
-import { ThemeProvider } from "@gravity-ui/uikit";
+import {
+  ThemeProvider,
+  ToasterComponent,
+  ToasterProvider,
+} from "@gravity-ui/uikit";
+import { toaster } from "@gravity-ui/uikit/toaster-singleton";
 import { client } from "./client/client.gen.ts";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
 
@@ -20,9 +25,12 @@ client.setConfig(
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider theme="light">
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <ToasterProvider toaster={toaster}>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+        <ToasterComponent />
+      </ToasterProvider>
     </ThemeProvider>
   </StrictMode>
 );

@@ -6,6 +6,7 @@ import IntegrationSettings from "@/pages/IntegrationSettings";
 import Authorization from "@/pages/Authorization";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
+import { HomePage } from "@/pages/HomePage";
 
 function App() {
   return (
@@ -24,7 +25,7 @@ function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <div>Главная страница</div>
+                <HomePage />
               </ProtectedRoute>
             }
           />

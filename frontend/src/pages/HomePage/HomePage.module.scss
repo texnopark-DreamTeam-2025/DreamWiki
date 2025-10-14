@@ -1,0 +1,28 @@
+.homePage {
+  padding: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+
+  h1 {
+    margin-bottom: 16px;
+    color: var(--g-color-text-primary);
+  }
+
+  p {
+    margin-bottom: 32px;
+    color: var(--g-color-text-secondary);
+  }
+}
+
+.toastExamples {
+  h3 {
+    margin-bottom: 16px;
+    color: var(--g-color-text-primary);
+  }
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
