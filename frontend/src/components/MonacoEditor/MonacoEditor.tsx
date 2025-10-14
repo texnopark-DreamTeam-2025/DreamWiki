@@ -1,0 +1,88 @@
+import { Editor } from "@monaco-editor/react";
+import { useState, useEffect } from "react";
+import styles from "./MonacoEditor.module.scss";
+
+interface MonacoEditorProps {
+  value: string;
+  onChange?: (value: string | undefined) => void;
+  language?: string;
+  height?: string;
+  readOnly?: boolean;
+  theme?: "light" | "dark";
+}
+
+export const MonacoEditor = ({
+  value,
+  onChange,
+  language = "markdown",
+  height = "400px",
+  readOnly = false,
+  theme = "light",
+}: MonacoEditorProps) => {
+  const [isEditorReady, setIsEditorReady] = useState(false);
+
+  useEffect(() => {
+    // Настройка Monaco Editor после загрузки
+    if (isEditorReady) {
+      import("monaco-editor").then((monaco) => {
+        // Базовые настройки для TypeScript/JavaScript
+        monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+          noSemanticValidation: true,
+          noSyntaxValidation: false,
+        });
+      });
+    }
+  }, [isEditorReady]);
+
+  const handleEditorDidMount = () => {
+    setIsEditorReady(true);
+  };
+
+  return (
+    <div className={styles.editorContainer}>
+      <Editor
+        height={height}
+        language={language}
+        value={value}
+        onChange={onChange}
+        onMount={handleEditorDidMount}
+        theme={theme === "dark" ? "vs-dark" : "vs"}
+        options={{
+          readOnly,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          wordWrap: "on",
+          lineNumbers: "on",
+          glyphMargin: false,
+          folding: true,
+          lineDecorationsWidth: 10,
+          lineNumbersMinChars: 3,
+          fontSize: 14,
+          fontFamily:
+            'JetBrains Mono, Monaco, Consolas, "Courier New", monospace',
+          automaticLayout: true,
+          contextmenu: true,
+          selectOnLineNumbers: true,
+          roundedSelection: false,
+          cursorStyle: "line",
+          cursorWidth: 2,
+          renderWhitespace: "boundary",
+          smoothScrolling: true,
+          quickSuggestions: {
+            other: true,
+            comments: false,
+            strings: false,
+          },
+          parameterHints: {
+            enabled: true,
+          },
+          suggestOnTriggerCharacters: true,
+          acceptSuggestionOnEnter: "on",
+          tabCompletion: "on",
+          wordBasedSuggestions: "currentDocument",
+        }}
+        loading={<div className={styles.loading}>Загрузка редактора...</div>}
+      />
+    </div>
+  );
+};

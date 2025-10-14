@@ -17,6 +17,8 @@ import { FileText, ChartColumn, Clock } from "@gravity-ui/icons";
 // import { indexatePage, type V1DiagnosticInfoGetResponse } from "@/client"; // TODO: раскомментировать когда бэк заработает
 import { type V1DiagnosticInfoGetResponse } from "@/client";
 import { TreeNavigation } from "@/components/TreeNavigation";
+import { MonacoEditor } from "@/components/MonacoEditor";
+import { useToast } from "@/hooks/useToast";
 import styles from "./Document.module.scss";
 // MOCK DATA - удалить когда бэк заработает
 import {
@@ -31,6 +33,7 @@ type TabId = "content" | "diagnostics" | "history" | "statistics";
 
 export default function Document() {
   const { id } = useParams<{ id: string }>();
+  const { showSuccess, showError } = useToast();
   const [page, setPage] = useState<V1DiagnosticInfoGetResponse | undefined>(
     undefined
   );
@@ -62,6 +65,7 @@ export default function Document() {
         setPage(pageData);
       } catch (error) {
         console.error("Ошибка загрузки данных:", error);
+        showError("Ошибка загрузки", "Не удалось загрузить данные страницы");
       } finally {
         setLoading(false);
       }
@@ -139,10 +143,13 @@ export default function Document() {
 
                         // MOCK - используем функцию из mockData
                         await mockIndexPage(id!);
-                        alert("Страница успешно проиндексирована!");
+                        showSuccess("Успешно", "Страница проиндексирована");
                       } catch (error) {
                         console.error("Ошибка индексации:", error);
-                        alert("Ошибка при индексации страницы");
+                        showError(
+                          "Ошибка",
+                          "Не удалось проиндексировать страницу"
+                        );
                       }
                     }}
                   >
@@ -150,7 +157,15 @@ export default function Document() {
                   </Button>
                 </div>
                 <h1 className={styles.contentTitle}>{page.page.title}</h1>
-                <div className={styles.contentBody}>{page.page.content}</div>
+                <div className={styles.monacoContainer}>
+                  <MonacoEditor
+                    value={page.page.content || ""}
+                    language="markdown"
+                    height="100%"
+                    readOnly={true}
+                    theme="light"
+                  />
+                </div>
               </div>
             </TabPanel>
 

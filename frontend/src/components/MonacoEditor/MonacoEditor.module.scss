@@ -1,0 +1,16 @@
+.editorContainer {
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--g-color-base-background);
+  height: 100%;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--g-color-text-secondary);
+  font-size: 14px;
+}
