@@ -12,6 +12,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
+	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/indexed"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
@@ -28,7 +29,7 @@ type (
 		GetUserByLogin(login string) (*models.User, error)
 		WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error
 		GetPageBySlug(yWikiSlug string) (*api.Page, error)
-		UpsertPage(page api.Page, ywikiSlug string) error
+		UpsertPage(page api.Page, ywikiSlug string) (pageID *uuid.UUID, err error)
 		DeletePageBySlug(yWikiSlug string) error
 	}
 
@@ -94,14 +95,32 @@ func (r *appRepositoryImpl) execute(yql string, opts ...table.ParameterOption) (
 	return
 }
 
-func (r *appRepositoryImpl) nextResultSet(result result.Result) bool {
+func (r *appRepositoryImpl) nextResultSet(result result.Result) error {
 	ok := result.NextResultSet(r.ctx)
 	if ok {
 		r.log.Debug("Result set has ", result.CurrentResultSet().RowCount(), " rows")
 	} else {
 		r.log.Debug("Result set requested, but not exists")
+		return fmt.Errorf("result set requested, but not exists")
 	}
-	return ok
+	return nil
+}
+
+func (r *appRepositoryImpl) scanSingleRowResultSet(result result.Result, scanTo ...indexed.RequiredOrOptional) error {
+	err := r.nextResultSet(result)
+	if err != nil {
+		return err
+	}
+	if result.CurrentResultSet().RowCount() != 1 {
+		return fmt.Errorf("expected 1 row in result set, got %d", result.CurrentResultSet().RowCount())
+	}
+	if result.NextRow() {
+		err := result.Scan(scanTo...)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func embeddingToYDBList(embedding models.Embedding) types.Value {
@@ -140,8 +159,8 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding model
 	}
 	defer result.Close()
 
-	if ok := r.nextResultSet(result); !ok {
-		return nil, fmt.Errorf("no result set")
+	if err = r.nextResultSet(result); err != nil {
+		return nil, err
 	}
 
 	searchResult := make([]api.SearchResultItem, 0)
@@ -180,28 +199,16 @@ func (r *appRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error
 	}
 	defer result.Close()
 
-	if ok := result.NextResultSet(r.ctx); !ok {
-		return nil, fmt.Errorf("no result set")
-	}
-	rowCount := result.CurrentResultSet().RowCount()
-	if rowCount != 1 {
-		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
-		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
-	}
-
 	var retrievedPageID uuid.UUID
 	var title string
-	var pageContent string
-	for result.NextRow() {
-		err = result.Scan(&retrievedPageID, &title, &pageContent)
-		if err != nil {
-			return nil, err
-		}
+	var content string
+	if err = r.scanSingleRowResultSet(result, &retrievedPageID, &title, &content); err != nil {
+		return nil, err
 	}
 
 	return &api.Page{
 		PageId:  retrievedPageID,
-		Content: pageContent,
+		Content: content,
 		Title:   title,
 	}, nil
 }
@@ -277,24 +284,11 @@ func (r *appRepositoryImpl) GetUserByLogin(login string) (*models.User, error) {
 	}
 	defer result.Close()
 
-	if ok := r.nextResultSet(result); !ok {
-		return nil, fmt.Errorf("no result set")
-	}
-
-	rowCount := result.CurrentResultSet().RowCount()
-	if rowCount != 1 {
-		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
-		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
-	}
-
 	var userID uuid.UUID
 	var userLogin string
 	var passwordHash string
-	for result.NextRow() {
-		err = result.Scan(&userID, &userLogin, &passwordHash)
-		if err != nil {
-			return nil, err
-		}
+	if err = r.scanSingleRowResultSet(result, &userID, &userLogin, &passwordHash); err != nil {
+		return nil, err
 	}
 
 	return &models.User{
@@ -319,27 +313,11 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 	}
 	defer result.Close()
 
-	if ok := r.nextResultSet(result); !ok {
-		return nil, fmt.Errorf("no result set")
-	}
-
-	rowCount := result.CurrentResultSet().RowCount()
-	if rowCount == 0 {
-		return nil, fmt.Errorf("page not found")
-	}
-	if rowCount != 1 {
-		r.log.Errorf("Invalid row count: %d, expected 1", rowCount)
-		return nil, fmt.Errorf("invalid row count: %d, expected 1", rowCount)
-	}
-
 	var pageID uuid.UUID
 	var title string
 	var content string
-	for result.NextRow() {
-		err = result.Scan(&pageID, &title, &content)
-		if err != nil {
-			return nil, err
-		}
+	if err = r.scanSingleRowResultSet(result, &pageID, &title, &content); err != nil {
+		return nil, err
 	}
 
 	return &api.Page{
@@ -349,38 +327,56 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 	}, nil
 }
 
-func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) error {
-	// First try to update the page
-	yql := `
-	UPDATE Page SET title=$title, content=$content WHERE ywiki_slug=$yWikiSlug;
-	`
+func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) (pageID *uuid.UUID, err error) {
+	yql1 := `
+	UPDATE Page
+	SET
+		title=$title,
+		content=$content
+	WHERE ywiki_slug=$ywikiSlug
+	RETURNING page_id;`
 
-	result, err := r.execute(yql,
+	yql2 := `
+	INSERT INTO Page(page_id, title, ywiki_slug, content)
+	VALUES (
+		RandomUUID(4),
+		$title,
+		$yWikiSlug,
+		$content
+	)
+	RETURNING page_id;`
+
+	pageID = new(uuid.UUID)
+
+	parameters := []table.ParameterOption{
 		table.ValueParam("$title", types.TextValue(page.Title)),
 		table.ValueParam("$content", types.TextValue(page.Content)),
 		table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)),
-	)
-	if err != nil {
-		return err
 	}
-	defer result.Close()
 
-	// Check if any rows were affected
-	// If not, insert a new page
-	yql = `
-	INSERT INTO Page (page_id, title, ywiki_slug, content)
-	SELECT $pageID, $title, $yWikiSlug, $content
-	FROM Page
-	WHERE ywiki_slug = $yWikiSlug;
-	`
+	result1, err := r.execute(yql1, parameters...)
+	if err != nil {
+		return nil, err
+	}
+	defer result1.Close()
+	if err = r.nextResultSet(result1); err != nil {
+		return nil, err
+	}
+	if result1.CurrentResultSet().RowCount() == 1 {
+		result1.NextRow()
+		err := result1.Scan(pageID)
+		if err != nil {
+			return nil, err
+		}
+		return pageID, nil
+	}
 
-	_, err = r.execute(yql,
-		table.ValueParam("$pageID", types.UuidValue(page.PageId)),
-		table.ValueParam("$title", types.TextValue(page.Title)),
-		table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)),
-		table.ValueParam("$content", types.TextValue(page.Content)),
-	)
-	return err
+	result2, err := r.execute(yql2, parameters...)
+	if err := r.scanSingleRowResultSet(result2, pageID); err != nil {
+		return nil, err
+	}
+
+	return pageID, nil
 }
 
 func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {

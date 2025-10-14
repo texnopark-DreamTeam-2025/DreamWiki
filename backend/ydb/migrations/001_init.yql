@@ -4,8 +4,7 @@ CREATE TABLE Page (
     title TEXT NOT NULL,
     ywiki_slug TEXT NOT NULL,
     content TEXT NOT NULL,
-    PRIMARY KEY (page_id),
-    INDEX UNIQUE (ywiki_slug)
+    PRIMARY KEY (page_id)
 );
 
 CREATE TABLE Paragraph (

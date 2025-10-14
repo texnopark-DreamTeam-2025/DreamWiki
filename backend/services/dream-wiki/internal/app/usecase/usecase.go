@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -192,22 +191,11 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 
 	// 3. Upsert page to repository
 	page := api.Page{
-		PageId:  uuid.New(),
-		Title:   pageResponse.Title,
-		Content: *pageResponse.Content,
+		Content:   *pageResponse.Content,
+		Title:     pageResponse.Title,
+		YwikiSlug: &pageResponse.Slug,
 	}
-
-	// Check if page already exists
-	_, err = repo.GetPageBySlug(slug)
-	if err != nil {
-		// Page doesn't exist, create new one
-		u.log.Infof("Page with slug %s doesn't exist, creating new one", slug)
-	} else {
-		// Page exists, we'll update it
-		u.log.Infof("Page with slug %s exists, updating", slug)
-	}
-
-	err = repo.UpsertPage(page, slug)
+	pageID, err := repo.UpsertPage(page, slug)
 	if err != nil {
 		u.log.Errorf("Failed to upsert page: %v", err)
 		return err
@@ -215,7 +203,7 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 
 	// 4. Indexate page using usecase function
 	indexateReq := api.V1IndexatePageRequest{
-		PageId: page.PageId,
+		PageId: *pageID,
 	}
 	_, err = u.IndexatePage(indexateReq)
 	if err != nil {

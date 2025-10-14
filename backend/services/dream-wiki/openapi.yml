@@ -321,6 +321,8 @@ components:
           format: uuid
         content:
           type: string
+        ywiki_slug:
+          type: string
         title:
           type: string
       required:
