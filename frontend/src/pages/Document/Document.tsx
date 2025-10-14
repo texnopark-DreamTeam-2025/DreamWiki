@@ -150,12 +150,7 @@ export default function Document() {
                   </Button>
                 </div>
                 <h1 className={styles.contentTitle}>{page.page.title}</h1>
-                <div
-                  className={styles.contentBody}
-                  dangerouslySetInnerHTML={{
-                    __html: page.page.content || "Содержимое отсутствует",
-                  }}
-                />
+                <div className={styles.contentBody}>{page.page.content}</div>
               </div>
             </TabPanel>
 
