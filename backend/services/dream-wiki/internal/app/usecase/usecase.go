@@ -3,9 +3,12 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -15,17 +18,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AppUsecaseImpl struct {
+type appUsecaseImpl struct {
 	ctx  context.Context
 	deps *deps.Deps
 	log  logger.Logger
 }
 
-func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) *AppUsecaseImpl {
-	return &AppUsecaseImpl{ctx: ctx, deps: deps, log: deps.Logger}
+var (
+	_ app.AppUsecase = (*appUsecaseImpl)(nil)
+)
+
+func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) app.AppUsecase {
+	return &appUsecaseImpl{ctx: ctx, deps: deps, log: deps.Logger}
 }
 
-func (u *AppUsecaseImpl) generateJWTToken(userID string, username string) (string, error) {
+func (u *appUsecaseImpl) generateJWTToken(userID string, username string) (string, error) {
 	// Create a new token object
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":       userID,
@@ -42,7 +49,7 @@ func (u *AppUsecaseImpl) generateJWTToken(userID string, username string) (strin
 	return tokenString, nil
 }
 
-func (u *AppUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, error) {
+func (u *appUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, error) {
 	// Get user from repository by login
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
@@ -67,7 +74,7 @@ func (u *AppUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, er
 	return &api.V1LoginResponse{Token: token}, nil
 }
 
-func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
+func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
 	embedding, err := u.deps.InferenceClient.GenerateEmbedding(u.ctx, req.Query)
 	if err != nil {
 		return nil, err
@@ -94,7 +101,7 @@ func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	}, nil
 }
 
-func (u *AppUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
+func (u *appUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
@@ -108,7 +115,7 @@ func (u *AppUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (
 	}, nil
 }
 
-func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
+func (u *appUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
@@ -148,15 +155,79 @@ func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 	}, nil
 }
 
-// func (u *AppUsecaseImpl) FetchFromExternalSource() (*api.V1FetchFromExternalSourceResponse, error) {
-// 	repo := repository.StartTransaction(u.ctx, u.deps)
-// 	defer repo.Rollback()
+func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
+	// 1. Parse URL, extract slug like:
+	// https://wiki.yandex.ru/homepage/required-notification/ -> required-notification
+	slug := u.extractSlugFromURL(pageURL)
 
-// 	// удаляем все pages и paragraphs
-// 	err := repo.DeleteAllPages()
-// 	if err != nil {
-// 		return nil, err
-// 	}
+	repo := repository.StartTransaction(u.ctx, u.deps)
+	defer repo.Rollback()
 
-// 	return nil, nil
-// }
+	// Write integration log
+	err := repo.WriteIntegrationLogField("ywiki", fmt.Sprintf("Fetching page with slug: %s", slug))
+	if err != nil {
+		u.log.Errorf("Failed to write integration log: %v", err)
+	}
+
+	// 2. Go to YWiki client from deps, fetch page
+	pageResponse, err := u.deps.YWikiClient.GetPage(u.ctx, slug)
+	if err != nil {
+		// TODO: If fetch return 404, delete page
+		// Will be done later
+		// err := repo.DeletePageBySlug(slug)
+		// if err != nil {
+		// 	u.log.Errorf("Failed to delete page with slug %s: %v", slug, err)
+		// 	return err
+		// }
+		// repo.Commit()
+		u.log.Errorf("Failed to fetch page from YWiki: %v", err)
+		return err
+	}
+
+	// 3. Upsert page to repository
+	page := api.Page{
+		PageId:  uuid.New(),
+		Title:   pageResponse.Title,
+		Content: *pageResponse.Content,
+	}
+
+	// Check if page already exists
+	_, err = repo.GetPageBySlug(slug)
+	if err != nil {
+		// Page doesn't exist, create new one
+		u.log.Infof("Page with slug %s doesn't exist, creating new one", slug)
+	} else {
+		// Page exists, we'll update it
+		u.log.Infof("Page with slug %s exists, updating", slug)
+	}
+
+	err = repo.UpsertPage(page, slug)
+	if err != nil {
+		u.log.Errorf("Failed to upsert page: %v", err)
+		return err
+	}
+
+	// 4. Indexate page using usecase function
+	indexateReq := api.V1IndexatePageRequest{
+		PageId: page.PageId,
+	}
+	_, err = u.IndexatePage(indexateReq)
+	if err != nil {
+		u.log.Errorf("Failed to indexate page: %v", err)
+		return err
+	}
+
+	// 5. Commit transaction
+	repo.Commit()
+	return nil
+}
+
+func (u *appUsecaseImpl) extractSlugFromURL(pageURL string) string {
+	// Parse URL and extract slug
+	// https://wiki.yandex.ru/homepage/required-notification/ -> required-notification
+	parts := strings.Split(strings.Trim(pageURL, "/"), "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return ""
+}
