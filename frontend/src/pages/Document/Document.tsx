@@ -1,95 +1,169 @@
 /**
- * TODO: УБРАТЬ MOCK ДАННЫЕ КОГДА БЭК ЗАРАБОТАЕТ
+ * Компонент для отображения документов
  *
- * Mock данные теперь находятся в ./mockData.ts
- * После интеграции с API нужно:
- * 1. Удалить импорт из mockData.ts
- * 2. Раскомментировать реальные API вызовы (getPageInfo, indexatePage)
- * 3. Заменить MOCK_* константы на реальные данные из API
- * 4. Удалить файл mockData.ts
+ * Использует реальные API вызовы:
+ * - getDiagnosticInfo для загрузки данных документа
+ *
+ * TODO: Заменить TREE_DATA на реальные данные дерева навигации из API
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-// import { getPageInfo } from "./getDocument"; // TODO: раскомментировать когда бэк заработает
-import { Button, TabProvider, TabList, Tab, TabPanel } from "@gravity-ui/uikit";
+import { TabProvider, TabList, Tab, TabPanel } from "@gravity-ui/uikit";
 import { FileText, ChartColumn, Clock } from "@gravity-ui/icons";
-// import { indexatePage, type V1DiagnosticInfoGetResponse } from "@/client"; // TODO: раскомментировать когда бэк заработает
-import { type V1DiagnosticInfoGetResponse } from "@/client";
+import { getDiagnosticInfo, type V1DiagnosticInfoGetResponse } from "@/client";
 import { TreeNavigation } from "@/components/TreeNavigation";
 import { MonacoEditor } from "@/components/MonacoEditor";
 import { useToast } from "@/hooks/useToast";
 import styles from "./Document.module.scss";
-// MOCK DATA - удалить когда бэк заработает
 import {
-  MOCK_TREE_DATA,
-  MOCK_INITIAL_SELECTED_NODE,
-  MOCK_INITIAL_EXPANDED_NODES,
-  mockFetchPageData,
-  mockIndexPage,
-} from "./mockData";
+  TREE_DATA,
+  INITIAL_SELECTED_NODE,
+  INITIAL_EXPANDED_NODES,
+} from "./treeData";
 
 type TabId = "content" | "diagnostics" | "history" | "statistics";
 
 export default function Document() {
   const { id } = useParams<{ id: string }>();
-  const { showSuccess, showError } = useToast();
+  const { showError } = useToast();
   const [page, setPage] = useState<V1DiagnosticInfoGetResponse | undefined>(
     undefined
   );
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>("content");
   const [selectedNode, setSelectedNode] = useState<string | null>(
-    MOCK_INITIAL_SELECTED_NODE
+    INITIAL_SELECTED_NODE
   );
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
-    MOCK_INITIAL_EXPANDED_NODES
+    INITIAL_EXPANDED_NODES
+  );
+
+  // Функция для переключения раскрытия узла
+  const toggleNodeExpansion = useCallback(
+    (nodeId: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      setExpandedNodes((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(nodeId)) {
+          newSet.delete(nodeId);
+        } else {
+          newSet.add(nodeId);
+        }
+        return newSet;
+      });
+    },
+    []
   );
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) {
+      setLoading(false);
+      return;
+    }
 
-    // MOCK - симуляция загрузки
+    // Флаг для предотвращения обновления состояния после размонтирования
+    let isCancelled = false;
+
+    // Предотвращаем мерцание, сбрасываем предыдущие данные только при смене id
+    setPage(undefined);
+    setLoading(true);
+
     const fetchData = async () => {
-      setLoading(true);
-
       try {
-        // TODO: Когда бэк заработает, заменить на:
-        // const res = await getPageInfo(id);
-        // if (res.data) {
-        //   setPage(res.data);
-        // }
+        // API вызов для загрузки данных страницы
+        const res = await getDiagnosticInfo({
+          body: { page_id: id },
+        });
 
-        // MOCK - используем функцию из mockData
-        const pageData = await mockFetchPageData(id);
-        setPage(pageData);
+        if (isCancelled) return; // Прерываем если компонент размонтирован
+
+        if (res.error) {
+          console.error("Ошибка API:", res.error);
+          showError("Ошибка загрузки", "Не удалось загрузить данные страницы");
+          return;
+        }
+
+        if (res.data) {
+          setPage(res.data);
+        } else {
+          showError("Ошибка", "Данные страницы не найдены");
+        }
       } catch (error) {
+        if (isCancelled) return; // Прерываем если компонент размонтирован
+
         console.error("Ошибка загрузки данных:", error);
-        showError("Ошибка загрузки", "Не удалось загрузить данные страницы");
+        showError("Ошибка загрузки", "Произошла ошибка при загрузке страницы");
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchData();
-  }, [id]); // Убрали mockData из зависимостей
 
-  if (loading) return <div style={{ padding: "20px" }}>Загрузка...</div>;
-  if (!page) return <div style={{ padding: "20px" }}>Данные не найдены</div>;
+    // Cleanup функция для отмены запроса
+    return () => {
+      isCancelled = true;
+    };
+  }, [id]); // Убираем showError из зависимостей, чтобы предотвратить лишние запросы
 
-  // Функция для переключения раскрытия узла
-  const toggleNodeExpansion = (nodeId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    setExpandedNodes((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(nodeId)) {
-        newSet.delete(nodeId);
-      } else {
-        newSet.add(nodeId);
-      }
-      return newSet;
-    });
-  };
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.sidebar}>
+          <h3 className={styles.sidebarTitle}>База знаний</h3>
+          <TreeNavigation
+            data={TREE_DATA}
+            selectedNode={selectedNode}
+            expandedNodes={expandedNodes}
+            onNodeSelect={setSelectedNode}
+            onNodeToggle={toggleNodeExpansion}
+          />
+        </div>
+        <div className={styles.mainContent}>
+          <div
+            style={{
+              padding: "40px",
+              textAlign: "center",
+              color: "var(--g-color-text-secondary)",
+            }}
+          >
+            Загрузка...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!page) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.sidebar}>
+          <h3 className={styles.sidebarTitle}>База знаний</h3>
+          <TreeNavigation
+            data={TREE_DATA}
+            selectedNode={selectedNode}
+            expandedNodes={expandedNodes}
+            onNodeSelect={setSelectedNode}
+            onNodeToggle={toggleNodeExpansion}
+          />
+        </div>
+        <div className={styles.mainContent}>
+          <div
+            style={{
+              padding: "40px",
+              textAlign: "center",
+              color: "var(--g-color-text-secondary)",
+            }}
+          >
+            Данные не найдены
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -97,7 +171,7 @@ export default function Document() {
       <div className={styles.sidebar}>
         <h3 className={styles.sidebarTitle}>База знаний</h3>
         <TreeNavigation
-          data={MOCK_TREE_DATA}
+          data={TREE_DATA}
           selectedNode={selectedNode}
           expandedNodes={expandedNodes}
           onNodeSelect={setSelectedNode}
@@ -134,27 +208,7 @@ export default function Document() {
             <TabPanel value="content">
               <div className={styles.contentPanel}>
                 <div className={styles.contentHeader}>
-                  <Button
-                    view="action"
-                    onClick={async () => {
-                      try {
-                        // TODO: Когда бэк заработает, заменить на:
-                        // await indexatePage({ body: { page_id: id! } });
-
-                        // MOCK - используем функцию из mockData
-                        await mockIndexPage(id!);
-                        showSuccess("Успешно", "Страница проиндексирована");
-                      } catch (error) {
-                        console.error("Ошибка индексации:", error);
-                        showError(
-                          "Ошибка",
-                          "Не удалось проиндексировать страницу"
-                        );
-                      }
-                    }}
-                  >
-                    Проиндексировать
-                  </Button>
+                  {/* Здесь можно добавить кнопки */}
                 </div>
                 <h1 className={styles.contentTitle}>{page.page.title}</h1>
                 <div className={styles.monacoContainer}>
