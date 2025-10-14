@@ -8,7 +8,6 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -18,17 +17,24 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type appUsecaseImpl struct {
-	ctx  context.Context
-	deps *deps.Deps
-	log  logger.Logger
-}
+type (
+	AppUsecase interface {
+		Search(req api.V1SearchRequest) (*api.V1SearchResponse, error)
+		GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error)
+		IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error)
+		Login(req api.V1LoginRequest) (*api.V1LoginResponse, error)
+		FetchPageFromYWiki(pageURL string) error
+		// AccountGitHubPullRequest(pullRequestURL string)error
+	}
 
-var (
-	_ app.AppUsecase = (*appUsecaseImpl)(nil)
+	appUsecaseImpl struct {
+		ctx  context.Context
+		deps *deps.Deps
+		log  logger.Logger
+	}
 )
 
-func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) app.AppUsecase {
+func NewAppUsecaseImpl(ctx context.Context, deps *deps.Deps) AppUsecase {
 	return &appUsecaseImpl{ctx: ctx, deps: deps, log: deps.Logger}
 }
 

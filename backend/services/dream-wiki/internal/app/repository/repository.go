@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 
 	"github.com/google/uuid"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
@@ -16,15 +15,33 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
-type appRepositoryImpl struct {
-	ctx     context.Context
-	tx      table.TransactionActor
-	log     logger.Logger
-	success chan bool
-	closed  int32
-}
+type (
+	AppRepository interface {
+		Commit()
+		Rollback()
 
-func StartTransaction(ctx context.Context, deps *deps.Deps) app.AppRepository {
+		SearchByEmbedding(query string, queryEmbedding models.Embedding) ([]api.SearchResultItem, error)
+		RetrievePageByID(pageID uuid.UUID) (*api.Page, error)
+		RemovePageIndexation(pageID uuid.UUID) error
+		AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error
+		DeleteAllPages() error
+		GetUserByLogin(login string) (*models.User, error)
+		WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error
+		GetPageBySlug(yWikiSlug string) (*api.Page, error)
+		UpsertPage(page api.Page, ywikiSlug string) error
+		DeletePageBySlug(yWikiSlug string) error
+	}
+
+	appRepositoryImpl struct {
+		ctx     context.Context
+		tx      table.TransactionActor
+		log     logger.Logger
+		success chan bool
+		closed  int32
+	}
+)
+
+func StartTransaction(ctx context.Context, deps *deps.Deps) AppRepository {
 	deps.Logger.Debug("starting YDB transaction...")
 	success := make(chan bool)
 	txRetriever := make(chan table.TransactionActor)
