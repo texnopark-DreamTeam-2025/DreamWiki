@@ -6,6 +6,7 @@ import (
 
 var allowedOrigins = map[string]bool{
 	"http://localhost:5173":       true,
+	"https://localhost:5173":      true,
 	"https://dreamwiki.zhugeo.ru": true,
 }
 

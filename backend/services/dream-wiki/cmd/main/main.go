@@ -17,6 +17,7 @@ import (
 	auth_middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/auth"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
+	panic_middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/panic"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/db"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
@@ -79,6 +80,7 @@ func main() {
 		BaseRouter: apiRouter,
 	})
 
+	router.Use(panic_middleware.PanicMiddleware(logger))
 	router.Use(auth_middleware.AuthMiddleware(&deps))
 	router.Use(middleware.LoggingMiddleware(logger))
 	routerWithCORS := cors.CORSMiddleware(router)
