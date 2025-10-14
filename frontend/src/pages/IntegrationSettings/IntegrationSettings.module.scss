@@ -1,0 +1,314 @@
+.container,
+.container * {
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.title {
+  color: #000000;
+  text-align: left;
+  font-family: "Inter-Regular", sans-serif;
+  font-size: 20px;
+  font-weight: 400;
+  position: relative;
+}
+
+.selectWrapper {
+  display: flex;
+  align-items: center;
+  width: 340px;
+}
+
+.pullRequestSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 593px;
+  position: relative;
+  overflow: hidden;
+}
+
+.wikiSection {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 593px;
+  position: relative;
+  overflow: hidden;
+}
+
+.indexStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  align-self: stretch;
+}
+
+.statusInfo {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.statusText {
+  color: var(--var-g-color-text-primary, rgba(0, 0, 0, 0.85));
+  font-family: var(--text-body-1-font-family, "Inter-Regular", sans-serif);
+  font-size: var(--text-body-1-font-size, 13px);
+  line-height: var(--text-body-1-line-height, 18px);
+  font-weight: var(--text-body-1-font-weight, 400);
+}
+
+.updateButton {
+  background: var(--var-g-color-base-generic, rgba(0, 0, 0, 0.05));
+  border-radius: var(--var-g-border-radius-m, 6px);
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--var-g-color-base-generic-hover, rgba(0, 0, 0, 0.1));
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.sectionTitle {
+  color: #000000;
+  text-align: left;
+  font-family: var(--osnovnoj-tekst-font-family, "Inter-Regular", sans-serif);
+  font-size: var(--osnovnoj-tekst-font-size, 15px);
+  line-height: var(--osnovnoj-tekst-line-height, 27px);
+  font-weight: var(--osnovnoj-tekst-font-weight, 400);
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.inputWrapper {
+  border-radius: var(--var-g-border-radius-m, 6px);
+  border-style: solid;
+  border-color: var(--var-g-color-line-generic-active, rgba(0, 0, 0, 0.3));
+  border-width: 1px;
+  padding: 2px 2px 2px 8px;
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 340px;
+  position: relative;
+}
+
+.inputContent {
+  padding: 0px 6px 0px 0px;
+  display: flex;
+  flex-direction: row;
+  gap: 2px;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 1;
+  height: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.selectText {
+  color: var(--var-g-color-text-primary, rgba(0, 0, 0, 0.85));
+  text-align: left;
+  font-family: var(--text-body-1-font-family, "Inter-Regular", sans-serif);
+  font-size: var(--text-body-1-font-size, 13px);
+  line-height: var(--text-body-1-line-height, 18px);
+  font-weight: var(--text-body-1-font-weight, 400);
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  border: none;
+  outline: none;
+  background: transparent;
+}
+
+// Стили для кнопок теперь используются из Gravity UI
+
+.parametersSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 654px;
+  position: relative;
+  overflow: hidden;
+}
+
+.sectionLabel {
+  color: #000000;
+  text-align: left;
+  font-family: var(--text-body-1-font-family, "Inter-Regular", sans-serif);
+  font-size: var(--text-body-1-font-size, 13px);
+  line-height: var(--text-body-1-line-height, 18px);
+  font-weight: var(--text-body-1-font-weight, 400);
+  position: relative;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.textareaWrapper {
+  border-style: solid;
+  border-color: #000000;
+  border-width: 1px;
+  align-self: stretch;
+  flex-shrink: 0;
+  height: 252px;
+  position: relative;
+  overflow: hidden;
+}
+
+.textarea {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 16px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: none;
+  background: transparent;
+}
+
+.placeholder {
+  flex-shrink: 0;
+  width: 320px;
+  height: 70px;
+  position: absolute;
+  left: 16px;
+  top: 56px;
+  object-fit: cover;
+  aspect-ratio: 320/70;
+}
+
+.actionsSection {
+  display: flex;
+  flex-direction: row;
+  gap: 22px;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+// Стили для кнопок действий теперь используются из Gravity UI
+
+.wikiSection {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 593px;
+  position: relative;
+  overflow: hidden;
+}
+
+.indexStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.statusInfo {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.statusText {
+  color: var(--var-g-color-text-secondary, rgba(0, 0, 0, 0.6));
+  text-align: left;
+  font-family: var(--text-body-1-font-family, "Inter-Regular", sans-serif);
+  font-size: var(--text-body-1-font-size, 13px);
+  line-height: var(--text-body-1-line-height, 18px);
+  font-weight: var(--text-body-1-font-weight, 400);
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
