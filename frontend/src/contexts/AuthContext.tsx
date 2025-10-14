@@ -9,6 +9,7 @@ import { client } from "@/client/client.gen";
 
 interface AuthContextType {
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -17,10 +18,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Check if there's a stored token on initial load
     const token = localStorage.getItem("authToken");
+
     if (token) {
       setIsAuthenticated(true);
       // Set the token in the client config
@@ -30,6 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
     }
+
+    setIsLoading(false);
   }, []);
 
   const login = (token: string) => {
@@ -48,12 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("authToken");
     // Clear the token from the client config
     client.setConfig({
-        headers: {}
+      headers: {},
     });
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
