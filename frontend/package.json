@@ -11,11 +11,13 @@
     "openapi-ts": "openapi-ts"
   },
   "dependencies": {
+    "@gravity-ui/icons": "^2.16.0",
+    "@gravity-ui/navigation": "^3.7.2",
     "@hey-api/client-axios": "^0.9.1",
     "@hey-api/openapi-ts": "^0.82.5",
     "axios": "^1.12.2",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-router-dom": "^7.9.3",
     "whatwg-fetch": "^3.6.20"
   },
@@ -23,8 +25,8 @@
     "@eslint/js": "^9.36.0",
     "@gravity-ui/uikit": "^7.23.0",
     "@types/node": "^24.6.0",
-    "@types/react": "^19.1.16",
-    "@types/react-dom": "^19.1.9",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@types/whatwg-fetch": "^0.0.33",
     "@vitejs/plugin-react": "^5.0.4",
     "eslint": "^9.36.0",
