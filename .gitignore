@@ -1,5 +1,4 @@
 .env
 .env.local
 .env.production
-codegen
 .vscode
