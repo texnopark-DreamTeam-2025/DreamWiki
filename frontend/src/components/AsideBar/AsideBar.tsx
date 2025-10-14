@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { AsideHeader, type MenuItem, FooterItem } from "@gravity-ui/navigation";
+import { AsideHeader, type MenuItem, FooterItem, type SubheaderMenuItem } from "@gravity-ui/navigation";
 import {
   House,
   Magnifier,
@@ -10,8 +10,10 @@ import {
   Square,
   Person,
   Plus,
+  ArrowRightFromSquare,
 } from "@gravity-ui/icons";
 import styles from "./AsideBar.module.scss";
+import { useAuth } from "@/contexts";
 
 interface AsideBarProps {
   children: React.ReactNode;
@@ -21,6 +23,7 @@ export default function AsideBar({ children }: AsideBarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [compact, setCompact] = useState(false);
+  const { isAuthenticated, logout } = useAuth();
 
   const logo = {
     text: "DreamWiki",
@@ -28,19 +31,7 @@ export default function AsideBar({ children }: AsideBarProps) {
     onClick: () => navigate("/"),
   };
 
-  const subheaderItems = [
-    {
-      item: {
-        id: "services",
-        title: "Все сервисы",
-        icon: Square,
-        current: location.pathname === "/services",
-        onItemClick: () => navigate("/services"),
-        qa: "services",
-        tooltipText: "Просмотр всех доступных сервисов",
-      },
-      enableTooltip: true,
-    },
+  const subheaderItems: SubheaderMenuItem[] = [
     {
       item: {
         id: "search",
@@ -57,53 +48,66 @@ export default function AsideBar({ children }: AsideBarProps) {
     },
   ];
 
-  const menuItems: MenuItem[] = [
-    {
-      id: "integrations",
-      title: "Настройка интеграций",
-      icon: Gear,
-      current: location.pathname === "/integration-settings",
-      onItemClick: () => navigate("/integration-settings"),
-      category: "Настройки",
-      qa: "integrations",
-      tooltipText: "Управление интеграциями с внешними сервисами",
-    },
-    {
-      id: "logs",
-      title: "Журнал интеграций",
-      icon: Clock,
-      current: location.pathname === "/logs",
-      onItemClick: () => navigate("/logs"),
-      category: "Настройки",
-      qa: "logs",
-      tooltipText: "История операций интеграций",
-    },
-    {
-      id: "drafts",
-      title: "Черновики",
-      icon: FileText,
-      current: location.pathname === "/drafts",
-      onItemClick: () => navigate("/drafts"),
-      category: "Контент",
-      qa: "drafts",
-      tooltipText: "Управление черновиками документов",
-    },
-    {
-      id: "divider",
-      title: "",
-      type: "divider",
-    },
-    {
-      id: "create-draft",
-      title: "Создать черновик",
-      icon: Plus,
-      type: "action",
-      onItemClick: () => navigate("/drafts/new"),
-      category: "Действия",
-      qa: "create-draft-button",
-      tooltipText: "Создать новый черновик документа",
-    },
-  ];
+  const menuItems: MenuItem[] = isAuthenticated
+    ? [
+        {
+          id: "integrations",
+          title: "Настройка интеграций",
+          icon: Gear,
+          current: location.pathname === "/integration-settings",
+          onItemClick: () => navigate("/integration-settings"),
+          category: "Настройки",
+          qa: "integrations",
+          tooltipText: "Управление интеграциями с внешними сервисами",
+        },
+        {
+          id: "logs",
+          title: "Журнал интеграций",
+          icon: Clock,
+          current: location.pathname === "/logs",
+          onItemClick: () => navigate("/logs"),
+          category: "Настройки",
+          qa: "logs",
+          tooltipText: "История операций интеграций",
+        },
+        {
+          id: "drafts",
+          title: "Черновики",
+          icon: FileText,
+          current: location.pathname === "/drafts",
+          onItemClick: () => navigate("/drafts"),
+          category: "Контент",
+          qa: "drafts",
+          tooltipText: "Управление черновиками документов",
+        },
+        {
+          id: "divider",
+          title: "",
+          type: "divider",
+        },
+        {
+          id: "create-draft",
+          title: "Создать черновик",
+          icon: Plus,
+          type: "action",
+          onItemClick: () => navigate("/drafts/new"),
+          category: "Действия",
+          qa: "create-draft-button",
+          tooltipText: "Создать новый черновик документа",
+        },
+      ]
+    : [
+        {
+          id: "authorization",
+          title: "Авторизация",
+          icon: Person,
+          current: location.pathname === "/login",
+          onItemClick: () => navigate("/login"),
+          category: "Аккаунт",
+          qa: "authorization",
+          tooltipText: "Вход в систему",
+        },
+      ];
 
   const renderFooter = () => (
     <>
@@ -117,16 +121,32 @@ export default function AsideBar({ children }: AsideBarProps) {
         compact={compact}
         bringForward={true}
       />
-      <FooterItem
-        item={{
-          id: "account",
-          title: "Account",
-          icon: Person,
-          onItemClick: () => navigate("/profile"),
-        }}
-        compact={compact}
-        bringForward={false}
-      />
+      {isAuthenticated ? (
+        <FooterItem
+          item={{
+            id: "logout",
+            title: "Выйти",
+            icon:   ArrowRightFromSquare,
+            onItemClick: () => {
+              logout();
+              navigate("/login");
+            },
+          }}
+          compact={compact}
+          bringForward={false}
+        />
+      ) : (
+        <FooterItem
+          item={{
+            id: "account",
+            title: "Account",
+            icon: Person,
+            onItemClick: () => navigate("/login"),
+          }}
+          compact={compact}
+          bringForward={false}
+        />
+      )}
     </>
   );
 

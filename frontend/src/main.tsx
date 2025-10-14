@@ -6,6 +6,7 @@ import App from "./App.tsx";
 import { createConfig } from "./client/client";
 import { ThemeProvider } from "@gravity-ui/uikit";
 import { client } from "./client/client.gen.ts";
+import { AuthProvider } from "./contexts/AuthContext.tsx";
 
 client.setConfig(createConfig({
   baseURL: import.meta.env.VITE_BASE_URL || "https://did.you.forget.to.add.vite.base.url.to.config/?",
@@ -14,7 +15,9 @@ client.setConfig(createConfig({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider theme="light">
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </ThemeProvider>
   </StrictMode>
 );

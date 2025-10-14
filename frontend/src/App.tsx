@@ -3,18 +3,54 @@ import AsideBar from "@/components/AsideBar";
 import SearchDone from "@/pages/SearchDone";
 import Document from "@/pages/Document/Document";
 import IntegrationSettings from "@/pages/IntegrationSettings";
+import Authorization from "@/pages/Authorization";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import PublicRoute from "@/components/PublicRoute";
 
 function App() {
   return (
     <Router>
       <AsideBar>
         <Routes>
-          <Route path="/" element={<div>Главная страница</div>} />
-          <Route path="/search-done" element={<SearchDone />} />
-          <Route path="/document/:id" element={<Document />} />
+          <Route
+            path="/login"
+            element={
+              <PublicRoute>
+                <Authorization />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <div>Главная страница</div>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/search-done"
+            element={
+              <ProtectedRoute>
+                <SearchDone />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/document/:id"
+            element={
+              <ProtectedRoute>
+                <Document />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/integration-settings"
-            element={<IntegrationSettings />}
+            element={
+              <ProtectedRoute>
+                <IntegrationSettings />
+              </ProtectedRoute>
+            }
           />
           <Route path="*" element={<div>Страница не найдена</div>} />
         </Routes>
