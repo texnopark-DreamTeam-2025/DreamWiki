@@ -1,5 +1,0 @@
-package: inference_client
-output: internal/inference/client.gen.go
-generate:
-  client: true
-  models: true

@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/local_model"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
@@ -87,7 +86,7 @@ func (r *AppRepositoryImpl) nextResultSet(result result.Result) bool {
 	return ok
 }
 
-func embeddingToYDBList(embedding local_model.Embedding) types.Value {
+func embeddingToYDBList(embedding models.Embedding) types.Value {
 	embeddingValues := make([]types.Value, len(embedding))
 	for i := range embedding {
 		embeddingValues[i] = types.FloatValue(embedding[i])
@@ -95,7 +94,7 @@ func embeddingToYDBList(embedding local_model.Embedding) types.Value {
 	return types.ListValue(embeddingValues...)
 }
 
-func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding local_model.Embedding) ([]api.SearchResultItem, error) {
+func (r *AppRepositoryImpl) SearchByEmbedding(query string, queryEmbedding models.Embedding) ([]api.SearchResultItem, error) {
 	yql := `
 		$K = 20;
 		$targetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);

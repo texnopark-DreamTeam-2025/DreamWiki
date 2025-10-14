@@ -10,7 +10,6 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
-	inference_client "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/inference"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"golang.org/x/crypto/bcrypt"
@@ -69,15 +68,14 @@ func (u *AppUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, er
 }
 
 func (u *AppUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
-	embedding, err := u.deps.InferenceClient.GenerateEmbeddingWithResponse(u.ctx,
-		inference_client.GenerateEmbeddingJSONRequestBody{Text: req.Query})
+	embedding, err := u.deps.InferenceClient.GenerateEmbedding(u.ctx, req.Query)
 	if err != nil {
 		return nil, err
 	}
 	repo := repository.StartTransaction(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	results, err := repo.SearchByEmbedding(req.Query, embedding.JSON200.Embedding)
+	results, err := repo.SearchByEmbedding(req.Query, embedding)
 	if err != nil {
 		return nil, err
 	}
@@ -127,9 +125,7 @@ func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 	paragraphs := indexing.SplitPageToParagraphs(page.Content)
 
 	for i, paragraph := range paragraphs {
-		embedding, err := u.deps.InferenceClient.GenerateEmbeddingWithResponse(u.ctx,
-			inference_client.GenerateEmbeddingJSONRequestBody{Text: paragraph},
-		)
+		embedding, err := u.deps.InferenceClient.GenerateEmbedding(u.ctx, paragraph)
 		if err != nil {
 			return nil, err
 		}
@@ -137,7 +133,7 @@ func (u *AppUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1Ind
 			PageID:     req.PageId,
 			LineNumber: i,
 			Content:    paragraph,
-			Embedding:  embedding.JSON200.Embedding,
+			Embedding:  embedding,
 		}
 
 		err = repo.AddIndexedParagraph(paragraphWithEmbedding)

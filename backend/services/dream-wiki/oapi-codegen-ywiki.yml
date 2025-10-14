@@ -1,5 +1,0 @@
-package: ywikiclient
-output: internal/ywiki/client.gen.go
-generate:
-  client: true
-  models: true

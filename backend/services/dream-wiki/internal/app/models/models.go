@@ -2,14 +2,15 @@ package models
 
 import (
 	"github.com/google/uuid"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/local_model"
 )
+
+type Embedding []float32
 
 type ParagraphWithEmbedding struct {
 	PageID     uuid.UUID
 	LineNumber int
 	Content    string
-	Embedding  local_model.Embedding
+	Embedding  Embedding
 }
 
 type User struct {

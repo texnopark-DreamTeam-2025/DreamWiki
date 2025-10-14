@@ -11,9 +11,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/inference_client"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
-	inference_client "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/inference"
 	auth_middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/auth"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
@@ -52,9 +53,14 @@ func main() {
 	dbTable := db.Table()
 
 	// Initialize inference client
-	inferenceClient, err := inference_client.NewClientWithResponses(appConfig.InferenceAPIURL)
+	inferenceClient, err := inference_client.NewInferenceClient(appConfig)
 	if err != nil {
 		logger.Fatalf("failed to initialize inference client: %v", err)
+	}
+
+	yWikiClient, err := ywiki_client.NewYWikiClient(appConfig)
+	if err != nil {
+		logger.Fatalf("failed to initialize ywiki client: %v", err)
 	}
 
 	deps := deps.Deps{
@@ -62,6 +68,7 @@ func main() {
 		Config:          appConfig,
 		Logger:          logger,
 		InferenceClient: inferenceClient,
+		YWikiClient:     yWikiClient,
 	}
 
 	appDelivery := delivery.NewAppDelivery(&deps)

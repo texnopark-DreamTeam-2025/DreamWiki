@@ -9,11 +9,13 @@ import (
 )
 
 type Config struct {
-	LogMode         string
-	ServerPort      string
-	YDBDSN          string
-	InferenceAPIURL string
-	JWTSecretKey    string
+	LogMode          string
+	ServerPort       string
+	YDBDSN           string
+	InferenceAPIURL  string
+	JWTSecretKey     string
+	YWikiToken       string
+	YandexCloudOrgID string
 }
 
 func checkEnv(envVars []string) error {
@@ -38,6 +40,8 @@ func validateEnv() error {
 		"SERVER_PORT",
 		"INFERENCE_API_URL",
 		"JWT_SECRET_KEY",
+		"YWIKI_TOKEN",
+		"YANDEX_CLOUD_ORG_ID",
 	})
 	if err != nil {
 		return err
@@ -60,19 +64,24 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return &Config{
-		LogMode:         getEnv("LOG_MODE"),
-		ServerPort:      getEnv("SERVER_PORT"),
-		YDBDSN:          getEnv("YDB_DSN"),
-		InferenceAPIURL: getEnv("INFERENCE_API_URL"),
-		JWTSecretKey:    getEnv("JWT_SECRET_KEY"),
+		LogMode:          getEnv("LOG_MODE"),
+		ServerPort:       getEnv("SERVER_PORT"),
+		YDBDSN:           getEnv("YDB_DSN"),
+		InferenceAPIURL:  getEnv("INFERENCE_API_URL"),
+		JWTSecretKey:     getEnv("JWT_SECRET_KEY"),
+		YWikiToken:       getEnv("YWIKI_TOKEN"),
+		YandexCloudOrgID: getEnv("YANDEX_CLOUD_ORG_ID"),
 	}, nil
 }
+
 func LogConfig(config *Config, log logger.Logger) {
+	// DO NOT include secrets in this slice, because logs can leak
 	loggedFields := []string{
 		"LOG_MODE",
 		"YDB_DSN",
 		"SERVER_PORT",
 		"INFERENCE_API_URL",
+		"YANDEX_CLOUD_ORG_ID",
 	}
 	fields := make([]any, 0, len(loggedFields)+1)
 	fields = append(fields, "config loaded")

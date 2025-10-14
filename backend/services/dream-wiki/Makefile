@@ -1,33 +1,26 @@
-# Базовые команды
-run:
+define setup_env
+	$(eval ENV_FILE := ../../../.env)
+	@echo "==> Load $(ENV_FILE)"
+	$(eval export $(shell sed 's/=.*//' $(ENV_FILE)))
+	$(eval include $(ENV_FILE))
+endef
+
+load-env:
+	$(call setup_env)
+
+run: load-env
 	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://127.0.0.1:2136/?database=/local \
 	INFERENCE_API_URL=http://localhost:8082 JWT_SECRET_KEY=secret \
 	go run cmd/main/main.go
 
-# Генерация кода из OpenAPI спецификации
 generate:
 	@echo "==> Generating server API code..."
-	oapi-codegen --config=oapi-codegen.yml openapi.yml
+	oapi-codegen --config=config/oapi-codegen.yml openapi.yml
 	@echo "==> Generating Inference client code..."
-	oapi-codegen --config=oapi-codegen-inference.yml ../../services/inference/openapi.yml
+	oapi-codegen --config=config/oapi-codegen-inference.yml ../../services/inference/openapi.yml
 	@echo "==> Generating Yandex Wiki Client..."
-	oapi-codegen --config=oapi-codegen-ywiki.yml openapi-ywiki.yml
-
-# Тестирование
-run_tests:
-	@echo "==> Running tests..."
-	go test -coverprofile coverage_raw.out -v ./...
-
-test: run_tests
-	@echo "==> Calculating coverage..."
-	grep -v "mock" coverage_raw.out > coverage.out
-	go tool cover -func=coverage.out
-	go tool cover -html=coverage.out -o=coverage.html
-	@echo "==> Done! Check dream-wiki/coverage.html file!"
-
-short_test:
-	go test -cover ./...
+	oapi-codegen --config=config/oapi-codegen-ywiki.yml config/openapi-ywiki.yml
 
 dev: generate run
 
-.PHONY: run test run_tests short_test dev generate
+.PHONY: run dev generate
