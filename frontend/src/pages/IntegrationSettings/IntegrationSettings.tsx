@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Select, Button } from "@gravity-ui/uikit";
 import { ywikiAddPage } from "@/client";
 import { useToast } from "@/hooks/useToast";
+import { MonacoEditor } from "@/components/MonacoEditor";
 import styles from "./IntegrationSettings.module.scss";
 
 export default function IntegrationSettings() {
@@ -16,6 +17,10 @@ export default function IntegrationSettings() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAddingPage, setIsAddingPage] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [configContent, setConfigContent] = useState<string>(`{
+  "token": "test",
+  "url": "http://localhost:8080"
+}`);
 
   const integrationOptions = [
     { value: "GitHub", content: "GitHub" },
@@ -209,14 +214,23 @@ export default function IntegrationSettings() {
 
       <div className={styles.parametersSection}>
         <div className={styles.sectionLabel}>Параметры</div>
-        <div className={styles.textareaWrapper}>
-          <textarea
-            className={styles.textarea}
-            defaultValue={`{
-  "token": "test",
-  "url": "http://localhost:8080"
-}`}
-            rows={15}
+        <div className={styles.editorWrapper}>
+          <MonacoEditor
+            value={configContent}
+            onChange={setConfigContent}
+            language="json"
+            height="400px"
+            theme="light"
+            options={{
+              minimap: { enabled: false },
+              scrollBeyondLastLine: false,
+              fontSize: 14,
+              lineNumbers: "on",
+              roundedSelection: false,
+              readOnly: false,
+              cursorStyle: "line",
+              automaticLayout: true,
+            }}
           />
         </div>
         <div className={styles.placeholder}></div>

@@ -217,28 +217,28 @@
   justify-content: flex-start;
 }
 
-.textareaWrapper {
+.editorWrapper {
   border-style: solid;
   border-color: #000000;
   border-width: 1px;
   align-self: stretch;
   flex-shrink: 0;
-  height: 252px;
+  height: 400px;
   position: relative;
   overflow: hidden;
+  border-radius: 4px;
 }
 
-.textarea {
-  width: 100%;
-  height: 100%;
-  border: none;
-  outline: none;
-  padding: 16px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  line-height: 1.5;
-  resize: none;
-  background: transparent;
+.editorWrapper :global(.monaco-editor) {
+  border-radius: 4px;
+}
+
+.editorWrapper :global(.monaco-editor .monaco-editor-background) {
+  background-color: #ffffff;
+}
+
+.editorWrapper :global(.monaco-editor .margin) {
+  background-color: #ffffff;
 }
 
 .placeholder {
