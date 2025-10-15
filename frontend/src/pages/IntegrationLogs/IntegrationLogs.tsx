@@ -6,10 +6,9 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Select, Card, Button } from "@gravity-ui/uikit";
+import { Select, Card } from "@gravity-ui/uikit";
 import {
   integrationLogsGet,
-  type V1IntegrationLogsGetResponse,
   type IntegrationLogField,
   type IntegrationId,
 } from "@/client";
