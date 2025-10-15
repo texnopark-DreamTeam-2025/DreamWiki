@@ -7,9 +7,7 @@ import styles from "./IntegrationSettings.module.scss";
 
 export default function IntegrationSettings() {
   const { showSuccess, showError } = useToast();
-  const [selectedIntegration, setSelectedIntegration] = useState<string[]>([
-    "GitHub",
-  ]);
+  const [selectedIntegration, setSelectedIntegration] = useState<string[]>(["GitHub"]);
   const [prUrl, setPrUrl] = useState<string>("");
   const [pageUrl, setPageUrl] = useState<string>("");
   const [indexedPagesCount, setIndexedPagesCount] = useState<number>(15);
@@ -40,10 +38,7 @@ export default function IntegrationSettings() {
 
       if (response.error) {
         console.error("Ошибка добавления страницы:", response.error);
-        showError(
-          "Ошибка",
-          "Не удалось добавить страницу. Проверьте URL и попробуйте снова."
-        );
+        showError("Ошибка", "Не удалось добавить страницу. Проверьте URL и попробуйте снова.");
         return;
       }
 
@@ -167,9 +162,7 @@ export default function IntegrationSettings() {
           <div className={styles.indexStatus}>
             <div className={styles.sectionTitle}>Состояние индекса</div>
             <div className={styles.statusInfo}>
-              <div className={styles.statusText}>
-                {indexedPagesCount} страниц проиндексировано
-              </div>
+              <div className={styles.statusText}>{indexedPagesCount} страниц проиндексировано</div>
               <Button
                 view="flat"
                 size="s"
@@ -184,9 +177,7 @@ export default function IntegrationSettings() {
         </div>
       ) : (
         <div className={styles.pullRequestSection}>
-          <div className={styles.sectionTitle}>
-            Внести изменения на основе кода Pull-Request-а
-          </div>
+          <div className={styles.sectionTitle}>Внести изменения на основе кода Pull-Request-а</div>
           <div className={styles.inputGroup}>
             <div className={styles.inputWrapper}>
               <div className={styles.inputContent}>
