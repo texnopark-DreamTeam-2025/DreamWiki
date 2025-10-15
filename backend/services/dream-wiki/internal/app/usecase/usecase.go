@@ -25,6 +25,7 @@ type (
 		FetchPageFromYWiki(pageURL string) error
 		AccountGitHubPullRequest(pullRequestURL string) error
 		GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeItem, error)
+		GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error)
 	}
 
 	appUsecaseImpl struct {
@@ -244,6 +245,14 @@ func (u *appUsecaseImpl) GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeIt
 	}
 
 	return result, nil
+}
+
+func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error) {
+	repo := repository.StartTransaction(u.ctx, u.deps)
+	defer repo.Rollback()
+
+	fields, newCursor, err = repo.GetIntegrationLogFields(string(integrationID), cursor, 50)
+	return
 }
 
 func (u *appUsecaseImpl) extractSlugFromURL(pageURL string) string {

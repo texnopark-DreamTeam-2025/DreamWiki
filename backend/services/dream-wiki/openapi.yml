@@ -314,7 +314,7 @@ components:
         log_fields:
           type: array
           items:
-            type: string
+            $ref: '#/components/schemas/IntegrationLogField'
       required:
         - cursor
         - log_fields
@@ -411,6 +411,18 @@ components:
       enum:
         - ywiki
         - github
+
+    IntegrationLogField:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: date-time
+        content:
+          type: string
+      required:
+        - created_at
+        - content
 
     PageID:
       type: string

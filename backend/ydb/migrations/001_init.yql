@@ -20,7 +20,7 @@ CREATE TABLE IntegrationLogField (
     field_id Serial8 NOT NULL,
     integration_id TEXT NOT NULL, -- ywiki, github
     log_text TEXT NOT NULL,
-    created_at TIMESTAMP64 NOT NULL, -- warning
+    created_at TIMESTAMP NOT NULL, -- warning
     PRIMARY KEY (field_id)
 );
 

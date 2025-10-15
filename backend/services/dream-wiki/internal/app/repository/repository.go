@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync/atomic"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
@@ -29,6 +30,7 @@ type (
 		GetAllPageDigests() ([]api.PageDigest, error)
 		GetUserByLogin(login string) (*models.User, error)
 		WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error
+		GetIntegrationLogFields(integrationID string, cursor *string, limit int) (fields []api.IntegrationLogField, newCursor string, err error)
 		GetPageBySlug(yWikiSlug string) (*api.Page, error)
 		UpsertPage(page api.Page, ywikiSlug string) (pageID *uuid.UUID, err error)
 		DeletePageBySlug(yWikiSlug string) error
@@ -429,4 +431,60 @@ func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
 		}
 	}
 	return pages, nil
+}
+
+func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID string, cursor *string, limit int) (fields []api.IntegrationLogField, newCursor string, err error) {
+	yql := `
+		SELECT field_id, log_text, created_at
+		FROM IntegrationLogField
+		WHERE integration_id=$integrationID
+			AND (
+				created_at > $timeFrom
+				OR (created_at = $timeFrom AND field_id > $idFrom)
+			)
+		ORDER BY created_at DESC
+		LIMIT $limit
+	`
+
+	timeFrom, idFrom := decodeCursor(cursor)
+
+	result, err := r.execute(yql,
+		table.ValueParam("$integrationID", types.TextValue(integrationID)),
+		table.ValueParam("$limit", types.Int32Value(int32(limit))),
+		table.ValueParam("$timeFrom", types.TimestampValueFromTime(timeFrom)),
+		table.ValueParam("$idFrom", types.Int64Value(idFrom)),
+	)
+	if err != nil {
+		return nil, "", err
+	}
+	defer result.Close()
+
+	if err = r.nextResultSet(result); err != nil {
+		return nil, "", err
+	}
+
+	fields = make([]api.IntegrationLogField, 0, limit)
+	if result.CurrentResultSet().RowCount() == 0 {
+		if cursor == nil {
+			return fields, "", nil
+		}
+		return fields, *cursor, nil
+	}
+
+	newIDFrom := int64(0)
+	for result.NextRow() {
+		var content string
+		var createdAt time.Time
+		err := result.Scan(&newIDFrom, &content, &createdAt)
+		if err != nil {
+			return nil, "", err
+		}
+		fields = append(fields, api.IntegrationLogField{
+			Content:   content,
+			CreatedAt: createdAt,
+		})
+	}
+
+	newTimeFrom := fields[len(fields)-1].CreatedAt
+	return fields, encodeCursor(newTimeFrom, newIDFrom), nil
 }

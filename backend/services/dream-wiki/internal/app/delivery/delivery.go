@@ -71,7 +71,13 @@ func (d *AppDelivery) GithubAccountPR(ctx context.Context, request api.GithubAcc
 }
 
 func (d *AppDelivery) IntegrationLogsGet(ctx context.Context, request api.IntegrationLogsGetRequestObject) (api.IntegrationLogsGetResponseObject, error) {
-	panic("unimplemented")
+	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
+
+	logs, newCursor, err := usecase.GetIntegrationLogs(request.Body.IntegrationId, request.Body.Cursor)
+	if err != nil {
+		return nil, err
+	}
+	return api.IntegrationLogsGet200JSONResponse{LogFields: logs, Cursor: newCursor}, nil
 }
 
 func (d *AppDelivery) YwikiAddPage(ctx context.Context, request api.YwikiAddPageRequestObject) (api.YwikiAddPageResponseObject, error) {
