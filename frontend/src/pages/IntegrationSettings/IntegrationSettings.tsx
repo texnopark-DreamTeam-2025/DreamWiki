@@ -208,20 +208,11 @@ export default function IntegrationSettings() {
         <div className={styles.editorWrapper}>
           <MonacoEditor
             value={configContent}
-            onChange={setConfigContent}
+            onChange={(value) => setConfigContent(value || "")}
             language="json"
             height="400px"
             theme="light"
-            options={{
-              minimap: { enabled: false },
-              scrollBeyondLastLine: false,
-              fontSize: 14,
-              lineNumbers: "on",
-              roundedSelection: false,
-              readOnly: false,
-              cursorStyle: "line",
-              automaticLayout: true,
-            }}
+            readOnly={false}
           />
         </div>
         <div className={styles.placeholder}></div>
