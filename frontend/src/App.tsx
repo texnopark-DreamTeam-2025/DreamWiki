@@ -3,6 +3,7 @@ import AsideBar from "@/components/AsideBar";
 import SearchDone from "@/pages/SearchDone";
 import Document from "@/pages/Document/Document";
 import IntegrationSettings from "@/pages/IntegrationSettings";
+import IntegrationLogs from "@/pages/IntegrationLogs";
 import Authorization from "@/pages/Authorization";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
@@ -50,6 +51,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <IntegrationSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/integration-logs"
+            element={
+              <ProtectedRoute>
+                <IntegrationLogs />
               </ProtectedRoute>
             }
           />

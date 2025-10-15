@@ -1,0 +1,118 @@
+.container {
+  padding: 20px;
+  height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--g-color-base-background);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--g-color-line-generic);
+}
+
+.title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--g-color-text-primary);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.integrationSelect {
+  min-width: 200px;
+}
+
+.controls button {
+  margin-left: 12px;
+}
+
+.logsContainer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--g-color-base-background);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: 8px;
+}
+
+.loadingState {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.loadingText {
+  font-size: 16px;
+  color: var(--g-color-text-secondary);
+}
+
+.editorContainer {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.loadingMore {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background-color: var(--g-color-base-background);
+  border: 1px solid var(--g-color-line-generic);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--g-color-text-secondary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.endMessage {
+  margin-top: 16px;
+  text-align: center;
+  padding: 16px;
+  color: var(--g-color-text-secondary);
+  font-size: 14px;
+  background-color: var(--g-color-base-float);
+  border-radius: 8px;
+  border: 1px solid var(--g-color-line-generic);
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .title {
+    font-size: 24px;
+    text-align: center;
+  }
+
+  .controls {
+    justify-content: center;
+  }
+
+  .integrationSelect {
+    min-width: 100%;
+  }
+}

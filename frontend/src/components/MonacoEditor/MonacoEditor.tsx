@@ -9,6 +9,8 @@ interface MonacoEditorProps {
   height?: string;
   readOnly?: boolean;
   theme?: "light" | "dark";
+  onMount?: (editor: any) => void;
+  onScroll?: (editor: any) => void;
 }
 
 export const MonacoEditor = ({
@@ -18,6 +20,8 @@ export const MonacoEditor = ({
   height = "400px",
   readOnly = false,
   theme = "light",
+  onMount,
+  onScroll,
 }: MonacoEditorProps) => {
   const [isEditorReady, setIsEditorReady] = useState(false);
 
@@ -34,8 +38,20 @@ export const MonacoEditor = ({
     }
   }, [isEditorReady]);
 
-  const handleEditorDidMount = () => {
+  const handleEditorDidMount = (editor: any) => {
     setIsEditorReady(true);
+
+    // Вызываем onMount из родительского компонента
+    if (onMount) {
+      onMount(editor);
+    }
+
+    // Добавляем обработчик скролла если передан
+    if (onScroll) {
+      editor.onDidScrollChange(() => {
+        onScroll(editor);
+      });
+    }
   };
 
   return (
