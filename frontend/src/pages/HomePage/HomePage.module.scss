@@ -1,28 +1,31 @@
 .homePage {
   padding: 24px;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcomeSection {
+  text-align: center;
 
   h1 {
+    font-size: 48px;
+    font-weight: 700;
     margin-bottom: 16px;
-    color: var(--g-color-text-primary);
   }
 
   p {
-    margin-bottom: 32px;
+    font-size: 20px;
+    margin: 0;
     color: var(--g-color-text-secondary);
   }
 }
 
-.toastExamples {
-  h3 {
-    margin-bottom: 16px;
-    color: var(--g-color-text-primary);
-  }
-}
-
-.buttonGroup {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+.searchSection {
+  width: 100%;
+  max-width: 800px;
 }

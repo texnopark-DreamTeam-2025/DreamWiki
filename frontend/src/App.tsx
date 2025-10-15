@@ -31,6 +31,14 @@ function App() {
             }
           />
           <Route
+            path="/search"
+            element={
+              <ProtectedRoute>
+                <SearchDone />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/search-done"
             element={
               <ProtectedRoute>

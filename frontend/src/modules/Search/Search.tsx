@@ -36,9 +36,7 @@ export default function Search() {
       const searchResults = res.data?.result_items || [];
       setResults(searchResults);
 
-      if (searchResults.length === 0) {
-        showSuccess("Поиск завершен", "По вашему запросу ничего не найдено");
-      } else {
+      if (searchResults.length > 0) {
         showSuccess(
           "Поиск завершен",
           `Найдено результатов: ${searchResults.length}`
@@ -105,15 +103,6 @@ export default function Search() {
               />
             </div>
           ))}
-        </div>
-      )}
-
-      {!loading && word && results.length === 0 && (
-        <div className={styles.noResults}>
-          <p>По запросу "{word}" ничего не найдено</p>
-          <p>
-            Попробуйте изменить запрос или использовать другие ключевые слова
-          </p>
         </div>
       )}
     </div>
