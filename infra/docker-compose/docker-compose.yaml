@@ -45,6 +45,12 @@ services:
     depends_on:
       - ydb
       - inference
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   nginx:
     build:
@@ -66,6 +72,12 @@ services:
     networks:
       - dreamwiki-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 networks:
   dreamwiki-net:
