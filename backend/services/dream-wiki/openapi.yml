@@ -175,6 +175,28 @@ paths:
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
+  /v1/pages-tree/get:
+    post:
+      summary: Получить дерево диагностики
+      operationId: pagesTreeGet
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1PagesTreeGetRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1PagesTreeGetResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
 components:
   schemas:
     V1LoginRequest:
@@ -297,12 +319,32 @@ components:
         - cursor
         - log_fields
 
+    V1PagesTreeGetRequest:
+      type: object
+      properties:
+        active_page_ids:
+          type: array
+          description: Массив включает ID текущей страницы и ID страниц, которые открыты через "треугольничек"
+          items:
+            $ref: '#/components/schemas/PageID'
+      required:
+        - active_page_ids
+
+    V1PagesTreeGetResponse:
+      type: object
+      properties:
+        tree:
+          type: array
+          items:
+            $ref: '#/components/schemas/TreeItem'
+      required:
+        - tree
+
     SearchResultItem:
       type: object
       properties:
         page_id:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/PageID'
         title:
           type: string
         description:
@@ -317,8 +359,7 @@ components:
       type: object
       properties:
         page_id:
-          type: string
-          format: uuid
+          $ref: '#/components/schemas/PageID'
         content:
           type: string
         ywiki_slug:
@@ -329,6 +370,33 @@ components:
         - page_id
         - content
         - title
+
+    PageDigest:
+      type: object
+      properties:
+        page_id:
+          $ref: '#/components/schemas/PageID'
+        title:
+          type: string
+      required:
+        - page_id
+        - title
+
+    TreeItem:
+      type: object
+      properties:
+        page_digest:
+          $ref: '#/components/schemas/PageDigest'
+        expanded:
+          type: boolean
+        children:
+          type: array
+          description: Если нет дочерних страниц, это поле равно undefined
+          items:
+            $ref: '#/components/schemas/TreeItem'
+      required:
+        - page_digest
+        - expanded
 
     ErrorResponseBody:
       type: object
@@ -343,6 +411,10 @@ components:
       enum:
         - ywiki
         - github
+
+    PageID:
+      type: string
+      format: uuid
 
   responses:
     ErrorResponse:

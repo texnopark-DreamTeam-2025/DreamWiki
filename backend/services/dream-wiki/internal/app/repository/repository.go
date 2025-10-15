@@ -26,6 +26,7 @@ type (
 		RemovePageIndexation(pageID uuid.UUID) error
 		AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error
 		DeleteAllPages() error
+		GetAllPageDigests() ([]api.PageDigest, error)
 		GetUserByLogin(login string) (*models.User, error)
 		WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error
 		GetPageBySlug(yWikiSlug string) (*api.Page, error)
@@ -405,4 +406,27 @@ func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.Integrati
 		table.ValueParam("$logText", types.TextValue(logText)),
 	)
 	return err
+}
+
+func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
+	yql := `SELECT page_id, title FROM Page`
+
+	result, err := r.execute(yql)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	var pages []api.PageDigest
+	for result.NextResultSet(r.ctx) {
+		for result.NextRow() {
+			var page api.PageDigest
+			err := result.Scan(&page.PageId, &page.Title)
+			if err != nil {
+				return nil, err
+			}
+			pages = append(pages, page)
+		}
+	}
+	return pages, nil
 }

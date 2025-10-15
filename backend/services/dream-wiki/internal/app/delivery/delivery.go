@@ -82,3 +82,12 @@ func (d *AppDelivery) YwikiAddPage(ctx context.Context, request api.YwikiAddPage
 	}
 	return api.YwikiAddPage200JSONResponse{}, nil
 }
+
+func (d *AppDelivery) PagesTreeGet(ctx context.Context, request api.PagesTreeGetRequestObject) (api.PagesTreeGetResponseObject, error) {
+	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
+	result, err := usecase.GetPagesTree(request.Body.ActivePageIds)
+	if err != nil {
+		return nil, err
+	}
+	return api.PagesTreeGet200JSONResponse{Tree: result}, nil
+}

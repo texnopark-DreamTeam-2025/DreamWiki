@@ -23,7 +23,8 @@ type (
 		IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error)
 		Login(req api.V1LoginRequest) (*api.V1LoginResponse, error)
 		FetchPageFromYWiki(pageURL string) error
-		// AccountGitHubPullRequest(pullRequestURL string)error
+		AccountGitHubPullRequest(pullRequestURL string) error
+		GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeItem, error)
 	}
 
 	appUsecaseImpl struct {
@@ -218,6 +219,31 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	// 5. Commit transaction
 	repo.Commit()
 	return nil
+}
+
+func (u *appUsecaseImpl) AccountGitHubPullRequest(pullRequestURL string) error {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeItem, error) {
+	repo := repository.StartTransaction(u.ctx, u.deps)
+	defer repo.Rollback()
+
+	items, err := repo.GetAllPageDigests()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]api.TreeItem, 0, len(items))
+	for _, item := range items {
+		result = append(result, api.TreeItem{
+			PageDigest: item,
+			Children:   nil,
+			Expanded:   false,
+		})
+	}
+
+	return result, nil
 }
 
 func (u *appUsecaseImpl) extractSlugFromURL(pageURL string) string {
