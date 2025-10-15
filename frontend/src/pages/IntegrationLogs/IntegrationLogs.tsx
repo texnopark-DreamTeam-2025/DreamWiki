@@ -29,11 +29,12 @@ export default function IntegrationLogs() {
   const [selectedIntegration, setSelectedIntegration] =
     useState<IntegrationType>("ywiki");
   const [logs, setLogs] = useState<IntegrationLogField[]>([]);
-  const [cursor, setCursor] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const editorRef = useRef<any>(null);
   const isLoadingMore = useRef(false);
+  const cursorRef = useRef<string>("");
+  const lastProcessedCursor = useRef<string>("");
 
   // Форматирование логов для отображения в Monaco Editor
   const formatLogs = useCallback((logFields: IntegrationLogField[]): string => {
@@ -52,7 +53,7 @@ export default function IntegrationLogs() {
     async (integrationId: IntegrationType) => {
       setLoading(true);
       setLogs([]);
-      setCursor("");
+      cursorRef.current = ""; // Сбрасываем ref
       setHasMore(false);
 
       try {
@@ -71,7 +72,9 @@ export default function IntegrationLogs() {
 
         if (res.data) {
           setLogs(res.data.log_fields);
-          setCursor(res.data.cursor);
+          // Устанавливаем курсор из ответа сервера
+          cursorRef.current = res.data.cursor;
+          // Есть еще данные, если есть логи и курсор не пустой
           const hasMoreData =
             res.data.log_fields.length > 0 && res.data.cursor !== "";
           setHasMore(hasMoreData);
@@ -86,15 +89,22 @@ export default function IntegrationLogs() {
     [showError]
   ); // Убираем loading из зависимостей  // Загрузка дополнительных логов (бесконечный скролл)
   const loadMoreLogs = useCallback(async () => {
-    if (loading || isLoadingMore.current || !hasMore || !cursor) return;
+    if (loading || isLoadingMore.current || !hasMore || !cursorRef.current)
+      return;
+
+    // Проверяем, не обрабатывали ли уже этот курсор
+    if (cursorRef.current === lastProcessedCursor.current) {
+      return;
+    }
 
     isLoadingMore.current = true;
+    const currentCursor = cursorRef.current;
 
     try {
       const res = await integrationLogsGet({
         body: {
           integration_id: selectedIntegration as IntegrationId,
-          cursor: cursor,
+          cursor: currentCursor,
         },
       });
 
@@ -104,41 +114,79 @@ export default function IntegrationLogs() {
       }
 
       if (res.data) {
-        const noMoreData =
-          res.data.log_fields.length === 0 ||
-          res.data.cursor === cursor ||
-          res.data.cursor === "";
+        // Отмечаем этот курсор как обработанный
+        lastProcessedCursor.current = currentCursor;
 
-        if (noMoreData) {
+        // Если получили пустой массив логов или пустой курсор - данных больше нет
+        if (res.data.log_fields.length === 0 || res.data.cursor === "") {
           setHasMore(false);
-        } else {
-          setLogs((prev) => [...prev, ...res.data!.log_fields]);
-          setCursor(res.data.cursor);
-          setHasMore(true);
+          return; // Выходим, не обновляя курсор
         }
+
+        // Если курсор не изменился по сравнению с тем что отправляли - данных больше нет
+        if (res.data.cursor === currentCursor) {
+          setHasMore(false);
+          return; // Выходим, не обновляя курсор
+        }
+
+        // Добавляем новые логи и обновляем курсор
+        setLogs((prev) => [...prev, ...res.data!.log_fields]);
+        cursorRef.current = res.data.cursor;
+
+        // Проверяем, есть ли еще данные
+        setHasMore(true); // Если дошли до этого места, значит есть данные и новый курсор
+      } else {
+        // Если нет data в ответе - данных больше нет
+        lastProcessedCursor.current = currentCursor;
+        setHasMore(false);
       }
     } catch (error) {
       console.error("Ошибка загрузки дополнительных логов:", error);
     } finally {
       isLoadingMore.current = false;
     }
-  }, [loading, hasMore, cursor, selectedIntegration]);
+  }, [loading, hasMore, selectedIntegration]);
 
   // Обработчик скролла в Monaco Editor
   const handleEditorScroll = useCallback(
     (editor: any) => {
-      if (!editor || !hasMore) return;
+      // Строгие проверки для предотвращения лишних запросов
+      if (
+        !editor ||
+        !hasMore ||
+        loading ||
+        isLoadingMore.current ||
+        !cursorRef.current
+      ) {
+        return;
+      }
+
+      const currentCursor = cursorRef.current;
+
+      // Проверяем, что этот курсор еще не обрабатывался
+      if (currentCursor === lastProcessedCursor.current) {
+        return;
+      }
 
       const scrollTop = editor.getScrollTop();
       const scrollHeight = editor.getScrollHeight();
       const clientHeight = editor.getLayoutInfo().height;
 
-      // Загружаем больше данных когда приближаемся к концу (80% прокрутки)
-      if (scrollTop + clientHeight >= scrollHeight * 0.8) {
-        loadMoreLogs();
+      // Загружаем больше данных когда приближаемся к концу (90% прокрутки для менее частых вызовов)
+      if (scrollTop + clientHeight >= scrollHeight * 0.9) {
+        // Дополнительная проверка перед вызовом
+        if (
+          hasMore &&
+          !loading &&
+          !isLoadingMore.current &&
+          currentCursor &&
+          currentCursor !== lastProcessedCursor.current
+        ) {
+          loadMoreLogs();
+        }
       }
     },
-    [hasMore, loadMoreLogs]
+    [hasMore, loadMoreLogs, loading]
   );
 
   // Начальная загрузка логов
@@ -156,10 +204,19 @@ export default function IntegrationLogs() {
   const handleEditorMount = useCallback(
     (editor: any) => {
       editorRef.current = editor;
+      let scrollTimeout: number;
 
-      // Добавляем обработчик скролла
+      // Добавляем обработчик скролла с debouncing
       editor.onDidScrollChange(() => {
-        handleEditorScroll(editor);
+        // Очищаем предыдущий timeout
+        if (scrollTimeout) {
+          clearTimeout(scrollTimeout);
+        }
+
+        // Устанавливаем новый timeout для предотвращения частых вызовов
+        scrollTimeout = setTimeout(() => {
+          handleEditorScroll(editor);
+        }, 100); // 100ms debounce
       });
     },
     [handleEditorScroll]
