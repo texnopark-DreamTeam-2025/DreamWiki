@@ -17,20 +17,8 @@ paths:
       tags:
         - Pages
       parameters:
-        - name: Authorization
-          in: header
-          required: true
-          description: OAuth токен в формате "OAuth <token>"
-          schema:
-            type: string
-          example: "OAuth y0__xCdfgdfg342_FGDFGFDfdjgd_dfgdfgdfg_dkfgjdkfgfdj"
-        - name: X-Cloud-Org-Id
-          in: header
-          required: true
-          description: Идентификатор организации Yandex Cloud
-          schema:
-            type: string
-          example: "bpffjdfgfdfg843r"
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/X-Cloud-Org-Id'
         - name: slug
           in: query
           required: true
@@ -60,6 +48,25 @@ paths:
           description: Внутренняя ошибка сервера
 
 components:
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      description: OAuth токен в формате "OAuth <token>"
+      schema:
+        type: string
+      example: "OAuth y0__xCdfgdfg342_FGDFGFDfdjgd_dfgdfgdfg_dkfgjdkfgfdj"
+
+    X-Cloud-Org-Id:
+      name: X-Cloud-Org-Id
+      in: header
+      required: true
+      description: Идентификатор организации Yandex Cloud
+      schema:
+        type: string
+      example: "bpffjdfgfdfg843r"
+
   schemas:
     V1PageResponse:
       type: object

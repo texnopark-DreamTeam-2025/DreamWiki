@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/github_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/inference_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
@@ -63,12 +64,18 @@ func main() {
 		logger.Fatalf("failed to initialize ywiki client: %v", err)
 	}
 
+	gitHubClient, err := github_client.NewGitHubClient(appConfig)
+	if err != nil {
+		logger.Fatalf("failed to initialize github client: %v", err)
+	}
+
 	deps := deps.Deps{
 		DB:              dbTable,
 		Config:          appConfig,
 		Logger:          logger,
 		InferenceClient: inferenceClient,
 		YWikiClient:     yWikiClient,
+		GitHubClient:    gitHubClient,
 	}
 
 	appDelivery := delivery.NewAppDelivery(&deps)

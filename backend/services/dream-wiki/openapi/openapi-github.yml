@@ -1,0 +1,166 @@
+openapi: 3.0.3
+info:
+  title: GitHub API Client
+  description: Клиент для работы с API GitHub
+  version: 1.0.0
+
+servers:
+  - url: https://api.github.com
+    description: GitHub API server
+
+paths:
+  /repos/{owner}/{repo}/pulls/{pull_number}:
+    get:
+      description: Get PR
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XGitHubApiVersion'
+        - $ref: '#/components/parameters/Owner'
+        - $ref: '#/components/parameters/Repo'
+        - $ref: '#/components/parameters/PullNumber'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestResponse'
+        404:
+          description: Not found
+        406:
+          description: Not acceptable
+
+  /repos/{owner}/{repo}/pulls/{pull_number}/files:
+    get:
+      description: Get PR files
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XGitHubApiVersion'
+        - $ref: '#/components/parameters/Owner'
+        - $ref: '#/components/parameters/Repo'
+        - $ref: '#/components/parameters/PullNumber'
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PullRequestFilesResponse'
+
+  /repos/{owner}/{repo}/pulls/{pull_number}/merge:
+    get:
+      description: Check if PR has been merged
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/XGitHubApiVersion'
+        - $ref: '#/components/parameters/Owner'
+        - $ref: '#/components/parameters/Repo'
+        - $ref: '#/components/parameters/PullNumber'
+      responses:
+        204:
+          description: Merged
+        404:
+          description: Not merged or not found
+
+components:
+  parameters:
+    XGitHubApiVersion:
+      name: X-GitHub-Api-Version
+      in: header
+      required: true
+      description: GitHub API version
+      schema:
+        type: string
+        example: 2022-11-28
+        default: 2022-11-28
+
+    Owner:
+      name: owner
+      in: path
+      required: true
+      description: Owner of the repository
+      schema:
+        type: string
+
+    Repo:
+      name: repo
+      in: path
+      required: true
+      description: Name of the repository
+      schema:
+        type: string
+
+    PullNumber:
+      name: pull_number
+      in: path
+      required: true
+      description: Number of the pull request
+      schema:
+        type: integer
+
+  schemas:
+    PullRequestResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+          example: https://api.github.com/repos/octocat/Hello-World/pulls/1
+        patch_url:
+          type: string
+          format: uri
+          example: https://api.github.com/repos/octocat/Hello-World/pulls/1.patch
+        state:
+          $ref: '#/components/schemas/PullRequestState'
+        user:
+          $ref: '#/components/schemas/User'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PullRequestFilesResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/PullRequestFile'
+
+    PullRequestFile:
+      type: object
+      properties:
+        filename:
+          type: string
+          example: README.md
+        patch:
+          type: string
+        additions:
+          type: integer
+        deletions:
+          type: integer
+
+    PullRequestState:
+      type: string
+      enum:
+        - open
+        - closed
+        - merged
+
+    User:
+      type: object
+      properties:
+        login:
+          type: string
+          example: octocat
+        avatar_url:
+          type: string
+          format: uri
+          example: https://avatars.githubusercontent.com/u/583231?v=4
+
+  securitySchemas:
+    bearerAuth:
+      type: http
+      scheme: bearer

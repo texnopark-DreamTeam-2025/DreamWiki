@@ -1,6 +1,7 @@
 package deps
 
 import (
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/github_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/inference_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
@@ -14,4 +15,5 @@ type Deps struct {
 	Logger          logger.Logger
 	InferenceClient inference_client.InferenceClient
 	YWikiClient     ywiki_client.YWikiClient
+	GitHubClient    github_client.GitHubClient
 }
