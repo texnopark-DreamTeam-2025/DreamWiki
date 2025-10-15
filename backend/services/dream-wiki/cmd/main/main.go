@@ -16,10 +16,10 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
-	auth_middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/auth"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/auth"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
-	middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
-	panic_middleware "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/panic"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/panic"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/db"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
@@ -94,9 +94,9 @@ func main() {
 		BaseRouter: apiRouter,
 	})
 
-	router.Use(panic_middleware.PanicMiddleware(logger))
-	router.Use(auth_middleware.AuthMiddleware(&deps))
-	router.Use(middleware.LoggingMiddleware(logger))
+	router.Use(panic.PanicMiddleware(logger))
+	router.Use(auth.AuthMiddleware(&deps))
+	router.Use(logging.LoggingMiddleware(logger))
 	routerWithCORS := cors.CORSMiddleware(router)
 
 	port := ":" + appConfig.ServerPort
