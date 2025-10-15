@@ -401,7 +401,7 @@ func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
 
 func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error {
 	yql := `INSERT INTO IntegrationLogField (integration_id, log_text, created_at)
-	VALUES ($integrationID, $logText, CurrentUtcDate())`
+	VALUES ($integrationID, $logText, CurrentUtcDatetime())`
 
 	_, err := r.execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(string(integrationID))),
