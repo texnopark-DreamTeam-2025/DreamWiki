@@ -1,5 +1,5 @@
 package: github_client_gen
-output: pkg/github_client_gen/client.gen.go
+output: ../pkg/github_client_gen/client.gen.go
 generate:
   client: true
   models: true

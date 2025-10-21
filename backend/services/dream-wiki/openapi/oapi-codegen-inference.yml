@@ -1,5 +1,5 @@
 package: inference_client_gen
-output: pkg/inference_client_gen/client.gen.go
+output: ../pkg/inference_client_gen/client.gen.go
 generate:
   client: true
   models: true

@@ -14,14 +14,8 @@ run: load-env
 	go run cmd/main/main.go
 
 generate:
-	@echo "==> Generating server API code..."
-	oapi-codegen --config=openapi/oapi-codegen.yml openapi.yml
-	@echo "==> Generating Inference client code..."
-	oapi-codegen --config=openapi/oapi-codegen-inference.yml ../../services/inference/openapi.yml
-	@echo "==> Generating Yandex Wiki Client..."
-	oapi-codegen --config=openapi/oapi-codegen-ywiki.yml openapi/openapi-ywiki.yml
-	@echo "==> Generating GitHub API Client..."
-	oapi-codegen --config=openapi/oapi-codegen-github.yml openapi/openapi-github.yml
+	@echo "==> Generating..."
+	go generate ./...
 
 dev: generate run
 

@@ -1,5 +1,5 @@
 package: ywiki_client_gen
-output: pkg/ywiki_client_gen/client.gen.go
+output: ../pkg/ywiki_client_gen/client.gen.go
 generate:
   client: true
   models: true
