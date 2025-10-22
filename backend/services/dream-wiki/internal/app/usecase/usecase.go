@@ -58,7 +58,7 @@ func (u *appUsecaseImpl) generateJWTToken(userID string, username string) (strin
 
 func (u *appUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, error) {
 	// Get user from repository by login
-	repo := repository.StartTransaction(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	user, err := repo.GetUserByLogin(req.Username)
@@ -86,7 +86,7 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	if err != nil {
 		return nil, err
 	}
-	repo := repository.StartTransaction(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	results, err := repo.SearchByEmbedding(req.Query, embedding)
@@ -109,7 +109,7 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 }
 
 func (u *appUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
-	repo := repository.StartTransaction(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	page, err := repo.RetrievePageByID(req.PageId)
@@ -123,7 +123,7 @@ func (u *appUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (
 }
 
 func (u *appUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
-	repo := repository.StartTransaction(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	return u.indexatePageInTransaction(repo, req)
@@ -171,7 +171,7 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	// https://wiki.yandex.ru/homepage/required-notification/ -> required-notification
 	slug := u.extractSlugFromURL(pageURL)
 
-	repo := repository.StartTransaction(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	// Write integration log
@@ -227,7 +227,7 @@ func (u *appUsecaseImpl) AccountGitHubPullRequest(pullRequestURL string) error {
 }
 
 func (u *appUsecaseImpl) GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeItem, error) {
-	repo := repository.StartTransaction(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	items, err := repo.GetAllPageDigests()
@@ -248,7 +248,7 @@ func (u *appUsecaseImpl) GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeIt
 }
 
 func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error) {
-	repo := repository.StartTransaction(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	fields, newCursor, err = repo.GetIntegrationLogFields(string(integrationID), cursor, 50)

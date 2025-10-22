@@ -44,14 +44,11 @@ func main() {
 	config.LogConfig(appConfig, logger)
 
 	logger.Debug("connecting to ydb")
-	db, err := db.ConnectToYDB(appConfig, logger)
+	ydbDriver, err := db.ConnectToYDB(appConfig, logger)
 	if err != nil {
 		logger.Fatalf("failed to connect to ydb: %v", err)
 	}
-	logger.Info("connected to ydb")
-	defer db.Close(context.Background())
-
-	dbTable := db.Table()
+	defer ydbDriver.Close(context.Background())
 
 	// Initialize inference client
 	inferenceClient, err := inference_client.NewInferenceClient(appConfig)
@@ -70,7 +67,7 @@ func main() {
 	}
 
 	deps := deps.Deps{
-		DB:              dbTable,
+		YDBDriver:       ydbDriver,
 		Config:          appConfig,
 		Logger:          logger,
 		InferenceClient: inferenceClient,

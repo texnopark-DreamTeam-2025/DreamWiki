@@ -30,3 +30,5 @@ CREATE TABLE User (
     password_hash_bcrypt TEXT NOT NULL,
     PRIMARY KEY (user_id)
 );
+
+CREATE TOPIC test;

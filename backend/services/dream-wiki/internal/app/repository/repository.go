@@ -2,18 +2,15 @@ package repository
 
 import (
 	"context"
-	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/ydb_wrapper"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/indexed"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
@@ -37,101 +34,26 @@ type (
 	}
 
 	appRepositoryImpl struct {
-		ctx     context.Context
-		tx      table.TransactionActor
-		log     logger.Logger
-		success chan bool
-		closed  int32
+		ctx       context.Context
+		ydbClient ydb_wrapper.YDBWrapper
+		log       logger.Logger
 	}
 )
 
-func StartTransaction(ctx context.Context, deps *deps.Deps) AppRepository {
-	deps.Logger.Debug("starting YDB transaction...")
-	success := make(chan bool)
-	txRetriever := make(chan table.TransactionActor)
-
-	action := func(ctx context.Context, tx table.TransactionActor) error {
-		txRetriever <- tx
-		deps.Logger.Infof("YDB transaction %s started", tx.ID())
-
-		shouldCommit := <-success
-		close(success)
-		if shouldCommit {
-			deps.Logger.Infof("YDB transaction %s committed", tx.ID())
-			return nil
-		}
-		deps.Logger.Infof("YDB transaction %s rolled back", tx.ID())
-		return fmt.Errorf("transaction rolled back")
-	}
-
-	go deps.DB.DoTx(context.Background(), action)
-	tx := <-txRetriever
-	close(txRetriever)
+func NewAppRepository(ctx context.Context, deps *deps.Deps) AppRepository {
 	return &appRepositoryImpl{
-		ctx: ctx, tx: tx, success: success, log: deps.Logger}
+		ctx:       ctx,
+		log:       deps.Logger,
+		ydbClient: ydb_wrapper.NewYDBWrapper(ctx, deps, true),
+	}
 }
 
 func (r *appRepositoryImpl) Commit() {
-	if n := atomic.AddInt32(&(r.closed), 1); n == 1 {
-		r.success <- true
-	}
+	r.ydbClient.Commit()
 }
 
 func (r *appRepositoryImpl) Rollback() {
-	if n := atomic.AddInt32(&(r.closed), 1); n == 1 {
-		r.success <- false
-	}
-}
-
-func (r *appRepositoryImpl) execute(yql string, opts ...table.ParameterOption) (result result.Result, err error) {
-	r.log.Debug("executing yql: ", yql, opts)
-	result, err = r.tx.Execute(r.ctx, yql, table.NewQueryParameters(opts...))
-	if err != nil {
-		r.log.Error(err)
-		return nil, err
-	}
-	err = result.Err()
-	if err != nil {
-		r.log.Error(err)
-		return nil, err
-	}
-	return
-}
-
-func (r *appRepositoryImpl) nextResultSet(result result.Result) error {
-	ok := result.NextResultSet(r.ctx)
-	if ok {
-		r.log.Debug("Result set has ", result.CurrentResultSet().RowCount(), " rows")
-	} else {
-		r.log.Debug("Result set requested, but not exists")
-		return fmt.Errorf("result set requested, but not exists")
-	}
-	return nil
-}
-
-func (r *appRepositoryImpl) scanSingleRowResultSet(result result.Result, scanTo ...indexed.RequiredOrOptional) error {
-	err := r.nextResultSet(result)
-	if err != nil {
-		return err
-	}
-	if result.CurrentResultSet().RowCount() != 1 {
-		return fmt.Errorf("expected 1 row in result set, got %d", result.CurrentResultSet().RowCount())
-	}
-	if result.NextRow() {
-		err := result.Scan(scanTo...)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func embeddingToYDBList(embedding models.Embedding) types.Value {
-	embeddingValues := make([]types.Value, len(embedding))
-	for i := range embedding {
-		embeddingValues[i] = types.FloatValue(embedding[i])
-	}
-	return types.ListValue(embeddingValues...)
+	r.ydbClient.Rollback()
 }
 
 func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding models.Embedding) ([]api.SearchResultItem, error) {
@@ -150,21 +72,13 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding model
 		LIMIT $K;
 	`
 
-	embeddingValues := make([]types.Value, len(queryEmbedding))
-	for i := range queryEmbedding {
-		embeddingValues[i] = types.FloatValue(queryEmbedding[i])
-	}
 	yqlEmbedding := embeddingToYDBList(queryEmbedding)
-	result, err := r.execute(yql,
-		table.ValueParam("$queryEmbedding", yqlEmbedding))
+
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$queryEmbedding", yqlEmbedding))
 	if err != nil {
 		return nil, err
 	}
 	defer result.Close()
-
-	if err = r.nextResultSet(result); err != nil {
-		return nil, err
-	}
 
 	searchResult := make([]api.SearchResultItem, 0)
 	for result.NextRow() {
@@ -172,7 +86,7 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding model
 		var title string
 		var pageContent string
 		var distance float32
-		err = result.Scan(&retrievedPageID, &title, &pageContent, &distance)
+		err = result.FetchRow(&retrievedPageID, &title, &pageContent, &distance)
 		if err != nil {
 			return nil, err
 		}
@@ -196,7 +110,7 @@ func (r *appRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error
 	FROM Page WHERE page_id=$pageID;
 	`
 
-	result, err := r.execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +119,7 @@ func (r *appRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error
 	var retrievedPageID uuid.UUID
 	var title string
 	var content string
-	if err = r.scanSingleRowResultSet(result, &retrievedPageID, &title, &content); err != nil {
+	if err = result.FetchExactlyOne(&retrievedPageID, &title, &content); err != nil {
 		return nil, err
 	}
 
@@ -221,7 +135,7 @@ func (r *appRepositoryImpl) RemovePageIndexation(pageID uuid.UUID) error {
 		DELETE FROM Paragraph WHERE page_id=$pageID;
 	`
 
-	result, err := r.execute(yql,
+	result, err := r.ydbClient.InTX().Execute(yql,
 		table.ValueParam("$pageID", types.UuidValue(pageID)),
 	)
 	if err != nil {
@@ -244,17 +158,13 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEm
 		);
 	`
 
-	result, err := r.execute(yql,
+	result, err := r.ydbClient.InTX().Execute(yql,
 		table.ValueParam("$pageID", types.UuidValue(paragraph.PageID)),
 		table.ValueParam("$lineNumber", types.Int32Value(int32(paragraph.LineNumber))),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
 		table.ValueParam("$anchorLineSlug", types.TextValue("")), // TODO
 	)
-	if err != nil {
-		return err
-	}
-	err = result.Err()
 	if err != nil {
 		return err
 	}
@@ -269,7 +179,7 @@ func (r *appRepositoryImpl) DeleteAllPages() error {
 		DELETE FROM Page;
 	`
 
-	result, err := r.execute(yql)
+	result, err := r.ydbClient.InTX().Execute(yql)
 	if err != nil {
 		return err
 	}
@@ -288,7 +198,7 @@ func (r *appRepositoryImpl) GetUserByLogin(login string) (*models.User, error) {
 	FROM User WHERE login=$login;
 	`
 
-	result, err := r.execute(yql, table.ValueParam("$login", types.TextValue(login)))
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$login", types.TextValue(login)))
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +207,7 @@ func (r *appRepositoryImpl) GetUserByLogin(login string) (*models.User, error) {
 	var userID uuid.UUID
 	var userLogin string
 	var passwordHash string
-	if err = r.scanSingleRowResultSet(result, &userID, &userLogin, &passwordHash); err != nil {
+	if err = result.FetchExactlyOne(result, &userID, &userLogin, &passwordHash); err != nil {
 		return nil, err
 	}
 
@@ -317,7 +227,7 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 	FROM Page WHERE ywiki_slug=$yWikiSlug;
 	`
 
-	result, err := r.execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
 	if err != nil {
 		return nil, err
 	}
@@ -326,7 +236,7 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 	var pageID uuid.UUID
 	var title string
 	var content string
-	if err = r.scanSingleRowResultSet(result, &pageID, &title, &content); err != nil {
+	if err = result.FetchExactlyOne(result, &pageID, &title, &content); err != nil {
 		return nil, err
 	}
 
@@ -364,27 +274,31 @@ func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) (pageID 
 		table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)),
 	}
 
-	result1, err := r.execute(yql1, parameters...)
+	result1, err := r.ydbClient.InTX().Execute(yql1, parameters...)
 	if err != nil {
 		return nil, err
 	}
 	defer result1.Close()
-	if err = r.nextResultSet(result1); err != nil {
-		return nil, err
-	}
-	if result1.CurrentResultSet().RowCount() == 1 {
-		result1.NextRow()
-		err := result1.Scan(pageID)
+
+	if result1.RowCount() == 1 {
+		err := result1.FetchExactlyOne(&pageID)
 		if err != nil {
 			return nil, err
 		}
 		return pageID, nil
 	}
 
-	result2, err := r.execute(yql2, parameters...)
-	if err := r.scanSingleRowResultSet(result2, pageID); err != nil {
+	result2, err := r.ydbClient.InTX().Execute(yql2, parameters...)
+	if err != nil {
 		return nil, err
 	}
+	defer result2.Close()
+
+	err = result2.FetchExactlyOne(&pageID)
+	if err != nil {
+		return nil, err
+	}
+
 	r.log.Debug("Inserted page with id ", pageID)
 
 	return pageID, nil
@@ -392,10 +306,11 @@ func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) (pageID 
 
 func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
 	yql := `
-	DELETE FROM Page WHERE ywiki_slug=$yWikiSlug;
-	`
+	DELETE FROM Page WHERE ywiki_slug=$yWikiSlug;`
 
-	_, err := r.execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
+	defer result.Close()
+
 	return err
 }
 
@@ -403,32 +318,32 @@ func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.Integrati
 	yql := `INSERT INTO IntegrationLogField (integration_id, log_text, created_at)
 	VALUES ($integrationID, $logText, CurrentUtcDatetime())`
 
-	_, err := r.execute(yql,
+	result, err := r.ydbClient.OutsideTX().Execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(string(integrationID))),
 		table.ValueParam("$logText", types.TextValue(logText)),
 	)
+	defer result.Close()
+
 	return err
 }
 
 func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
 	yql := `SELECT page_id, title FROM Page`
 
-	result, err := r.execute(yql)
+	result, err := r.ydbClient.InTX().Execute(yql)
 	if err != nil {
 		return nil, err
 	}
 	defer result.Close()
 
-	var pages []api.PageDigest
-	for result.NextResultSet(r.ctx) {
-		for result.NextRow() {
-			var page api.PageDigest
-			err := result.Scan(&page.PageId, &page.Title)
-			if err != nil {
-				return nil, err
-			}
-			pages = append(pages, page)
+	pages := make([]api.PageDigest, 0, result.RowCount())
+	for result.NextRow() {
+		var page api.PageDigest
+		err := result.FetchRow(&page.PageId, &page.Title)
+		if err != nil {
+			return nil, err
 		}
+		pages = append(pages, page)
 	}
 	return pages, nil
 }
@@ -448,7 +363,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID string, cursor
 
 	timeFrom, idFrom := decodeCursor(cursor)
 
-	result, err := r.execute(yql,
+	result, err := r.ydbClient.InTX().Execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(integrationID)),
 		table.ValueParam("$limit", types.Int32Value(int32(limit))),
 		table.ValueParam("$timeFrom", types.TimestampValueFromTime(timeFrom)),
@@ -459,12 +374,8 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID string, cursor
 	}
 	defer result.Close()
 
-	if err = r.nextResultSet(result); err != nil {
-		return nil, "", err
-	}
-
 	fields = make([]api.IntegrationLogField, 0, limit)
-	if result.CurrentResultSet().RowCount() == 0 {
+	if result.RowCount() == 0 {
 		if cursor == nil {
 			return fields, "", nil
 		}
@@ -475,7 +386,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID string, cursor
 	for result.NextRow() {
 		var content string
 		var createdAt time.Time
-		err := result.Scan(&newIDFrom, &content, &createdAt)
+		err := result.FetchRow(&newIDFrom, &content, &createdAt)
 		if err != nil {
 			return nil, "", err
 		}
