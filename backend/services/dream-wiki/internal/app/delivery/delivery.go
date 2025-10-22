@@ -97,3 +97,43 @@ func (d *AppDelivery) PagesTreeGet(ctx context.Context, request api.PagesTreeGet
 	}
 	return api.PagesTreeGet200JSONResponse{Tree: result}, nil
 }
+
+func (d *AppDelivery) ApplyDraft(ctx context.Context, request api.ApplyDraftRequestObject) (api.ApplyDraftResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) CancelTask(ctx context.Context, request api.CancelTaskRequestObject) (api.CancelTaskResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) CreateDraft(ctx context.Context, request api.CreateDraftRequestObject) (api.CreateDraftResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) DeleteDraft(ctx context.Context, request api.DeleteDraftRequestObject) (api.DeleteDraftResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) GetDraft(ctx context.Context, request api.GetDraftRequestObject) (api.GetDraftResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) GetTaskDetails(ctx context.Context, request api.GetTaskDetailsRequestObject) (api.GetTaskDetailsResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) ListDrafts(ctx context.Context, request api.ListDraftsRequestObject) (api.ListDraftsResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) ListTasks(ctx context.Context, request api.ListTasksRequestObject) (api.ListTasksResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) RetryTask(ctx context.Context, request api.RetryTaskRequestObject) (api.RetryTaskResponseObject, error) {
+	panic("unimplemented")
+}
+
+func (d *AppDelivery) UpdateDraft(ctx context.Context, request api.UpdateDraftRequestObject) (api.UpdateDraftResponseObject, error) {
+	panic("unimplemented")
+}
