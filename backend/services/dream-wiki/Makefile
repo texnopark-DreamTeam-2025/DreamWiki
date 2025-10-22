@@ -19,4 +19,8 @@ generate:
 
 dev: generate run
 
-.PHONY: run dev generate
+lint: generate
+	@echo "==> Linting..."
+	golangci-lint run
+
+.PHONY: run dev generate lint

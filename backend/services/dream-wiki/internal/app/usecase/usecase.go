@@ -149,7 +149,7 @@ func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository
 		}
 		paragraphWithEmbedding := models.ParagraphWithEmbedding{
 			PageID:     req.PageId,
-			LineNumber: i,
+			LineNumber: int64(i),
 			Content:    paragraph,
 			Embedding:  embedding,
 		}

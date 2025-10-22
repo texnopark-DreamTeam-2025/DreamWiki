@@ -27,7 +27,7 @@ type (
 		GetAllPageDigests() ([]api.PageDigest, error)
 		GetUserByLogin(login string) (*models.User, error)
 		WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error
-		GetIntegrationLogFields(integrationID string, cursor *string, limit int) (fields []api.IntegrationLogField, newCursor string, err error)
+		GetIntegrationLogFields(integrationID string, cursor *string, limit int64) (fields []api.IntegrationLogField, newCursor string, err error)
 		GetPageBySlug(yWikiSlug string) (*api.Page, error)
 		UpsertPage(page api.Page, ywikiSlug string) (pageID *uuid.UUID, err error)
 		DeletePageBySlug(yWikiSlug string) error
@@ -38,6 +38,10 @@ type (
 		ydbClient ydb_wrapper.YDBWrapper
 		log       logger.Logger
 	}
+)
+
+var (
+	_ AppRepository = &appRepositoryImpl{}
 )
 
 func NewAppRepository(ctx context.Context, deps *deps.Deps) AppRepository {
@@ -160,7 +164,7 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEm
 
 	result, err := r.ydbClient.InTX().Execute(yql,
 		table.ValueParam("$pageID", types.UuidValue(paragraph.PageID)),
-		table.ValueParam("$lineNumber", types.Int32Value(int32(paragraph.LineNumber))),
+		table.ValueParam("$lineNumber", types.Int64Value(paragraph.LineNumber)),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
 		table.ValueParam("$anchorLineSlug", types.TextValue("")), // TODO
@@ -309,6 +313,9 @@ func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
 	DELETE FROM Page WHERE ywiki_slug=$yWikiSlug;`
 
 	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
+	if err != nil {
+		return err
+	}
 	defer result.Close()
 
 	return err
@@ -322,9 +329,12 @@ func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.Integrati
 		table.ValueParam("$integrationID", types.TextValue(string(integrationID))),
 		table.ValueParam("$logText", types.TextValue(logText)),
 	)
+	if err != nil {
+		return err
+	}
 	defer result.Close()
 
-	return err
+	return nil
 }
 
 func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
@@ -348,7 +358,7 @@ func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
 	return pages, nil
 }
 
-func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID string, cursor *string, limit int) (fields []api.IntegrationLogField, newCursor string, err error) {
+func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID string, cursor *string, limit int64) (fields []api.IntegrationLogField, newCursor string, err error) {
 	yql := `
 		SELECT field_id, log_text, created_at
 		FROM IntegrationLogField
@@ -365,7 +375,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID string, cursor
 
 	result, err := r.ydbClient.InTX().Execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(integrationID)),
-		table.ValueParam("$limit", types.Int32Value(int32(limit))),
+		table.ValueParam("$limit", types.Int64Value(limit)),
 		table.ValueParam("$timeFrom", types.TimestampValueFromTime(timeFrom)),
 		table.ValueParam("$idFrom", types.Int64Value(idFrom)),
 	)

@@ -38,7 +38,9 @@ func main() {
 		fmt.Printf("failed to initialize logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer logger.Sync()
+	defer func() {
+		_ = logger.Sync()
+	}()
 
 	logger.Info("configuration loaded successfully")
 	config.LogConfig(appConfig, logger)
@@ -48,7 +50,9 @@ func main() {
 	if err != nil {
 		logger.Fatalf("failed to connect to ydb: %v", err)
 	}
-	defer ydbDriver.Close(context.Background())
+	defer func() {
+		_ = ydbDriver.Close(context.Background())
+	}()
 
 	// Initialize inference client
 	inferenceClient, err := inference_client.NewInferenceClient(appConfig)
@@ -81,7 +85,7 @@ func main() {
 
 	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}).Methods("GET")
 
 	apiRouter := router.PathPrefix("/api").Subrouter()
@@ -98,8 +102,9 @@ func main() {
 
 	port := ":" + appConfig.ServerPort
 	server := &http.Server{
-		Addr:    port,
-		Handler: routerWithCORS,
+		Addr:              port,
+		ReadHeaderTimeout: 1 * time.Second,
+		Handler:           routerWithCORS,
 	}
 
 	serverErr := make(chan error, 1)

@@ -9,7 +9,7 @@ CREATE TABLE Page (
 
 CREATE TABLE Paragraph (
     page_id UUID NOT NULL,
-    line_number INT NOT NULL,
+    line_number INT64 NOT NULL,
     content TEXT NOT NULL,
     anchor_link_slug TEXT NOT NULL,
     embedding String NOT NULL,

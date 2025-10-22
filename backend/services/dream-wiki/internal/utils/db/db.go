@@ -31,7 +31,7 @@ func ConnectToYDB(config *config.Config, logger logger.Logger) (*ydb.Driver, err
 	})
 	if err != nil {
 		logger.Error("Failed to ping YDB: ", err)
-		driver.Close(context.Background())
+		_ = driver.Close(context.Background())
 		return nil, err
 	}
 

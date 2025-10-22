@@ -99,7 +99,9 @@ func (y *ydbWrapperImpl) beginTX() {
 		return fmt.Errorf("transaction rolled back")
 	}
 
-	go y.tableClient.DoTx(y.ctx, action)
+	go func() {
+		_ = y.tableClient.DoTx(y.ctx, action)
+	}()
 	tx := <-txRetriever
 	y.tx = &tx
 	close(txRetriever)
@@ -150,7 +152,9 @@ func (y *ydbWrapperImpl) OutsideTX() Actor {
 		return nil
 	}
 
-	go y.tableClient.DoTx(y.ctx, action)
+	go func() {
+		_ = y.tableClient.DoTx(y.ctx, action)
+	}()
 
 	tx := <-txRetriever
 	close(txRetriever)
@@ -205,6 +209,6 @@ func (r *resultImpl) FetchRow(values ...indexed.RequiredOrOptional) error {
 }
 
 func (r *resultImpl) Close() {
-	r.result.Close()
+	_ = r.result.Close()
 	r.closeCallback()
 }

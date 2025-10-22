@@ -11,7 +11,7 @@ type (
 
 	ParagraphWithEmbedding struct {
 		PageID     uuid.UUID
-		LineNumber int
+		LineNumber int64
 		Content    string
 		Embedding  Embedding
 	}
