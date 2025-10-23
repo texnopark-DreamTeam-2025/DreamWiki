@@ -208,14 +208,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1ListTasksRequest"
+              $ref: "#/components/schemas/V1TasksListRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/V1ListTasksResponse"
+                $ref: "#/components/schemas/V1TasksListResponse"
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
@@ -230,7 +230,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1CancelTaskRequest"
+              $ref: "#/components/schemas/V1TasksCancelRequest"
       responses:
         "200":
           description: OK
@@ -252,7 +252,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1RetryTaskRequest"
+              $ref: "#/components/schemas/V1TasksRetryRequest"
       responses:
         "200":
           $ref: "#/components/responses/EmptyOKResponse"
@@ -270,14 +270,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1GetTaskDetailsRequest"
+              $ref: "#/components/schemas/V1TasksGetRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/V1GetTaskDetailsResponse"
+                $ref: "#/components/schemas/V1TasksGetResponse"
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
@@ -292,14 +292,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1ListDraftsRequest"
+              $ref: "#/components/schemas/V1DraftsListRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/V1ListDraftsResponse"
+                $ref: "#/components/schemas/V1DraftsListResponse"
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
@@ -314,14 +314,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1GetDraftRequest"
+              $ref: "#/components/schemas/V1DraftsGetRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/V1GetDraftResponse"
+                $ref: "#/components/schemas/V1DraftsGetResponse"
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
@@ -336,14 +336,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1CreateDraftRequest"
+              $ref: "#/components/schemas/V1DraftsCreateRequest"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/V1CreateDraftResponse"
+                $ref: "#/components/schemas/V1DraftsCreateResponse"
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
@@ -358,7 +358,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1DeleteDraftRequest"
+              $ref: "#/components/schemas/V1DraftsDeleteRequest"
       responses:
         "200":
           $ref: "#/components/responses/EmptyOKResponse"
@@ -376,7 +376,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1UpdateDraftRequest"
+              $ref: "#/components/schemas/V1DraftsUpdateRequest"
       responses:
         "200":
           $ref: "#/components/responses/EmptyOKResponse"
@@ -394,7 +394,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1ApplyDraftRequest"
+              $ref: "#/components/schemas/V1DraftsApplyRequest"
       responses:
         "200":
           $ref: "#/components/responses/EmptyOKResponse"
@@ -544,7 +544,7 @@ components:
       required:
         - tree
 
-    V1ListTasksRequest:
+    V1TasksListRequest:
       type: object
       properties:
         only_my_tasks:
@@ -556,7 +556,7 @@ components:
         cursor:
           type: string
 
-    V1CancelTaskRequest:
+    V1TasksCancelRequest:
       type: object
       properties:
         task_id:
@@ -564,7 +564,7 @@ components:
       required:
         - task_id
 
-    V1RetryTaskRequest:
+    V1TasksRetryRequest:
       type: object
       properties:
         task_id:
@@ -572,7 +572,7 @@ components:
       required:
         - task_id
 
-    V1GetTaskDetailsRequest:
+    V1TasksGetRequest:
       type: object
       properties:
         task_id:
@@ -580,7 +580,7 @@ components:
       required:
         - task_id
 
-    V1GetTaskDetailsResponse:
+    V1TasksGetResponse:
       type: object
       properties:
         task:
@@ -588,7 +588,7 @@ components:
       required:
         - task
 
-    V1ListTasksResponse:
+    V1TasksListResponse:
       type: object
       properties:
         tasks:
@@ -601,13 +601,13 @@ components:
         - tasks
         - cursor
 
-    V1ListDraftsRequest:
+    V1DraftsListRequest:
       type: object
       properties:
         cursor:
           type: string
 
-    V1ListDraftsResponse:
+    V1DraftsListResponse:
       type: object
       properties:
         drafts:
@@ -620,7 +620,7 @@ components:
         - drafts
         - cursor
 
-    V1GetDraftRequest:
+    V1DraftsGetRequest:
       type: object
       properties:
         draft_id:
@@ -628,7 +628,7 @@ components:
       required:
         - draft_id
 
-    V1GetDraftResponse:
+    V1DraftsGetResponse:
       type: object
       properties:
         draft:
@@ -636,7 +636,7 @@ components:
       required:
         - draft
 
-    V1CreateDraftRequest:
+    V1DraftsCreateRequest:
       type: object
       properties:
         page_url:
@@ -645,7 +645,7 @@ components:
       required:
         - page_url
 
-    V1CreateDraftResponse:
+    V1DraftsCreateResponse:
       type: object
       properties:
         draft_id:
@@ -653,7 +653,7 @@ components:
       required:
         - draft_id
 
-    V1DeleteDraftRequest:
+    V1DraftsDeleteRequest:
       type: object
       properties:
         draft_id:
@@ -661,18 +661,19 @@ components:
       required:
         - draft_id
 
-    V1UpdateDraftRequest:
+    V1DraftsUpdateRequest:
       type: object
       properties:
         draft_id:
           $ref: '#/components/schemas/DraftID'
         new_content:
           type: string
+        new_title:
+          type: string
       required:
         - draft_id
-        - new_content
 
-    V1ApplyDraftRequest:
+    V1DraftsApplyRequest:
       type: object
       properties:
         draft_id:
@@ -783,6 +784,7 @@ components:
         - executing
         - done
         - failed
+        - cancelled
 
     DraftStatus:
       type: string
@@ -852,12 +854,15 @@ components:
         draft_id:
           type: string
           format: uuid
+        draft_title:
+          type: string
         status:
           $ref: '#/components/schemas/DraftStatus'
         page_digest:
           $ref: '#/components/schemas/PageDigest'
       required:
         - draft_id
+        - draft_title
         - status
         - page_digest
 
@@ -867,6 +872,8 @@ components:
         draft_digest:
           $ref: '#/components/schemas/DraftDigest'
         content:
+          type: string
+        original_page_content:
           type: string
         created_at:
           type: string

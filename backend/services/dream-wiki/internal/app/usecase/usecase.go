@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -26,6 +25,16 @@ type (
 		AccountGitHubPullRequest(pullRequestURL string) error
 		GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeItem, error)
 		GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error)
+		ApplyDraft(draftID api.DraftID) error
+		CancelTask(taskID api.TaskID) error
+		CreateDraft(pageURL string) (api.DraftDigest, error)
+		DeleteDraft(draftID api.DraftID) error
+		GetDraft(draftID api.DraftID) (api.Draft, error)
+		GetTaskDetails(taskID api.TaskID) (api.Task, error)
+		ListDrafts(cursor *string) ([]api.DraftDigest, error)
+		ListTasks(cursor *string) (tasks []api.TaskDigest, newCursor string, err error)
+		RetryTask(taskID api.TaskID) error
+		UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error
 	}
 
 	appUsecaseImpl struct {
@@ -57,22 +66,19 @@ func (u *appUsecaseImpl) generateJWTToken(userID string, username string) (strin
 }
 
 func (u *appUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, error) {
-	// Get user from repository by login
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
 	user, err := repo.GetUserByLogin(req.Username)
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, models.ErrWrongCredentials
 	}
 
-	// Compare the provided password with the stored hash
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password))
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, models.ErrWrongCredentials
 	}
 
-	// Generate a JWT token
 	token, err := u.generateJWTToken(user.ID.String(), req.Username)
 	if err != nil {
 		return nil, err
@@ -169,7 +175,7 @@ func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository
 func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	// 1. Parse URL, extract slug like:
 	// https://wiki.yandex.ru/homepage/required-notification/ -> required-notification
-	slug := u.extractSlugFromURL(pageURL)
+	slug := extractSlugFromURL(pageURL)
 
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
@@ -255,8 +261,42 @@ func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cur
 	return
 }
 
-func (u *appUsecaseImpl) extractSlugFromURL(pageURL string) string {
-	const prefix = "https://wiki.yandex.ru/"
+func (u *appUsecaseImpl) ApplyDraft(draftID api.DraftID) error {
+	panic("unimplemented")
+}
 
-	return strings.TrimSuffix(strings.TrimPrefix(pageURL, prefix), "/")
+func (u *appUsecaseImpl) CancelTask(taskID api.TaskID) error {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) CreateDraft(pageURL string) (api.DraftDigest, error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) DeleteDraft(draftID api.DraftID) error {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) GetDraft(draftID api.DraftID) (api.Draft, error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) GetTaskDetails(taskID api.TaskID) (api.Task, error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) ListDrafts(cursor *string) ([]api.DraftDigest, error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) ListTasks(cursor *string) (tasks []api.TaskDigest, newCursor string, err error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) RetryTask(taskID api.TaskID) error {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error {
+	panic("unimplemented")
 }

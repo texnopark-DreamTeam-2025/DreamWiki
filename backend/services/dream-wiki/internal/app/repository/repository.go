@@ -211,7 +211,7 @@ func (r *appRepositoryImpl) GetUserByLogin(login string) (*models.User, error) {
 	var userID uuid.UUID
 	var userLogin string
 	var passwordHash string
-	if err = result.FetchExactlyOne(result, &userID, &userLogin, &passwordHash); err != nil {
+	if err = result.FetchExactlyOne(&userID, &userLogin, &passwordHash); err != nil {
 		return nil, err
 	}
 
@@ -240,7 +240,7 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 	var pageID uuid.UUID
 	var title string
 	var content string
-	if err = result.FetchExactlyOne(result, &pageID, &title, &content); err != nil {
+	if err = result.FetchExactlyOne(&pageID, &title, &content); err != nil {
 		return nil, err
 	}
 
@@ -318,7 +318,7 @@ func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
 	}
 	defer result.Close()
 
-	return err
+	return nil
 }
 
 func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error {
