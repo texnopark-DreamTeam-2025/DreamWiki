@@ -14,6 +14,18 @@ type AppDelivery struct {
 	log  logger.Logger
 }
 
+var (
+	_ api.StrictServerInterface = &AppDelivery{}
+)
+
+const (
+	internalErrorMessage string = "internal error"
+)
+
+func NewAppDelivery(deps *deps.Deps) *AppDelivery {
+	return &AppDelivery{deps: deps, log: deps.Logger}
+}
+
 func (d *AppDelivery) Login(ctx context.Context, request api.LoginRequestObject) (api.LoginResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	resp, err := usecase.Login(*request.Body)
@@ -29,16 +41,12 @@ func (d *AppDelivery) YwikiFetchAll(ctx context.Context, request api.YwikiFetchA
 	panic("unimplemented")
 }
 
-func NewAppDelivery(deps *deps.Deps) *AppDelivery {
-	return &AppDelivery{deps: deps, log: deps.Logger}
-}
-
 func (d *AppDelivery) Search(ctx context.Context, request api.SearchRequestObject) (api.SearchResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	resp, err := usecase.Search(*request.Body)
 	if err != nil {
 		d.log.Error(err.Error())
-		return api.Search500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: "internal error"}}, nil
+		return api.Search500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 
 	return api.Search200JSONResponse(*resp), nil
@@ -49,7 +57,7 @@ func (d *AppDelivery) GetDiagnosticInfo(ctx context.Context, request api.GetDiag
 	resp, err := usecase.GetDiagnosticInfo(*request.Body)
 	if err != nil {
 		d.log.Error(err.Error())
-		return api.GetDiagnosticInfo500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: "internal error"}}, nil
+		return api.GetDiagnosticInfo500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 
 	return api.GetDiagnosticInfo200JSONResponse(*resp), nil
@@ -60,7 +68,7 @@ func (d *AppDelivery) IndexatePage(ctx context.Context, request api.IndexatePage
 	resp, err := usecase.IndexatePage(*request.Body)
 	if err != nil {
 		d.log.Error(err.Error())
-		return api.IndexatePage500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: "internal error"}}, nil
+		return api.IndexatePage500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 
 	return api.IndexatePage200JSONResponse(*resp), nil
@@ -75,7 +83,8 @@ func (d *AppDelivery) IntegrationLogsGet(ctx context.Context, request api.Integr
 
 	logs, newCursor, err := usecase.GetIntegrationLogs(request.Body.IntegrationId, request.Body.Cursor)
 	if err != nil {
-		return nil, err
+		d.log.Error(err.Error())
+		return api.IntegrationLogsGet500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 	return api.IntegrationLogsGet200JSONResponse{LogFields: logs, Cursor: newCursor}, nil
 }
@@ -84,7 +93,8 @@ func (d *AppDelivery) YwikiAddPage(ctx context.Context, request api.YwikiAddPage
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	err := usecase.FetchPageFromYWiki(request.Body.PageUrl)
 	if err != nil {
-		return nil, err
+		d.log.Error(err.Error())
+		return api.YwikiAddPage500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: err.Error()}}, nil
 	}
 	return api.YwikiAddPage200JSONResponse{}, nil
 }
@@ -93,7 +103,8 @@ func (d *AppDelivery) PagesTreeGet(ctx context.Context, request api.PagesTreeGet
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 	result, err := usecase.GetPagesTree(request.Body.ActivePageIds)
 	if err != nil {
-		return nil, err
+		d.log.Error(err.Error())
+		return api.PagesTreeGet500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 	return api.PagesTreeGet200JSONResponse{Tree: result}, nil
 }
