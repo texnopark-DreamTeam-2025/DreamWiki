@@ -1,0 +1,195 @@
+openapi: 3.0.3
+
+info:
+  title: Yandex Cloud API Client
+  description: Клиент для работы с API Yandex Cloud
+  version: 1.0.0
+
+servers:
+  - url: https://llm.api.cloud.yandex.net
+    description: Yandex Cloud API server - LLM domain
+  - url: https://operation.api.cloud.yandex.net
+    description: Yandex Cloud API server - Operation domain
+
+paths:
+  operations/{operation_id}:
+    get:
+      description: Operation
+      parameters:
+        - name: operation_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/OperationID'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsGetResponse'
+
+  foundationModels/v1/completionAsync:
+    post:
+      description: LLM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoundationModelsV1CompletionAsyncRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoundationModelsV1CompletionAsyncResponse'
+
+components:
+  schemas:
+    OperationsGetResponse:
+      $ref: '#/components/schemas/Operation'
+
+    FoundationModelsV1CompletionAsyncRequest:
+      type: object
+      properties:
+        modelUri:
+          type: string
+          format: uri
+        completionOptions:
+          $ref: '#/components/schemas/CompletionOptions'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+      required:
+        - modelUri
+        - completionOptions
+        - messages
+
+    FoundationModelsV1CompletionAsyncResponse:
+      $ref: '#/components/schemas/Operation'
+
+    Operation:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/OperationID'
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        modifiedAt:
+          type: string
+          format: date-time
+        done:
+          type: boolean
+        response:
+          $ref: '#/components/schemas/ModelResponse'
+      required:
+        - id
+        - description
+        - createdAt
+        - createdBy
+        - modifiedAt
+        - done
+
+    ModelResponse:
+      type: object
+      properties:
+        "@type":
+          type: string
+        alternatives:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelResponseAlternative'
+        usage:
+          $ref: '#/components/schemas/ModelResponseUsage'
+        modelVersion:
+          type: string
+      required:
+        - "@type"
+        - alternatives
+        - usage
+        - modelVersion
+
+    ModelResponseUsage:
+      type: object
+      properties:
+        inputTextTokens:
+          type: string
+          example: 1234
+        completionTokens:
+          type: string
+          example: 1234
+        totalTokens:
+          type: string
+          example: 2468
+      required:
+        - inputTextTokens
+        - completionTokens
+        - totalTokens
+
+    ModelResponseAlternative:
+      type: object
+      properties:
+        message:
+          $ref: '#/components/schemas/Message'
+        status:
+          type: string
+          example: ALTERNATIVE_STATUS_FINAL
+      required:
+        - message
+        - status
+
+    CompletionOptions:
+      type: object
+      properties:
+        stream:
+          type: boolean
+          example: true
+        temperature:
+          type: number
+          example: 0.5
+        maxTokens:
+          type: string
+          example: 1000
+        reasoningOptions:
+          $ref: '#/components/schemas/ReasoningOptions'
+      required:
+        - stream
+        - temperature
+        - maxTokens
+        - reasoningOptions
+
+    ReasoningOptions:
+      type: object
+      properties:
+        mode:
+          type: string
+          example: DISABLED
+      required:
+        - mode
+
+    Message:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/MessageRole'
+        content:
+          type: string
+
+    MessageRole:
+      type: string
+      enum:
+        - user
+        - assistant
+        - system
+
+    OperationID:
+      type: string
+      example: a2aaa22aaaa222a2a22a

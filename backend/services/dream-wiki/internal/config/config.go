@@ -17,6 +17,7 @@ type Config struct {
 	YWikiToken       string
 	YandexCloudOrgID string
 	GitHubToken      string
+	YandexCloudToken string
 }
 
 func checkEnv(envVars []string) error {
@@ -44,6 +45,7 @@ func validateEnv() error {
 		"YWIKI_TOKEN",
 		"YANDEX_CLOUD_ORG_ID",
 		"GITHUB_TOKEN",
+		"YANDEX_CLOUD_TOKEN",
 	})
 	if err != nil {
 		return err
@@ -74,6 +76,7 @@ func LoadConfig() (*Config, error) {
 		YWikiToken:       getEnv("YWIKI_TOKEN"),
 		YandexCloudOrgID: getEnv("YANDEX_CLOUD_ORG_ID"),
 		GitHubToken:      getEnv("GITHUB_TOKEN"),
+		YandexCloudToken: getEnv("YANDEX_CLOUD_TOKEN"),
 	}, nil
 }
 

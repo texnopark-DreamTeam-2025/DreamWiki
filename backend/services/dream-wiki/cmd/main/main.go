@@ -13,6 +13,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/github_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/inference_client"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ycloud_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -54,7 +55,6 @@ func main() {
 		_ = ydbDriver.Close(context.Background())
 	}()
 
-	// Initialize inference client
 	inferenceClient, err := inference_client.NewInferenceClient(appConfig)
 	if err != nil {
 		logger.Fatalf("failed to initialize inference client: %v", err)
@@ -63,6 +63,11 @@ func main() {
 	yWikiClient, err := ywiki_client.NewYWikiClient(appConfig)
 	if err != nil {
 		logger.Fatalf("failed to initialize ywiki client: %v", err)
+	}
+
+	yCloudClient, err := ycloud_client.NewYCloudClient(appConfig)
+	if err != nil {
+		logger.Fatalf("failed to initialize ycloud client: %v", err)
 	}
 
 	gitHubClient, err := github_client.NewGitHubClient(appConfig)
@@ -77,6 +82,7 @@ func main() {
 		InferenceClient: inferenceClient,
 		YWikiClient:     yWikiClient,
 		GitHubClient:    gitHubClient,
+		YCloudClient:    yCloudClient,
 	}
 
 	appDelivery := delivery.NewAppDelivery(&deps)
