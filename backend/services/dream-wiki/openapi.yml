@@ -197,6 +197,210 @@ paths:
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
+  /v1/tasks/list:
+    post:
+      summary: Получить список задач с фильтрами
+      operationId: listTasks
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1ListTasksRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1ListTasksResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/tasks/cancel:
+    post:
+      summary: Отменить задачу
+      operationId: cancelTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1CancelTaskRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/tasks/retry:
+    post:
+      summary: Повторить задачу
+      operationId: retryTask
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1RetryTaskRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyOKResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/tasks/get:
+    post:
+      summary: Получить подробности одной задачи
+      operationId: getTaskDetails
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1GetTaskDetailsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1GetTaskDetailsResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/drafts/list:
+    post:
+      summary: Получить список черновиков
+      operationId: listDrafts
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1ListDraftsRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1ListDraftsResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/drafts/get:
+    post:
+      summary: Получить черновик
+      operationId: getDraft
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1GetDraftRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1GetDraftResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/drafts/create:
+    post:
+      summary: Создать черновик на основе существующей страницы в Wiki
+      operationId: createDraft
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1CreateDraftRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1CreateDraftResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/drafts/delete:
+    post:
+      summary: Удалить черновик
+      operationId: deleteDraft
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1DeleteDraftRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyOKResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/drafts/update:
+    post:
+      summary: Обновить черновик
+      operationId: updateDraft
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1UpdateDraftRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyOKResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
+  /v1/drafts/apply:
+    post:
+      summary: Применить черновик к странице
+      operationId: applyDraft
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/V1ApplyDraftRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/EmptyOKResponse"
+        "500":
+          $ref: "#/components/responses/ErrorResponse"
+
 components:
   schemas:
     V1LoginRequest:
@@ -340,6 +544,142 @@ components:
       required:
         - tree
 
+    V1ListTasksRequest:
+      type: object
+      properties:
+        only_my_tasks:
+          type: boolean
+          default: false
+        only_active:
+          type: boolean
+          default: false
+        cursor:
+          type: string
+
+    V1CancelTaskRequest:
+      type: object
+      properties:
+        task_id:
+          $ref: '#/components/schemas/TaskID'
+      required:
+        - task_id
+
+    V1RetryTaskRequest:
+      type: object
+      properties:
+        task_id:
+          $ref: '#/components/schemas/TaskID'
+      required:
+        - task_id
+
+    V1GetTaskDetailsRequest:
+      type: object
+      properties:
+        task_id:
+          $ref: '#/components/schemas/TaskID'
+      required:
+        - task_id
+
+    V1GetTaskDetailsResponse:
+      type: object
+      properties:
+        task:
+          $ref: "#/components/schemas/Task"
+      required:
+        - task
+
+    V1ListTasksResponse:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaskDigest"
+        cursor:
+          type: string
+      required:
+        - tasks
+        - cursor
+
+    V1ListDraftsRequest:
+      type: object
+      properties:
+        cursor:
+          type: string
+
+    V1ListDraftsResponse:
+      type: object
+      properties:
+        drafts:
+          type: array
+          items:
+            $ref: '#/components/schemas/DraftDigest'
+        cursor:
+          type: string
+      required:
+        - drafts
+        - cursor
+
+    V1GetDraftRequest:
+      type: object
+      properties:
+        draft_id:
+          $ref: '#/components/schemas/DraftID'
+      required:
+        - draft_id
+
+    V1GetDraftResponse:
+      type: object
+      properties:
+        draft:
+          $ref: '#/components/schemas/Draft'
+      required:
+        - draft
+
+    V1CreateDraftRequest:
+      type: object
+      properties:
+        page_url:
+          type: string
+          format: uri
+      required:
+        - page_url
+
+    V1CreateDraftResponse:
+      type: object
+      properties:
+        draft_id:
+          $ref: '#/components/schemas/DraftID'
+      required:
+        - draft_id
+
+    V1DeleteDraftRequest:
+      type: object
+      properties:
+        draft_id:
+          $ref: '#/components/schemas/DraftID'
+      required:
+        - draft_id
+
+    V1UpdateDraftRequest:
+      type: object
+      properties:
+        draft_id:
+          $ref: '#/components/schemas/DraftID'
+        new_content:
+          type: string
+      required:
+        - draft_id
+        - new_content
+
+    V1ApplyDraftRequest:
+      type: object
+      properties:
+        draft_id:
+          $ref: '#/components/schemas/DraftID'
+      required:
+        - draft_id
+
     SearchResultItem:
       type: object
       properties:
@@ -428,6 +768,118 @@ components:
       type: string
       format: uuid
 
+    TaskID:
+      type: integer
+      format: int64
+
+    DraftID:
+      type: string
+      format: uuid
+
+    TaskStatus:
+      type: string
+      enum:
+        - waiting
+        - executing
+        - done
+        - failed
+
+    DraftStatus:
+      type: string
+      enum:
+        - active
+        - merged
+        - needs-rebase
+
+    Subtask:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        description:
+          type: string
+      required:
+        - id
+        - status
+        - description
+
+    TaskDigest:
+      type: object
+      properties:
+        task_id:
+          $ref: '#/components/schemas/TaskID'
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        triggered_by:
+          type: string
+        description:
+          type: string
+      required:
+        - task_id
+        - status
+        - triggered_by
+        - description
+
+    Task:
+      type: object
+      properties:
+        task_digest:
+          $ref: '#/components/schemas/TaskDigest'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        subtasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Subtask'
+      required:
+        - task_digest
+        - triggered_by
+        - description
+        - created_at
+        - updated_at
+        - subtasks
+
+    DraftDigest:
+      type: object
+      properties:
+        draft_id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/DraftStatus'
+        page_digest:
+          $ref: '#/components/schemas/PageDigest'
+      required:
+        - draft_id
+        - status
+        - page_digest
+
+    Draft:
+      type: object
+      properties:
+        draft_digest:
+          $ref: '#/components/schemas/DraftDigest'
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - draft_digest
+        - content
+        - created_at
+        - updated_at
+
   responses:
     ErrorResponse:
       description: 4xx or 5xx code
@@ -435,6 +887,13 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponseBody"
+
+    EmptyOKResponse:
+      description: Operation successful, but no content returned
+      content:
+        application/json:
+          schema:
+            type: object
 
   securitySchemes:
     bearerAuth:
