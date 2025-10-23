@@ -3,11 +3,11 @@ from typing import List, Union
 
 
 class V1EmbeddingRequest(BaseModel):
-    text: str
+    texts: List[str]
 
 
 class V1EmbeddingResponse(BaseModel):
-    embedding: List[Union[float, int]]
+    embeddings: List[List[Union[float, int]]]
 
 
 class V1ErrorResponse(BaseModel):

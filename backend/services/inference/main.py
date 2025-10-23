@@ -44,20 +44,20 @@ async def startup_event():
 @app.post("/v1/create-text-embedding",
           response_model=V1EmbeddingResponse,
           responses={422: {"model": V1ErrorResponse}, 500: {"model": V1ErrorResponse}},
-          summary="Generate text embedding using RuBERT transformer",
+          summary="Generate text embeddings using RuBERT transformer",
           operation_id="generateEmbedding")
 async def generate_embedding(request: V1EmbeddingRequest):
     """
-    Generate text embedding using RuBERT transformer model.
+    Generate text embeddings using RuBERT transformer model.
 
-    - **text**: Input text for embedding generation
+    - **texts**: List of input texts for embedding generation
     """
     try:
         if model is None or tokenizer is None:
             raise HTTPException(status_code=500, detail="Model not loaded")
 
-        # Tokenize the input text
-        inputs = tokenizer(request.text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        # Tokenize all input texts
+        inputs = tokenizer(request.texts, return_tensors="pt", padding=True, truncation=True, max_length=512)
 
         # Generate embeddings
         with torch.no_grad():
@@ -65,17 +65,13 @@ async def generate_embedding(request: V1EmbeddingRequest):
             # Use the mean of the last hidden states as the embedding
             embeddings = outputs.last_hidden_state.mean(dim=1)
 
-        # Convert to list of floats
-        embedding_list = embeddings.squeeze().tolist()
+        # Convert to list of lists of floats
+        embeddings_list = embeddings.tolist()
 
-        # If it's a single value, make it a list
-        if isinstance(embedding_list, float):
-            embedding_list = [embedding_list]
-
-        return V1EmbeddingResponse(embedding=embedding_list)
+        return V1EmbeddingResponse(embeddings=embeddings_list)
 
     except Exception as e:
-        logger.error(f"Error generating embedding: {e}")
+        logger.error(f"Error generating embeddings: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

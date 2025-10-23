@@ -11,7 +11,7 @@ servers:
 paths:
   /v1/create-text-embedding:
     post:
-      summary: Generate text embedding using RuBERT transformer
+      summary: Generate text embeddings using RuBERT transformer
       operationId: generateEmbedding
       requestBody:
         required: true
@@ -21,7 +21,7 @@ paths:
               $ref: '#/components/schemas/V1EmbeddingRequest'
       responses:
         '200':
-          description: Successful embedding generation
+          description: OK
           content:
             application/json:
               schema:
@@ -44,23 +44,27 @@ components:
     V1EmbeddingRequest:
       type: object
       properties:
-        text:
-          type: string
-          description: Input text for embedding generation
+        texts:
+          type: array
+          items:
+            type: string
+          description: List of input texts for embedding generation
       required:
-        - text
+        - texts
 
     V1EmbeddingResponse:
       type: object
       properties:
-        embedding:
+        embeddings:
           type: array
           items:
-            type: number
-            format: float
-          description: Generated embedding vector
+            type: array
+            items:
+              type: number
+              format: float
+          description: List of generated embedding vectors
       required:
-        - embedding
+        - embeddings
 
     V1ErrorResponse:
       type: object

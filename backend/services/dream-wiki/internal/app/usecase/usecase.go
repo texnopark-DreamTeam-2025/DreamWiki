@@ -148,16 +148,18 @@ func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository
 
 	paragraphs := indexing.SplitPageToParagraphs(page.Content)
 
+	// Generate embeddings for all paragraphs in batch
+	embeddings, err := u.deps.InferenceClient.GenerateEmbeddings(u.ctx, paragraphs)
+	if err != nil {
+		return nil, err
+	}
+
 	for i, paragraph := range paragraphs {
-		embedding, err := u.deps.InferenceClient.GenerateEmbedding(u.ctx, paragraph)
-		if err != nil {
-			return nil, err
-		}
 		paragraphWithEmbedding := models.ParagraphWithEmbedding{
 			PageID:     req.PageId,
 			LineNumber: int64(i),
 			Content:    paragraph,
-			Embedding:  embedding,
+			Embedding:  embeddings[i],
 		}
 
 		err = repo.AddIndexedParagraph(paragraphWithEmbedding)
