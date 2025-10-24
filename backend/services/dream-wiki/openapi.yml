@@ -839,7 +839,6 @@ components:
     TaskStatus:
       type: string
       enum:
-        - waiting
         - executing
         - done
         - failed_by_error
