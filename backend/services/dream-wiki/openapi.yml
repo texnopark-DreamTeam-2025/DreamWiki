@@ -11,25 +11,25 @@ servers:
 paths:
   /v1/login:
     post:
-      summary: Аутентифицировать пользователя
+      summary: Залогинить пользователя
       operationId: login
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1LoginRequest"
+              $ref: '#/components/schemas/V1LoginRequest'
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/V1LoginResponse"
+                $ref: '#/components/schemas/V1LoginResponse'
         "401":
-          $ref: "#/components/responses/ErrorResponse"
+          $ref: '#/components/responses/ErrorResponse'
         "500":
-          $ref: "#/components/responses/ErrorResponse"
+          $ref: '#/components/responses/ErrorResponse'
 
   /v1/search:
     post:
@@ -241,10 +241,10 @@ paths:
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
-  /v1/tasks/retry:
+  /v1/tasks/recreate:
     post:
       summary: Повторить задачу
-      operationId: retryTask
+      operationId: recreateTask
       security:
         - bearerAuth: []
       requestBody:
@@ -252,10 +252,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/V1TasksRetryRequest"
+              $ref: "#/components/schemas/V1TasksRecreateRequest"
       responses:
         "200":
-          $ref: "#/components/responses/EmptyOKResponse"
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/V1TasksRecreateResponse"
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
@@ -528,7 +532,7 @@ components:
         integration_id:
           $ref: "#/components/schemas/IntegrationID"
         cursor:
-          type: string
+          $ref: '#/components/schemas/Cursor'
       required:
         - integration_id
 
@@ -536,7 +540,7 @@ components:
       type: object
       properties:
         cursor:
-          type: string
+          $ref: '#/components/schemas/Cursor'
         log_fields:
           type: array
           items:
@@ -569,14 +573,12 @@ components:
     V1TasksListRequest:
       type: object
       properties:
-        only_my_tasks:
-          type: boolean
-          default: false
-        only_active:
-          type: boolean
-          default: false
+        filters:
+          $ref: '#/components/schemas/TaskListFilters'
         cursor:
-          type: string
+          $ref: '#/components/schemas/Cursor'
+      required:
+        - filters
 
     V1TasksCancelRequest:
       type: object
@@ -586,13 +588,21 @@ components:
       required:
         - task_id
 
-    V1TasksRetryRequest:
+    V1TasksRecreateRequest:
       type: object
       properties:
         task_id:
           $ref: '#/components/schemas/TaskID'
       required:
         - task_id
+
+    V1TasksRecreateResponse:
+      type: object
+      properties:
+        new_task_id:
+          $ref: '#/components/schemas/TaskID'
+      required:
+        - new_task_id
 
     V1TasksGetRequest:
       type: object
@@ -621,6 +631,8 @@ components:
     V1TasksInternalStateGetResponse:
       type: object
       properties:
+        task_id:
+          $ref: '#/components/schemas/TaskID'
         task_state:
           $ref: '#/components/schemas/RawJSON'
         actions:
@@ -629,6 +641,8 @@ components:
             $ref: '#/components/schemas/RawJSON'
       required:
         - task_id
+        - task_state
+        - actions
 
     V1TasksListResponse:
       type: object
@@ -636,9 +650,9 @@ components:
         tasks:
           type: array
           items:
-            $ref: "#/components/schemas/TaskDigest"
+            $ref: '#/components/schemas/TaskDigest'
         cursor:
-          type: string
+          $ref: '#/components/schemas/Cursor'
       required:
         - tasks
         - cursor
@@ -647,7 +661,7 @@ components:
       type: object
       properties:
         cursor:
-          type: string
+          $ref: '#/components/schemas/Cursor'
 
     V1DraftsListResponse:
       type: object
@@ -657,7 +671,7 @@ components:
           items:
             $ref: '#/components/schemas/DraftDigest'
         cursor:
-          type: string
+          $ref: '#/components/schemas/Cursor'
       required:
         - drafts
         - cursor
@@ -819,6 +833,9 @@ components:
       type: string
       format: uuid
 
+    Cursor:
+      type: string
+
     TaskStatus:
       type: string
       enum:
@@ -929,6 +946,19 @@ components:
         - content
         - created_at
         - updated_at
+
+    TaskListFilters:
+      type: object
+      properties:
+        only_my_tasks:
+          type: boolean
+          default: false
+        only_active:
+          type: boolean
+          default: false
+      required:
+        - only_my_tasks
+        - only_active
 
     RawJSON:
       type: object

@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -118,7 +119,7 @@ func (u *appUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	page, err := repo.RetrievePageByID(req.PageId)
+	page, _, err := repo.GetPageByID(req.PageId)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +142,7 @@ func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository
 		return nil, err
 	}
 
-	page, err := repo.RetrievePageByID(req.PageId)
+	page, _, err := repo.GetPageByID(req.PageId)
 	if err != nil {
 		return nil, err
 	}
@@ -193,31 +194,48 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	if err != nil {
 		// TODO: If fetch return 404, delete page
 		// Will be done later
-		// err := repo.DeletePageBySlug(slug)
-		// if err != nil {
-		// 	u.log.Errorf("Failed to delete page with slug %s: %v", slug, err)
-		// 	return err
-		// }
-		// repo.Commit()
 		u.log.Errorf("Failed to fetch page from YWiki: %w", err)
 		return err
 	}
 
 	// 3. Upsert page to repository
-	page := api.Page{
+	pageFromYWIki := api.Page{
 		Content:   *pageResponse.Content,
 		Title:     pageResponse.Title,
 		YwikiSlug: &pageResponse.Slug,
 	}
-	pageID, err := repo.UpsertPage(page, slug)
-	if err != nil {
-		u.log.Errorf("Failed to upsert page: %w", err)
+	pageFromRepository, err := repo.GetPageBySlug(slug)
+	if err != nil && !errors.Is(err, models.ErrNoRows) {
+		u.log.Errorf("Failed to get page by slug: %w", err)
 		return err
+	}
+	var pageID api.PageID
+
+	if errors.Is(err, models.ErrNoRows) {
+		newPageID, err := repo.CreatePage(slug, pageFromYWIki.Title, pageFromYWIki.Content)
+		if err != nil {
+			return err
+		}
+		pageID = *newPageID
+	} else {
+		pageID = pageFromRepository.PageId
+		if pageFromRepository.Content != pageFromYWIki.Content {
+			_, err := repo.AppendPageRevision(pageID, pageFromYWIki.Content)
+			if err != nil {
+				return err
+			}
+		}
+		if pageFromRepository.Title != pageFromYWIki.Title {
+			err := repo.SetPageTitle(pageID, pageFromYWIki.Title)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	// 4. Indexate page using usecase function
 	indexateReq := api.V1IndexatePageRequest{
-		PageId: *pageID,
+		PageId: pageID,
 	}
 	_, err = u.indexatePageInTransaction(repo, indexateReq)
 	if err != nil {

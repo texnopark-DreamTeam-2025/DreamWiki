@@ -3,6 +3,7 @@ package repository
 import (
 	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
@@ -79,6 +80,10 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 		Title:   title,
 		Content: content,
 	}, nil
+}
+
+func (r *appRepositoryImpl) CreatePage(yWikiSlug string, title string, content string) (*api.PageID, error) {
+	panic("unimplemented")
 }
 
 func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) (pageID *uuid.UUID, err error) {
@@ -170,4 +175,20 @@ func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
 		pages = append(pages, page)
 	}
 	return pages, nil
+}
+
+func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent string) (*internals.RevisionID, error) {
+	panic("unimplemented")
+}
+
+func (r *appRepositoryImpl) GetPageByID(pageID api.PageID) (*api.Page, *internals.PageAdditionalInfo, error) {
+	panic("unimplemented")
+}
+
+func (r *appRepositoryImpl) SetPageActualRevision(pageID api.PageID, revisionID internals.RevisionID) error {
+	panic("unimplemented")
+}
+
+func (r *appRepositoryImpl) SetPageTitle(pageID api.PageID, newTitle string) error {
+	panic("unimplemented")
 }

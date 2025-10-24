@@ -48,16 +48,18 @@ CREATE TABLE User (
 );
 
 CREATE TABLE Task (
-    task_id Serial8 NOT NULL,
-    status  Text    NOT NULL, -- schema: api.TaskStatus
-    state   Json    NOT NULL, -- schema: internals.TaskState
+    task_id    Serial8   NOT NULL,
+    status     Text      NOT NULL, -- schema: api.TaskStatus
+    state      Json      NOT NULL, -- schema: internals.TaskState
+    created_at Timestamp NOT NULL,
+    updated_at Timestamp NOT NULL,
     PRIMARY KEY (task_id)
 );
 
 CREATE TABLE Draft (
     draft_id         Uuid      NOT NULL,
     page_revision_id Int64     NOT NULL,
-    draft_status     Text      NOT NULL, -- enum: active, merged, needs_rebase
+    status           Text      NOT NULL, -- schema: api.DraftStatus
     draft_title      Text      NOT NULL,
     content          Text      NOT NULL,
     created_at       Timestamp NOT NULL,

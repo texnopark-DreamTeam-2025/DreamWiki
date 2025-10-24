@@ -20,6 +20,16 @@ components:
           indexate_page: '#/components/schemas/TaskActionIndexatePage'
           ask_llm: '#/components/schemas/TaskActionAskLLM'
 
+    TaskActionResult:
+      oneOf:
+        - $ref: '#/components/schemas/TaskActionResultIndexatePage'
+        - $ref: '#/components/schemas/TaskActionResultAskLLM'
+      discriminator:
+        propertyName: task_action_type
+        mapping:
+          indexate_page: '#/components/schemas/TaskActionResultIndexatePage'
+          ask_llm: '#/components/schemas/TaskActionResultAskLLM'
+
     TaskType:
       type: string
       enum:
@@ -60,13 +70,11 @@ components:
         pages_to_indexate_ids:
           type: array
           items:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/PageID'
         indexated_page_ids:
           type: array
           items:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/PageID'
       required:
         - task_type
         - page_ids_to_indexate
@@ -100,6 +108,25 @@ components:
         - messages
         - model
 
+    TaskActionAdditionalInfo:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/TaskActionStatus'
+        task_id:
+          $ref: '#/components/schemas/TaskID'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - status
+        - task_id
+        - created_at
+        - updated_at
+
     TaskActionResultIndexatePage:
       type: object
       properties:
@@ -109,7 +136,7 @@ components:
           type: string
           format: uuid
       required:
-        - task_type
+        - task_action_type
         - page_id
 
     TaskActionResultAskLLM:
@@ -124,9 +151,21 @@ components:
         server_response:
           $ref: '#/components/schemas/RawJSON'
       required:
-        - task_type
+        - task_action_type
         - messages
         - server_response
+
+    TaskActionResultAdditionalInfo:
+      type: object
+      properties:
+        task_id:
+          $ref: '#/components/schemas/TaskID'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - task_id
+        - created_at
 
     LLMMessage:
       type: object
@@ -139,10 +178,36 @@ components:
         - role
         - content
 
+    PageID:
+      type: string
+      format: uuid
+
+    TaskID:
+      type: integer
+      format: int64
+
+    RevisionID:
+      type: integer
+      format: int64
+
+    TaskActionID:
+      type: integer
+      format: int64
+
+    TaskActionResultID:
+      type: integer
+      format: int64
+
     LLMModel:
       type: string
       enum:
         - yandexgpt_5_lite
+
+    PageAdditionalInfo:
+      type: object
+      properties:
+        current_revision_id:
+          $ref: '#/components/schemas/RevisionID'
 
     RawJSON:
       type: object

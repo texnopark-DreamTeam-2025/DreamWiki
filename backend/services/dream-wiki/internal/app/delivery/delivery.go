@@ -141,7 +141,7 @@ func (d *AppDelivery) ListTasks(ctx context.Context, request api.ListTasksReques
 	panic("unimplemented")
 }
 
-func (d *AppDelivery) RetryTask(ctx context.Context, request api.RetryTaskRequestObject) (api.RetryTaskResponseObject, error) {
+func (d *AppDelivery) RecreateTask(ctx context.Context, request api.RecreateTaskRequestObject) (api.RecreateTaskResponseObject, error) {
 	panic("unimplemented")
 }
 

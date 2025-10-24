@@ -27,4 +27,5 @@ var (
 	ErrWrongCredentials error = fmt.Errorf("wrong credentials")
 	ErrNoAccess         error = fmt.Errorf("no access")
 	ErrNotFound         error = fmt.Errorf("not found")
+	ErrNoRows           error = fmt.Errorf("%w: no rows", ErrNotFound)
 )

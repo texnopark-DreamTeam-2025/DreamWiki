@@ -55,7 +55,7 @@ func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.Integrati
 	return nil
 }
 
-func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.IntegrationID, cursor *string, limit int64) (fields []api.IntegrationLogField, newCursor string, err error) {
+func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit int64) ([]api.IntegrationLogField, api.Cursor, error) {
 	yql := `
 		SELECT field_id, log_text, created_at
 		FROM IntegrationLogField
@@ -81,7 +81,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.Integratio
 	}
 	defer result.Close()
 
-	fields = make([]api.IntegrationLogField, 0, limit)
+	fields := make([]api.IntegrationLogField, 0, limit)
 	if result.RowCount() == 0 {
 		if cursor == nil {
 			return fields, "", nil
