@@ -281,6 +281,28 @@ paths:
         "500":
           $ref: "#/components/responses/ErrorResponse"
 
+  /v1/tasks/internal-state/get:
+    post:
+      summary: Получить состояние задачи
+      operationId: getTaskInternalState
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1TasksInternalStateGetRequest'
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1TasksInternalStateGetResponse'
+        "500":
+          $ref: '#/components/responses/ErrorResponse'
+
   /v1/drafts/list:
     post:
       summary: Получить список черновиков
@@ -588,6 +610,26 @@ components:
       required:
         - task
 
+    V1TasksInternalStateGetRequest:
+      type: object
+      properties:
+        task_id:
+          $ref: '#/components/schemas/TaskID'
+      required:
+        - task_id
+
+    V1TasksInternalStateGetResponse:
+      type: object
+      properties:
+        task_state:
+          $ref: '#/components/schemas/RawJSON'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RawJSON'
+      required:
+        - task_id
+
     V1TasksListResponse:
       type: object
       properties:
@@ -887,6 +929,10 @@ components:
         - content
         - created_at
         - updated_at
+
+    RawJSON:
+      type: object
+      additionalProperties: true
 
   responses:
     ErrorResponse:

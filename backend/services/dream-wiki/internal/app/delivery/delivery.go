@@ -148,3 +148,7 @@ func (d *AppDelivery) RetryTask(ctx context.Context, request api.RetryTaskReques
 func (d *AppDelivery) UpdateDraft(ctx context.Context, request api.UpdateDraftRequestObject) (api.UpdateDraftResponseObject, error) {
 	panic("unimplemented")
 }
+
+func (d *AppDelivery) GetTaskInternalState(ctx context.Context, request api.GetTaskInternalStateRequestObject) (api.GetTaskInternalStateResponseObject, error) {
+	panic("unimplemented")
+}
