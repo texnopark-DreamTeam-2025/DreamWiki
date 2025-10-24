@@ -21,6 +21,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/panic"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/topic_reader"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/db"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
@@ -125,6 +126,13 @@ func main() {
 		}
 	}()
 
+	rd, err := topic_reader.NewTopicReader(deps.YDBDriver, logger)
+	if err != nil {
+		logger.Error("failed to create topic reader", zap.Error(err))
+		os.Exit(1)
+	}
+	rd.ReadMessages()
+
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
@@ -133,6 +141,7 @@ func main() {
 		logger.Error("failed to start server", zap.Error(err))
 		os.Exit(1)
 	case sig := <-quit:
+		// TODO: graceful shutdown for topic readers
 		logger.Info("server is shutting down",
 			zap.String("signal", sig.String()),
 		)

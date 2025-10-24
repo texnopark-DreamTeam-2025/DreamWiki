@@ -85,4 +85,7 @@ CREATE TABLE TaskActionResult (
 );
 
 CREATE TOPIC TaskActionToExecute;
+ALTER TOPIC TaskActionToExecute ADD CONSUMER dream_wiki;
+
 CREATE TOPIC TaskActionResultReady;
+ALTER TOPIC TaskActionResultReady ADD CONSUMER dream_wiki;

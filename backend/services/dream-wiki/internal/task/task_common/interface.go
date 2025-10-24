@@ -14,7 +14,7 @@ type (
 		GetStatus() api.TaskStatus
 		CalculateSubtasks() ([]api.Subtask, error)
 
-		Logic() TaskLogic
+		OnActionResult(result internals.TaskActionResult) error
 	}
 
 	TaskLogic interface {
