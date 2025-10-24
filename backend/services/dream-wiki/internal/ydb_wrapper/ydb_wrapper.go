@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
@@ -196,7 +197,11 @@ func (r *resultImpl) RowCount() int {
 }
 
 func (r *resultImpl) FetchExactlyOne(values ...indexed.RequiredOrOptional) error {
-	if r.result.CurrentResultSet().RowCount() != 1 {
+	rowCount := r.RowCount()
+	if rowCount == 0 {
+		return models.ErrNoRows
+	}
+	if rowCount > 1 {
 		return fmt.Errorf("expected exactly one row")
 	}
 	r.result.NextRow()

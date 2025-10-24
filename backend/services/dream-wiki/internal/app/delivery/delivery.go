@@ -65,7 +65,7 @@ func (d *AppDelivery) GetDiagnosticInfo(ctx context.Context, request api.GetDiag
 
 func (d *AppDelivery) IndexatePage(ctx context.Context, request api.IndexatePageRequestObject) (api.IndexatePageResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
-	resp, err := usecase.IndexatePage(*request.Body)
+	resp, err := usecase.IndexatePage(request.Body.PageId)
 	if err != nil {
 		d.log.Error(err.Error())
 		return api.IndexatePage500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil

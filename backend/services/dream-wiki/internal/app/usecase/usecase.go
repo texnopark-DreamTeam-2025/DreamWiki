@@ -20,7 +20,7 @@ type (
 	AppUsecase interface {
 		Search(req api.V1SearchRequest) (*api.V1SearchResponse, error)
 		GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error)
-		IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error)
+		IndexatePage(pageID api.PageID) (*api.V1IndexatePageResponse, error)
 		Login(req api.V1LoginRequest) (*api.V1LoginResponse, error)
 		FetchPageFromYWiki(pageURL string) error
 		AccountGitHubPullRequest(pullRequestURL string) error
@@ -36,6 +36,10 @@ type (
 		ListTasks(cursor *string) (tasks []api.TaskDigest, newCursor string, err error)
 		RetryTask(taskID api.TaskID) error
 		UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error
+		YwikiFetchAllAsync() (*api.TaskID, error)
+		GithubAccountPRAsync(prURL string) (*api.TaskID, error)
+		GetTaskInternalState(taskID api.TaskID) (*api.V1TasksInternalStateGetResponse, error)
+		RecreateTask(taskID api.TaskID) (*api.TaskID, error)
 	}
 
 	appUsecaseImpl struct {
@@ -129,20 +133,20 @@ func (u *appUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (
 	}, nil
 }
 
-func (u *appUsecaseImpl) IndexatePage(req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
+func (u *appUsecaseImpl) IndexatePage(pageID api.PageID) (*api.V1IndexatePageResponse, error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	return u.indexatePageInTransaction(repo, req)
+	return u.indexatePageInTransaction(repo, pageID)
 }
 
-func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository, req api.V1IndexatePageRequest) (*api.V1IndexatePageResponse, error) {
-	err := repo.RemovePageIndexation(req.PageId)
+func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository, pageID api.PageID) (*api.V1IndexatePageResponse, error) {
+	err := repo.RemovePageIndexation(pageID)
 	if err != nil {
 		return nil, err
 	}
 
-	page, _, err := repo.GetPageByID(req.PageId)
+	page, _, err := repo.GetPageByID(pageID)
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +161,7 @@ func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository
 
 	for i, paragraph := range paragraphs {
 		paragraphWithEmbedding := models.ParagraphWithEmbedding{
-			PageID:     req.PageId,
+			PageID:     pageID,
 			LineNumber: int64(i),
 			Content:    paragraph,
 			Embedding:  embeddings[i],
@@ -171,14 +175,12 @@ func (u *appUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository
 
 	repo.Commit()
 	return &api.V1IndexatePageResponse{
-		PageId: req.PageId,
+		PageId: pageID,
 	}, nil
 }
 
 func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
-	// 1. Parse URL, extract slug like:
-	// https://wiki.yandex.ru/homepage/required-notification/ -> required-notification
-	slug := extractSlugFromURL(pageURL)
+	slug := extractYWikiSlugFromURL(pageURL)
 
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
@@ -237,7 +239,7 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	indexateReq := api.V1IndexatePageRequest{
 		PageId: pageID,
 	}
-	_, err = u.indexatePageInTransaction(repo, indexateReq)
+	_, err = u.indexatePageInTransaction(repo, indexateReq.PageId)
 	if err != nil {
 		u.log.Errorf("Failed to indexate page: %w", err)
 		return err
@@ -318,5 +320,21 @@ func (u *appUsecaseImpl) RetryTask(taskID api.TaskID) error {
 }
 
 func (u *appUsecaseImpl) UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) GetTaskInternalState(taskID api.TaskID) (*api.V1TasksInternalStateGetResponse, error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) GithubAccountPRAsync(prURL string) (*api.TaskID, error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) RecreateTask(taskID api.TaskID) (*api.TaskID, error) {
+	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) YwikiFetchAllAsync() (*api.TaskID, error) {
 	panic("unimplemented")
 }

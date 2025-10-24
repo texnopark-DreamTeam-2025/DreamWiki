@@ -1,41 +1,11 @@
 package repository
 
 import (
-	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
-
-func (r *appRepositoryImpl) RetrievePageByID(pageID uuid.UUID) (*api.Page, error) {
-	yql := `
-	SELECT
-		page_id,
-		title,
-		content
-	FROM Page WHERE page_id=$pageID;
-	`
-
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
-	if err != nil {
-		return nil, err
-	}
-	defer result.Close()
-
-	var retrievedPageID uuid.UUID
-	var title string
-	var content string
-	if err = result.FetchExactlyOne(&retrievedPageID, &title, &content); err != nil {
-		return nil, err
-	}
-
-	return &api.Page{
-		PageId:  retrievedPageID,
-		Content: content,
-		Title:   title,
-	}, nil
-}
 
 func (r *appRepositoryImpl) DeleteAllPages() error {
 	yql := `
@@ -83,64 +53,41 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 }
 
 func (r *appRepositoryImpl) CreatePage(yWikiSlug string, title string, content string) (*api.PageID, error) {
-	panic("unimplemented")
-}
-
-func (r *appRepositoryImpl) UpsertPage(page api.Page, yWikiSlug string) (pageID *uuid.UUID, err error) {
-	yql1 := `
-	UPDATE Page
-	SET
-		title=$title,
-		content=$content
-	WHERE ywiki_slug=$yWikiSlug
-	RETURNING page_id;`
-
-	yql2 := `
-	INSERT INTO Page(page_id, title, ywiki_slug, content)
+	yql := `
+	INSERT INTO Page(page_id, title, ywiki_slug, current_revision_id)
 	VALUES (
-		RandomUUID(4),
+		RandomUuid(4),
 		$title,
 		$yWikiSlug,
-		$content
+		0
 	)
 	RETURNING page_id;`
 
-	pageID = new(uuid.UUID)
-
 	parameters := []table.ParameterOption{
-		table.ValueParam("$title", types.TextValue(page.Title)),
-		table.ValueParam("$content", types.TextValue(page.Content)),
+		table.ValueParam("$title", types.TextValue(title)),
 		table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)),
 	}
 
-	result1, err := r.ydbClient.InTX().Execute(yql1, parameters...)
+	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return nil, err
 	}
-	defer result1.Close()
+	defer result.Close()
 
-	if result1.RowCount() == 1 {
-		err := result1.FetchExactlyOne(&pageID)
-		if err != nil {
-			return nil, err
-		}
-		return pageID, nil
-	}
-
-	result2, err := r.ydbClient.InTX().Execute(yql2, parameters...)
-	if err != nil {
-		return nil, err
-	}
-	defer result2.Close()
-
-	err = result2.FetchExactlyOne(&pageID)
+	var pageID api.PageID
+	err = result.FetchExactlyOne(&pageID)
 	if err != nil {
 		return nil, err
 	}
 
 	r.log.Debug("Inserted page with id ", pageID)
 
-	return pageID, nil
+	_, err = r.AppendPageRevision(pageID, content)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pageID, nil
 }
 
 func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
@@ -178,15 +125,112 @@ func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
 }
 
 func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent string) (*internals.RevisionID, error) {
-	panic("unimplemented")
+	yql1 := `
+	SELECT current_revision_id
+	FROM Page
+	WHERE page_id = $pageID;`
+
+	result1, err := r.ydbClient.InTX().Execute(yql1, table.ValueParam("$pageID", types.UuidValue(pageID)))
+	if err != nil {
+		return nil, err
+	}
+	defer result1.Close()
+
+	var currentRevisionID int64
+	err = result1.FetchExactlyOne(&currentRevisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	yql2 := `
+	INSERT INTO PageRevision(revision_id, page_id, previous_revision_id, content)
+	VALUES (
+		RandomUuid(4),
+		$pageID,
+		$previousRevisionID,
+		$content
+	)
+	RETURNING revision_id;`
+
+	parameters := []table.ParameterOption{
+		table.ValueParam("$pageID", types.UuidValue(pageID)),
+		table.ValueParam("$previousRevisionID", types.Int64Value(currentRevisionID)),
+		table.ValueParam("$content", types.TextValue(newContent)),
+	}
+
+	result2, err := r.ydbClient.InTX().Execute(yql2, parameters...)
+	if err != nil {
+		return nil, err
+	}
+	defer result2.Close()
+
+	var revisionID internals.RevisionID
+	err = result2.FetchExactlyOne(&revisionID)
+	if err != nil {
+		return nil, err
+	}
+
+	yql3 := `
+	UPDATE Page
+	SET current_revision_id = $revisionID
+	WHERE page_id = $pageID;`
+
+	parameters3 := []table.ParameterOption{
+		table.ValueParam("$pageID", types.UuidValue(pageID)),
+		table.ValueParam("$revisionID", types.Int64Value(revisionID)),
+	}
+
+	result3, err := r.ydbClient.InTX().Execute(yql3, parameters3...)
+	if err != nil {
+		return nil, err
+	}
+	defer result3.Close()
+
+	r.log.Debug("Appended page revision with id ", revisionID)
+
+	return &revisionID, nil
 }
 
 func (r *appRepositoryImpl) GetPageByID(pageID api.PageID) (*api.Page, *internals.PageAdditionalInfo, error) {
-	panic("unimplemented")
-}
+	yql := `
+	SELECT
+		p.page_id,
+		p.title,
+		p.ywiki_slug,
+		p.current_revision_id,
+		r.content
+	FROM Page p
+	JOIN PageRevision r ON p.current_revision_id=r.revision_id
+	WHERE page_id=$pageID;
+	`
 
-func (r *appRepositoryImpl) SetPageActualRevision(pageID api.PageID, revisionID internals.RevisionID) error {
-	panic("unimplemented")
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
+	if err != nil {
+		return nil, nil, err
+	}
+	defer result.Close()
+
+	var retrievedPageID api.PageID
+	var title string
+	var ywikiSlug *string
+	var currentRevisionID int64
+	var content string
+	if err = result.FetchExactlyOne(&retrievedPageID, &title, &ywikiSlug, &currentRevisionID, &content); err != nil {
+		return nil, nil, err
+	}
+
+	page := &api.Page{
+		PageId:    retrievedPageID,
+		Title:     title,
+		Content:   content,
+		YwikiSlug: ywikiSlug,
+	}
+
+	pageAdditionalInfo := &internals.PageAdditionalInfo{
+		CurrentRevisionId: &currentRevisionID,
+	}
+
+	return page, pageAdditionalInfo, nil
 }
 
 func (r *appRepositoryImpl) SetPageTitle(pageID api.PageID, newTitle string) error {
