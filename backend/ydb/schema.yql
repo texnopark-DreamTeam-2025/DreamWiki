@@ -1,0 +1,77 @@
+-- YDB, YQL
+
+CREATE TABLE Page (
+    page_id             Uuid  NOT NULL,
+    title               Text  NOT NULL,
+    ywiki_slug          Text  NOT NULL,
+    parent_page_id      Uuid          ,
+    current_revision_id Int64 NOT NULL,
+    PRIMARY KEY (page_id)
+);
+
+CREATE TABLE PageRevision (
+    revision_id          Serial8 NOT NULL,
+    page_id              Uuid    NOT NULL,
+    previous_revision_id Int64   NOT NULL,
+    content              Text    NOT NULL,
+    PRIMARY KEY (revision_id)
+);
+
+CREATE TABLE Paragraph (
+    page_id          Uuid   NOT NULL,
+    line_number      Int64  NOT NULL,
+    content          Text   NOT NULL,
+    anchor_link_slug Text   NOT NULL,
+    embedding        String NOT NULL,
+    PRIMARY KEY (page_id, line_number)
+);
+
+CREATE TABLE IntegrationLogField (
+    field_id       Serial8   NOT NULL,
+    integration_id Text      NOT NULL, -- schema: api.IntegrationID
+    log_text       Text      NOT NULL,
+    created_at     Timestamp NOT NULL,
+    PRIMARY KEY (field_id)
+);
+
+CREATE TABLE User (
+    user_id              Uuid NOT NULL,
+    username             Text NOT NULL,
+    password_hash_bcrypt Text NOT NULL,
+    PRIMARY KEY (user_id)
+);
+
+CREATE TABLE Task (
+    task_id Serial8 NOT NULL,
+    status  Text    NOT NULL, -- schema: api.TaskStatus
+    state   Json    NOT NULL, -- schema: internals.TaskState
+    PRIMARY KEY (task_id)
+);
+
+CREATE TABLE Draft (
+    draft_id         Uuid      NOT NULL,
+    page_revision_id Int64     NOT NULL,
+    draft_status     Text      NOT NULL, -- enum: active, merged, needs_rebase
+    draft_title      Text      NOT NULL,
+    content          Text      NOT NULL,
+    created_at       Timestamp NOT NULL,
+    updated_at       Timestamp NOT NULL,
+    PRIMARY KEY (draft_id)
+);
+
+CREATE TABLE TaskAction (
+    task_action_id Serial8   NOT NULL,
+    task_id        Int64     NOT NULL,
+    status         Text      NOT NULL, -- schema: internals.TaskActionStatus
+    action         Json      NOT NULL, -- schema: internals.TaskAction
+    created_at     Timestamp NOT NULL,
+    updated_at     Timestamp NOT NULL,
+    PRIMARY KEY (task_action_id)
+);
+
+CREATE TABLE TaskActionResult (
+    task_action_id Int64     NOT NULL,
+    result         Json      NOT NULL, -- schema: internals.TaskActionResult
+    created_at     Timestamp NOT NULL,
+    PRIMARY KEY (task_action_id)
+);

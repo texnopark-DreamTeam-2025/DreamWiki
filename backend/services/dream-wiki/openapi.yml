@@ -783,7 +783,8 @@ components:
         - waiting
         - executing
         - done
-        - failed
+        - failed_by_error
+        - failed_by_timeout
         - cancelled
 
     DraftStatus:
@@ -791,7 +792,7 @@ components:
       enum:
         - active
         - merged
-        - needs-rebase
+        - needs_rebase
 
     Subtask:
       type: object

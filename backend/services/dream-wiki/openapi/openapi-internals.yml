@@ -1,11 +1,5 @@
 components:
   schemas:
-    TaskType:
-      type: string
-      enum:
-        - github_account_pr
-        - reindexate_all_pages
-
     TaskState:
       oneOf:
         - $ref: '#/components/schemas/TaskStateGitHubAccountPR'
@@ -15,6 +9,36 @@ components:
         mapping:
           github_account_pr: '#/components/schemas/TaskStateGitHubAccountPR'
           reindexate_all_pages: '#/components/schemas/TaskStateReindexateAllPages'
+
+    TaskAction:
+      oneOf:
+        - $ref: '#/components/schemas/TaskActionIndexatePage'
+        - $ref: '#/components/schemas/TaskActionAskLLM'
+      discriminator:
+        propertyName: task_action_type
+        mapping:
+          indexate_page: '#/components/schemas/TaskActionIndexatePage'
+          ask_llm: '#/components/schemas/TaskActionAskLLM'
+
+    TaskType:
+      type: string
+      enum:
+        - github_account_pr
+        - reindexate_all_pages
+
+    TaskActionType:
+      type: string
+      enum:
+        - indexate_page
+        - ask_llm
+
+    TaskActionStatus:
+      type: string
+      enum:
+        - new
+        - executing
+        - finished
+        - failed
 
     TaskStateGitHubAccountPR:
       type: object
@@ -33,17 +57,93 @@ components:
       properties:
         task_type:
           $ref: '#/components/schemas/TaskType'
-        page_ids_to_indexate:
+        pages_to_indexate_ids:
           type: array
           items:
             type: string
-            format: uri
+            format: uuid
         indexated_page_ids:
           type: array
           items:
             type: string
-            format: uri
+            format: uuid
       required:
         - task_type
         - page_ids_to_indexate
         - indexated_page_ids
+
+    TaskActionIndexatePage:
+      type: object
+      properties:
+        task_action_type:
+          $ref: '#/components/schemas/TaskActionType'
+        page_id:
+          type: string
+          format: uuid
+      required:
+        - task_action_type
+        - page_id
+
+    TaskActionAskLLM:
+      type: object
+      properties:
+        task_action_type:
+          $ref: '#/components/schemas/TaskActionType'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LLMMessage'
+        model:
+          $ref: '#/components/schemas/LLMModel'
+      required:
+        - task_action_type
+        - messages
+        - model
+
+    TaskActionResultIndexatePage:
+      type: object
+      properties:
+        task_action_type:
+          $ref: '#/components/schemas/TaskActionType'
+        page_id:
+          type: string
+          format: uuid
+      required:
+        - task_type
+        - page_id
+
+    TaskActionResultAskLLM:
+      type: object
+      properties:
+        task_action_type:
+          $ref: '#/components/schemas/TaskActionType'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/LLMMessage'
+        server_response:
+          $ref: '#/components/schemas/RawJSON'
+      required:
+        - task_type
+        - messages
+        - server_response
+
+    LLMMessage:
+      type: object
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    LLMModel:
+      type: string
+      enum:
+        - yandexgpt_5_lite
+
+    RawJSON:
+      type: object
+      additionalProperties: true
