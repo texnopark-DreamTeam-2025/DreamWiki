@@ -26,10 +26,14 @@ func (r *appRepositoryImpl) DeleteAllPages() error {
 func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 	yql := `
 	SELECT
-		page_id,
-		title,
-		content
-	FROM Page WHERE ywiki_slug=$yWikiSlug;
+		p.page_id,
+		p.title,
+		p.ywiki_slug,
+		p.current_revision_id,
+		r.content
+	FROM Page p
+	JOIN PageRevision r ON p.current_revision_id=r.revision_id
+	WHERE p.ywiki_slug=$yWikiSlug;
 	`
 
 	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
@@ -40,15 +44,18 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 
 	var pageID api.PageID
 	var title string
+	var ywikiSlug *string
+	var currentRevisionID int64
 	var content string
-	if err = result.FetchExactlyOne(&pageID, &title, &content); err != nil {
+	if err = result.FetchExactlyOne(&pageID, &title, &ywikiSlug, &currentRevisionID, &content); err != nil {
 		return nil, err
 	}
 
 	return &api.Page{
-		PageId:  pageID,
-		Title:   title,
-		Content: content,
+		PageId:    pageID,
+		Title:     title,
+		Content:   content,
+		YwikiSlug: ywikiSlug,
 	}, nil
 }
 
@@ -234,5 +241,22 @@ func (r *appRepositoryImpl) GetPageByID(pageID api.PageID) (*api.Page, *internal
 }
 
 func (r *appRepositoryImpl) SetPageTitle(pageID api.PageID, newTitle string) error {
-	panic("unimplemented")
+	yql := `
+	UPDATE Page
+	SET title = $newTitle
+	WHERE page_id = $pageID;
+	`
+
+	parameters := []table.ParameterOption{
+		table.ValueParam("$pageID", types.UuidValue(pageID)),
+		table.ValueParam("$newTitle", types.TextValue(newTitle)),
+	}
+
+	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	if err != nil {
+		return err
+	}
+	defer result.Close()
+
+	return nil
 }
