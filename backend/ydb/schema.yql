@@ -1,5 +1,11 @@
 -- YDB, YQL
 
+-- There is lack of DDL operations in YDB, so schema there
+-- presented in full state. In future, we likely would implement
+-- table versioning in order to not loss data. But at this time,
+-- every update should drop all tables with losing ALL data.
+-- It is sad.
+
 CREATE TABLE Page (
     page_id             Uuid  NOT NULL,
     title               Text  NOT NULL,
@@ -75,3 +81,6 @@ CREATE TABLE TaskActionResult (
     created_at     Timestamp NOT NULL,
     PRIMARY KEY (task_action_id)
 );
+
+CREATE TOPIC TaskActionToExecute;
+CREATE TOPIC TaskActionResultReady;

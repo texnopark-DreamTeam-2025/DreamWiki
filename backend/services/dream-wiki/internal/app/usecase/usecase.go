@@ -259,7 +259,7 @@ func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cur
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	fields, newCursor, err = repo.GetIntegrationLogFields(string(integrationID), cursor, 50)
+	fields, newCursor, err = repo.GetIntegrationLogFields(integrationID, cursor, 50)
 	return
 }
 
