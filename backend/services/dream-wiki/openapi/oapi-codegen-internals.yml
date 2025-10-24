@@ -1,0 +1,6 @@
+package: internals
+output: ../pkg/internals/models.gen.go
+generate:
+  models: true
+output-options:
+  skip-prune: true

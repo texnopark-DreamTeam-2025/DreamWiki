@@ -5,3 +5,4 @@ package openapi
 //go:generate go tool oapi-codegen --config=oapi-codegen-ywiki.yml openapi-ywiki.yml
 //go:generate go tool oapi-codegen --config=oapi-codegen-ycloud.yml openapi-ycloud.yml
 //go:generate go tool oapi-codegen --config=oapi-codegen-github.yml openapi-github.yml
+//go:generate go tool oapi-codegen --config=oapi-codegen-internals.yml openapi-internals.yml

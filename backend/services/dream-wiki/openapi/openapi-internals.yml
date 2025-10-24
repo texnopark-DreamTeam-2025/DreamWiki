@@ -1,0 +1,49 @@
+components:
+  schemas:
+    TaskType:
+      type: string
+      enum:
+        - github_account_pr
+        - reindexate_all_pages
+
+    TaskState:
+      oneOf:
+        - $ref: '#/components/schemas/TaskStateGitHubAccountPR'
+        - $ref: '#/components/schemas/TaskStateReindexateAllPages'
+      discriminator:
+        propertyName: task_type
+        mapping:
+          github_account_pr: '#/components/schemas/TaskStateGitHubAccountPR'
+          reindexate_all_pages: '#/components/schemas/TaskStateReindexateAllPages'
+
+    TaskStateGitHubAccountPR:
+      type: object
+      properties:
+        task_type:
+          $ref: '#/components/schemas/TaskType'
+        pr_url:
+          type: string
+          format: uri
+      required:
+        - task_type
+        - pr_url
+
+    TaskStateReindexateAllPages:
+      type: object
+      properties:
+        task_type:
+          $ref: '#/components/schemas/TaskType'
+        page_ids_to_indexate:
+          type: array
+          items:
+            type: string
+            format: uri
+        indexated_page_ids:
+          type: array
+          items:
+            type: string
+            format: uri
+      required:
+        - task_type
+        - page_ids_to_indexate
+        - indexated_page_ids
