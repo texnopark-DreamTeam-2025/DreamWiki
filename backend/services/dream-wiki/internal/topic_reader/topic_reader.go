@@ -18,7 +18,7 @@ type (
 )
 
 func NewTopicReader(db *ydb.Driver, log logger.Logger) (*TopicReaders, error) {
-	taskActionsTopicReader, err := db.Topic().StartReader("dream_wiki", topicoptions.ReadTopic("local/TaskActionToExecute"))
+	taskActionsTopicReader, err := db.Topic().StartReader("dream_wiki", topicoptions.ReadTopic("TaskActionToExecute"))
 	if err != nil {
 		return nil, err
 	}
@@ -51,12 +51,14 @@ func (t *TopicReaders) ReadMessages() {
 }
 
 func (t *TopicReaders) readTaskActionMessages() {
+	t.log.Info("START READING TaskActionsTopicReader")
 	for {
 		mess, err := t.TaskActionsTopicReader.ReadMessage(context.Background())
 		if err != nil {
 			t.log.Error(err)
 			break
 		}
+		t.log.Info("SKDJFDLSJFKLDFJLSJFSDLFJFLKSJFLKDJSFKLSJFKSDJFKLSDJFLKSJFLKSJFLSKFJKLJDFLKSDJFLKSJFLKSDJFSKDFJSKJFHJK")
 		t.log.Info(mess)
 		t.TaskActionsTopicReader.Commit(mess.Context(), mess)
 	}

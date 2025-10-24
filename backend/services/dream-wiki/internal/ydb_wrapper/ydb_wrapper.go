@@ -9,15 +9,14 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
+	"github.com/ydb-platform/ydb-go-sdk/v3/query"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
-	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/indexed"
 	"github.com/ydb-platform/ydb-go-sdk/v3/topic"
 )
 
 type (
 	YDBWrapper interface {
-		Commit()
+		Commit() error
 		Rollback()
 		GetTX() table.TransactionIdentifier
 
@@ -39,33 +38,34 @@ type (
 	ResultSet interface {
 		RowCount() int
 		NextRow() bool
-		FetchRow(...indexed.RequiredOrOptional) error
-		FetchExactlyOne(...indexed.RequiredOrOptional) error
+		FetchRow(...any) error
+		FetchExactlyOne(...any) error
 
 		Close()
 	}
 
 	ydbWrapperImpl struct {
-		db          *ydb.Driver
-		log         logger.Logger
-		ctx         context.Context
-		tableClient table.Client
-		tx          *table.TransactionActor
+		db  *ydb.Driver
+		log logger.Logger
+		ctx context.Context
+		tx  *query.TxActor
 
-		// success and closed used in transaction commit/rollback mechanics.
-		success chan bool
-		closed  int32
+		// success, commitError and closed used in transaction commit/rollback mechanics.
+		success     chan bool
+		commitError chan error
+		closed      int32
 	}
 
 	actorImpl struct {
 		ctx            context.Context
-		tx             table.TransactionActor
+		tx             query.TxActor
 		closingChannel chan any
 	}
 
 	resultImpl struct {
 		ctx           context.Context
-		result        result.Result
+		rows          []query.Row
+		rowIdx        int
 		closeCallback func()
 	}
 )
@@ -78,10 +78,9 @@ var (
 
 func NewYDBWrapper(ctx context.Context, deps *deps.Deps, withTransaction bool) YDBWrapper {
 	result := &ydbWrapperImpl{
-		ctx:         ctx,
-		db:          deps.YDBDriver,
-		log:         deps.Logger,
-		tableClient: deps.YDBDriver.Table(),
+		ctx: ctx,
+		db:  deps.YDBDriver,
+		log: deps.Logger,
 	}
 	if withTransaction {
 		result.beginTX()
@@ -91,9 +90,10 @@ func NewYDBWrapper(ctx context.Context, deps *deps.Deps, withTransaction bool) Y
 
 func (y *ydbWrapperImpl) beginTX() {
 	y.success = make(chan bool)
-	txRetriever := make(chan table.TransactionActor)
+	y.commitError = make(chan error)
+	txRetriever := make(chan query.TxActor)
 
-	action := func(ctx context.Context, tx table.TransactionActor) error {
+	action := func(ctx context.Context, tx query.TxActor) error {
 		txRetriever <- tx
 		y.log.Infof("YDB transaction %s started", tx.ID())
 
@@ -108,7 +108,7 @@ func (y *ydbWrapperImpl) beginTX() {
 	}
 
 	go func() {
-		_ = y.tableClient.DoTx(y.ctx, action)
+		y.commitError <- y.db.Query().DoTx(y.ctx, action)
 	}()
 	tx := <-txRetriever
 	y.tx = &tx
@@ -119,15 +119,18 @@ func (y *ydbWrapperImpl) TopicClient() topic.Client {
 	return y.db.Topic()
 }
 
-func (y *ydbWrapperImpl) Commit() {
+func (y *ydbWrapperImpl) Commit() error {
 	if n := atomic.AddInt32(&(y.closed), 1); n == 1 {
 		y.success <- true
+		return <-y.commitError
 	}
+	return nil
 }
 
 func (y *ydbWrapperImpl) Rollback() {
 	if n := atomic.AddInt32(&(y.closed), 1); n == 1 {
 		y.success <- false
+		<-y.commitError
 	}
 }
 
@@ -154,14 +157,14 @@ func (y *ydbWrapperImpl) InTX() Actor {
 }
 
 func (y *ydbWrapperImpl) OutsideTX() Actor {
-	txRetriever := make(chan table.TransactionActor)
+	txRetriever := make(chan query.TxActor)
 	actorInstance := actorImpl{
 		ctx:            y.ctx,
 		closingChannel: make(chan any),
 		tx:             nil,
 	}
 
-	action := func(ctx context.Context, tx table.TransactionActor) error {
+	action := func(ctx context.Context, tx query.TxActor) error {
 		txRetriever <- tx
 		<-actorInstance.closingChannel
 		close(actorInstance.closingChannel)
@@ -169,7 +172,7 @@ func (y *ydbWrapperImpl) OutsideTX() Actor {
 	}
 
 	go func() {
-		_ = y.tableClient.DoTx(y.ctx, action)
+		_ = y.db.Query().DoTx(y.ctx, action)
 	}()
 
 	tx := <-txRetriever
@@ -179,24 +182,31 @@ func (y *ydbWrapperImpl) OutsideTX() Actor {
 }
 
 func (a *actorImpl) Execute(yql string, opts ...table.ParameterOption) (ResultSet, error) {
-	result, err := a.tx.Execute(a.ctx, yql, table.NewQueryParameters(opts...))
+
+	paramsBuilder := ydb.ParamsBuilder()
+	for _, opt := range opts {
+		paramsBuilder = paramsBuilder.Param(opt.Name()).Any(opt.Value())
+	}
+
+	resultSet, err := a.tx.QueryResultSet(a.ctx, yql, query.WithParameters(paramsBuilder.Build()))
 	if err != nil {
 		a.closingChannel <- nil
 		return nil, err
 	}
-	if result.Err() != nil {
-		a.closingChannel <- nil
-		return nil, result.Err()
+	defer resultSet.Close(a.ctx)
+
+	rows := make([]query.Row, 0)
+	for row, err := range resultSet.Rows(a.ctx) {
+		if err != nil {
+			return nil, err
+		}
+		rows = append(rows, row)
 	}
-	if result.ResultSetCount() < 1 {
-		a.closingChannel <- nil
-		return nil, fmt.Errorf("expected exactly one result set")
-	}
-	result.NextResultSet(a.ctx)
 
 	return &resultImpl{
 		ctx:    a.ctx,
-		result: result,
+		rows:   rows,
+		rowIdx: -1,
 		closeCallback: func() {
 			a.closingChannel <- nil
 		},
@@ -204,14 +214,15 @@ func (a *actorImpl) Execute(yql string, opts ...table.ParameterOption) (ResultSe
 }
 
 func (r *resultImpl) NextRow() bool {
-	return r.result.NextRow()
+	r.rowIdx++
+	return r.rowIdx < int(r.RowCount())
 }
 
 func (r *resultImpl) RowCount() int {
-	return r.result.CurrentResultSet().RowCount()
+	return len(r.rows)
 }
 
-func (r *resultImpl) FetchExactlyOne(values ...indexed.RequiredOrOptional) error {
+func (r *resultImpl) FetchExactlyOne(values ...any) error {
 	rowCount := r.RowCount()
 	if rowCount == 0 {
 		return models.ErrNoRows
@@ -219,16 +230,15 @@ func (r *resultImpl) FetchExactlyOne(values ...indexed.RequiredOrOptional) error
 	if rowCount > 1 {
 		return fmt.Errorf("expected exactly one row")
 	}
-	r.result.NextRow()
-	err := r.result.Scan(values...)
+	r.NextRow()
+	err := r.rows[r.rowIdx].Scan(values...)
 	return err
 }
 
-func (r *resultImpl) FetchRow(values ...indexed.RequiredOrOptional) error {
-	return r.result.Scan(values...)
+func (r *resultImpl) FetchRow(values ...any) error {
+	return r.rows[r.rowIdx].Scan(values...)
 }
 
 func (r *resultImpl) Close() {
-	_ = r.result.Close()
 	r.closeCallback()
 }

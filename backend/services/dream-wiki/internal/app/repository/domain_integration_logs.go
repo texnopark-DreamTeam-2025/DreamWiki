@@ -55,7 +55,7 @@ func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.Integrati
 	return nil
 }
 
-func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit int64) ([]api.IntegrationLogField, api.Cursor, error) {
+func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit uint64) ([]api.IntegrationLogField, api.Cursor, error) {
 	yql := `
 		SELECT field_id, log_text, created_at
 		FROM IntegrationLogField
@@ -72,9 +72,9 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.Integratio
 
 	result, err := r.ydbClient.InTX().Execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(string(integrationID))),
-		table.ValueParam("$limit", types.Int64Value(limit)),
+		table.ValueParam("$limit", types.Uint64Value(limit)),
 		table.ValueParam("$timeFrom", types.TimestampValueFromTime(timeFrom)),
-		table.ValueParam("$idFrom", types.Int64Value(idFrom)),
+		table.ValueParam("$idFrom", types.Uint64Value(uint64(idFrom))),
 	)
 	if err != nil {
 		return nil, "", err

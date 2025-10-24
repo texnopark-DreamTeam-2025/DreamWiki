@@ -32,9 +32,8 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 
 	// 3. Upsert page to repository
 	pageFromYWIki := api.Page{
-		Content:   *pageResponse.Content,
-		Title:     pageResponse.Title,
-		YwikiSlug: &pageResponse.Slug,
+		Content: *pageResponse.Content,
+		Title:   pageResponse.Title,
 	}
 	pageFromRepository, err := repo.GetPageBySlug(slug)
 	if err != nil && !errors.Is(err, models.ErrNoRows) {

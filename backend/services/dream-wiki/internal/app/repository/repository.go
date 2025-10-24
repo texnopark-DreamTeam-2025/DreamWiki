@@ -28,7 +28,7 @@ type (
 
 		// domain_integration_logs.go
 		WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error
-		GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit int64) ([]api.IntegrationLogField, api.Cursor, error)
+		GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit uint64) ([]api.IntegrationLogField, api.Cursor, error)
 
 		// domain_page_indexation.go
 		RemovePageIndexation(pageID api.PageID) error

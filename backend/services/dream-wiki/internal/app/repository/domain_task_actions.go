@@ -18,12 +18,17 @@ func (r *appRepositoryImpl) CreateTaskActionResult(actionID internals.TaskAction
 }
 
 func (r *appRepositoryImpl) EnqueueTaskAction(actionID internals.TaskActionID) error {
-	writer, err := r.ydbClient.TopicClient().StartTransactionalWriter(r.ydbClient.GetTX(), "/local/TaskActionToExecute")
+	topicClient := r.ydbClient.TopicClient()
+	writer, err := topicClient.StartTransactionalWriter(r.ydbClient.GetTX(), "TaskActionToExecute")
+	if err != nil {
+		return err
+	}
+	err = writer.Write(r.ctx, topicwriter.Message{Data: strings.NewReader(fmt.Sprintf("adsfadsasf %d", actionID))})
 	if err != nil {
 		return err
 	}
 	r.log.Info("Enqueued message")
-	return writer.Write(r.ctx, topicwriter.Message{Data: strings.NewReader(fmt.Sprintf("%d", actionID))})
+	return nil
 }
 
 func (r *appRepositoryImpl) EnqueueTaskActionResult(actionID internals.TaskActionID) error {
