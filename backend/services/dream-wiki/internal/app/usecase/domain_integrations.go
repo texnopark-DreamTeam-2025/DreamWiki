@@ -9,10 +9,6 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
-func (u *appUsecaseImpl) AccountGitHubPullRequest(pullRequestURL string) error {
-	panic("unimplemented")
-}
-
 func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	slug := extractYWikiSlugFromURL(pageURL)
 
@@ -93,7 +89,26 @@ func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cur
 }
 
 func (u *appUsecaseImpl) GithubAccountPRAsync(prURL string) (*api.TaskID, error) {
-	panic("unimplemented")
+	repo := repository.NewAppRepository(u.ctx, u.deps)
+	defer repo.Rollback()
+
+	// Initialize task
+	// task := github_account_pr.NewGitHubAccountPRTask(prURL)
+	// Add task to repository
+
+	// repo.CreateTask(task.State())
+
+	// Create TaskStarted action
+
+	// Add taskAction to repository
+	err := repo.EnqueueTaskAction(0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Commit
+	repo.Commit()
+	return nil, nil
 }
 
 func (u *appUsecaseImpl) YwikiFetchAllAsync() (*api.TaskID, error) {

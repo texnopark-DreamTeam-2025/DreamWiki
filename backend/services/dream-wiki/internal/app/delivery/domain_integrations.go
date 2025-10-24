@@ -8,7 +8,14 @@ import (
 )
 
 func (d *AppDelivery) GithubAccountPR(ctx context.Context, request api.GithubAccountPRRequestObject) (api.GithubAccountPRResponseObject, error) {
-	panic("unimplemented")
+	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
+
+	_, err := usecase.GithubAccountPRAsync(request.Body.PrUrl)
+	if err != nil {
+		d.log.Error(err.Error())
+		return api.GithubAccountPR500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: err.Error()}}, nil
+	}
+	return api.GithubAccountPR200JSONResponse{}, nil
 }
 
 func (d *AppDelivery) IntegrationLogsGet(ctx context.Context, request api.IntegrationLogsGetRequestObject) (api.IntegrationLogsGetResponseObject, error) {

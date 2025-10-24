@@ -8,21 +8,26 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/result/indexed"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic"
 )
 
 type (
 	YDBWrapper interface {
 		Commit()
 		Rollback()
+		GetTX() table.TransactionIdentifier
 
 		InTX() Actor
 
 		// OutsideTX returns actor that creates independent transaction for single expression.
 		// May be useful for log writing.
 		OutsideTX() Actor
+
+		TopicClient() topic.Client
 	}
 
 	Actor interface {
@@ -41,6 +46,7 @@ type (
 	}
 
 	ydbWrapperImpl struct {
+		db          *ydb.Driver
 		log         logger.Logger
 		ctx         context.Context
 		tableClient table.Client
@@ -73,6 +79,7 @@ var (
 func NewYDBWrapper(ctx context.Context, deps *deps.Deps, withTransaction bool) YDBWrapper {
 	result := &ydbWrapperImpl{
 		ctx:         ctx,
+		db:          deps.YDBDriver,
 		log:         deps.Logger,
 		tableClient: deps.YDBDriver.Table(),
 	}
@@ -108,10 +115,24 @@ func (y *ydbWrapperImpl) beginTX() {
 	close(txRetriever)
 }
 
+func (y *ydbWrapperImpl) TopicClient() topic.Client {
+	return y.db.Topic()
+}
+
 func (y *ydbWrapperImpl) Commit() {
 	if n := atomic.AddInt32(&(y.closed), 1); n == 1 {
 		y.success <- true
 	}
+}
+
+func (y *ydbWrapperImpl) Rollback() {
+	if n := atomic.AddInt32(&(y.closed), 1); n == 1 {
+		y.success <- false
+	}
+}
+
+func (y *ydbWrapperImpl) GetTX() table.TransactionIdentifier {
+	return *y.tx
 }
 
 func (y *ydbWrapperImpl) InTX() Actor {
@@ -130,12 +151,6 @@ func (y *ydbWrapperImpl) InTX() Actor {
 	}()
 
 	return &actor
-}
-
-func (y *ydbWrapperImpl) Rollback() {
-	if n := atomic.AddInt32(&(y.closed), 1); n == 1 {
-		y.success <- false
-	}
 }
 
 func (y *ydbWrapperImpl) OutsideTX() Actor {

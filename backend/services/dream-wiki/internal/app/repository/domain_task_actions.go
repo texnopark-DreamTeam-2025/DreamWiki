@@ -1,8 +1,12 @@
 package repository
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicwriter"
 )
 
 func (r *appRepositoryImpl) CreateTaskAction(taskID api.TaskID, actionState internals.TaskAction) (*internals.TaskActionID, error) {
@@ -14,7 +18,12 @@ func (r *appRepositoryImpl) CreateTaskActionResult(actionID internals.TaskAction
 }
 
 func (r *appRepositoryImpl) EnqueueTaskAction(actionID internals.TaskActionID) error {
-	panic("unimplemented")
+	writer, err := r.ydbClient.TopicClient().StartTransactionalWriter(r.ydbClient.GetTX(), "/local/TaskActionToExecute")
+	if err != nil {
+		return err
+	}
+	r.log.Info("Enqueued message")
+	return writer.Write(r.ctx, topicwriter.Message{Data: strings.NewReader(fmt.Sprintf("%d", actionID))})
 }
 
 func (r *appRepositoryImpl) EnqueueTaskActionResult(actionID internals.TaskActionID) error {

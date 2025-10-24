@@ -23,7 +23,6 @@ type (
 
 		// domain_integrations.go
 		FetchPageFromYWiki(pageURL string) error
-		AccountGitHubPullRequest(pullRequestURL string) error
 		YwikiFetchAllAsync() (*api.TaskID, error)
 		GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error)
 		GithubAccountPRAsync(prURL string) (*api.TaskID, error)

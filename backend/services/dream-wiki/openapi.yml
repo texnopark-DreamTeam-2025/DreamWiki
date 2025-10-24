@@ -855,15 +855,27 @@ components:
     Subtask:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        description:
+          type: string
+        subsubtasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubSubtask'
+      required:
+        - status
+        - description
+        - subsubtasks
+
+    SubSubtask:
+      type: object
+      properties:
         status:
           $ref: '#/components/schemas/TaskStatus'
         description:
           type: string
       required:
-        - id
         - status
         - description
 

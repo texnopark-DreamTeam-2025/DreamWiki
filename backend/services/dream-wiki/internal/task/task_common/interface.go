@@ -6,18 +6,53 @@ import (
 )
 
 type (
-	TaskWrapper interface {
-		FailByActionTimeout() error
-		FailByActionError() error
-		Cancel() error
-
+	Task interface {
 		GetStatus() api.TaskStatus
+		GetState() *internals.TaskState
+
 		CalculateSubtasks() ([]api.Subtask, error)
 
 		OnActionResult(result internals.TaskActionResult) error
 	}
 
+	taskImpl struct {
+		state     *internals.TaskState
+		status    api.TaskStatus
+		taskLogic TaskLogic
+	}
+
 	TaskLogic interface {
+		CalculateSubtasks() ([]api.Subtask, error)
 		OnActionResult(result internals.TaskActionResult) error
 	}
+
+	taskLogicCreator = func(state *internals.TaskState) TaskLogic
 )
+
+var (
+	_ Task = (*taskImpl)(nil)
+)
+
+func NewTask(digest api.TaskDigest, state *internals.TaskState, taskLogicCreator taskLogicCreator) Task {
+	return &taskImpl{
+		state:     state,
+		status:    digest.Status,
+		taskLogic: taskLogicCreator(state),
+	}
+}
+
+func (t *taskImpl) CalculateSubtasks() ([]api.Subtask, error) {
+	return t.taskLogic.CalculateSubtasks()
+}
+
+func (t *taskImpl) GetState() *internals.TaskState {
+	return t.state
+}
+
+func (t *taskImpl) GetStatus() api.TaskStatus {
+	return t.status
+}
+
+func (t *taskImpl) OnActionResult(result internals.TaskActionResult) error {
+	return t.taskLogic.OnActionResult(result)
+}
