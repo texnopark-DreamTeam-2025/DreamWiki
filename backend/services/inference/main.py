@@ -26,9 +26,9 @@ def load_rubert_model():
     global model, tokenizer
     try:
         logger.info("Loading RuBERT model...")
-        # Load the tokenizer and model
-        tokenizer = AutoTokenizer.from_pretrained("DeepPavlov/rubert-base-cased")
-        model = AutoModel.from_pretrained("DeepPavlov/rubert-base-cased")
+        # Load the pre-downloaded tokenizer and model
+        tokenizer = AutoTokenizer.from_pretrained("/app/rubert", local_files_only=True, use_fast=False)
+        model = AutoModel.from_pretrained("/app/rubert", local_files_only=True)
         logger.info("RuBERT model loaded successfully")
     except Exception as e:
         logger.error(f"Failed to load RuBERT model: {e}")
