@@ -7,31 +7,31 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
-func (r *appRepositoryImpl) GetUserByLogin(login string) (*models.User, error) {
+func (r *appRepositoryImpl) GetUserByLogin(username string) (*models.User, error) {
 	yql := `
 	SELECT
 		user_id,
-		login,
+		username,
 		password_hash_bcrypt
-	FROM User WHERE login=$login;
+	FROM User WHERE username=$username;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$login", types.TextValue(login)))
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$username", types.TextValue(username)))
 	if err != nil {
 		return nil, err
 	}
 	defer result.Close()
 
 	var userID uuid.UUID
-	var userLogin string
+	var usernameFromDB string
 	var passwordHash string
-	if err = result.FetchExactlyOne(&userID, &userLogin, &passwordHash); err != nil {
+	if err = result.FetchExactlyOne(&userID, &usernameFromDB, &passwordHash); err != nil {
 		return nil, err
 	}
 
 	return &models.User{
 		ID:           userID,
-		Login:        userLogin,
+		Login:        usernameFromDB,
 		PasswordHash: passwordHash,
 	}, nil
 }
