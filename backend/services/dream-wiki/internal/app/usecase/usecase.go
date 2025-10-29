@@ -14,12 +14,12 @@ type (
 		Login(req api.V1LoginRequest) (*api.V1LoginResponse, error)
 
 		// domain_drafts.go
-		CreateDraft(pageURL string) (api.DraftDigest, error)
+		CreateDraft(pageURL string) (*api.DraftDigest, error)
 		DeleteDraft(draftID api.DraftID) error
-		GetDraft(draftID api.DraftID) (api.Draft, error)
+		GetDraft(draftID api.DraftID) (*api.Draft, error)
 		UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error
 		ApplyDraft(draftID api.DraftID) error
-		ListDrafts(cursor *string) ([]api.DraftDigest, error)
+		ListDrafts(cursor *string) ([]api.DraftDigest, *api.Cursor, error)
 
 		// domain_integrations.go
 		FetchPageFromYWiki(pageURL string) error

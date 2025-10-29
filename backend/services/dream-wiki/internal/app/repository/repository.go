@@ -13,7 +13,7 @@ import (
 
 type (
 	AppRepository interface {
-		Commit()
+		Commit() error
 		Rollback()
 
 		// domain_drafts.go
@@ -86,8 +86,8 @@ func NewAppRepository(ctx context.Context, deps *deps.Deps) AppRepository {
 	}
 }
 
-func (r *appRepositoryImpl) Commit() {
-	r.ydbClient.Commit()
+func (r *appRepositoryImpl) Commit() error {
+	return r.ydbClient.Commit()
 }
 
 func (r *appRepositoryImpl) Rollback() {

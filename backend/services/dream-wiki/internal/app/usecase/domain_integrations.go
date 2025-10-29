@@ -75,8 +75,7 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	}
 
 	// 5. Commit transaction
-	repo.Commit()
-	return nil
+	return repo.Commit()
 }
 
 func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error) {

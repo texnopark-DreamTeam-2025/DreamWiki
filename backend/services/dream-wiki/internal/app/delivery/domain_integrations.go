@@ -13,7 +13,7 @@ func (d *AppDelivery) GithubAccountPR(ctx context.Context, request api.GithubAcc
 	_, err := usecase.GithubAccountPRAsync(request.Body.PrUrl)
 	if err != nil {
 		d.log.Error(err.Error())
-		return api.GithubAccountPR500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: err.Error()}}, nil
+		return api.GithubAccountPR500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 	return api.GithubAccountPR200JSONResponse{}, nil
 }
@@ -34,11 +34,18 @@ func (d *AppDelivery) YwikiAddPage(ctx context.Context, request api.YwikiAddPage
 	err := usecase.FetchPageFromYWiki(request.Body.PageUrl)
 	if err != nil {
 		d.log.Error(err.Error())
-		return api.YwikiAddPage500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: err.Error()}}, nil
+		return api.YwikiAddPage500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 	return api.YwikiAddPage200JSONResponse{}, nil
 }
 
 func (d *AppDelivery) YwikiFetchAll(ctx context.Context, request api.YwikiFetchAllRequestObject) (api.YwikiFetchAllResponseObject, error) {
-	panic("unimplemented")
+	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
+
+	_, err := usecase.YwikiFetchAllAsync()
+	if err != nil {
+		d.log.Error(err.Error())
+		return api.YwikiFetchAll500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
+	}
+	return api.YwikiFetchAll200Response{}, nil
 }

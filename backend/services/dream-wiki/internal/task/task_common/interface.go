@@ -26,14 +26,15 @@ type (
 		OnActionResult(result internals.TaskActionResult) error
 	}
 
-	taskLogicCreator = func(state *internals.TaskState) TaskLogic
+	// TaskLogicCreator is a function that creates a TaskLogic based on the task state
+	TaskLogicCreator = func(state *internals.TaskState) TaskLogic
 )
 
 var (
 	_ Task = (*taskImpl)(nil)
 )
 
-func NewTask(digest api.TaskDigest, state *internals.TaskState, taskLogicCreator taskLogicCreator) Task {
+func NewTask(digest api.TaskDigest, state *internals.TaskState, taskLogicCreator TaskLogicCreator) Task {
 	return &taskImpl{
 		state:     state,
 		status:    digest.Status,

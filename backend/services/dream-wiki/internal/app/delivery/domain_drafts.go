@@ -37,7 +37,7 @@ func (d *AppDelivery) GetDraft(ctx context.Context, request api.GetDraftRequestO
 		return api.GetDraft500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 
-	return api.GetDraft200JSONResponse{Draft: result}, nil
+	return api.GetDraft200JSONResponse{Draft: *result}, nil
 }
 
 func (d *AppDelivery) ApplyDraft(ctx context.Context, request api.ApplyDraftRequestObject) (api.ApplyDraftResponseObject, error) {
