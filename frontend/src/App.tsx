@@ -6,6 +6,7 @@ import IntegrationSettings from "@/pages/IntegrationSettings";
 import IntegrationLogs from "@/pages/IntegrationLogs";
 import Authorization from "@/pages/Authorization";
 import Drafts from "@/pages/Drafts";
+import DraftEditor from "./pages/Drafts/DraftEditor";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
 import { HomePage } from "@/pages/HomePage";
@@ -60,6 +61,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Drafts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/drafts/:draftId"
+            element={
+              <ProtectedRoute>
+                <DraftEditor />
               </ProtectedRoute>
             }
           />
