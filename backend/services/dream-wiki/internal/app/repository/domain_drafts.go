@@ -98,7 +98,7 @@ func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.D
 	`
 
 	parameters := []table.ParameterOption{
-		table.ValueParam("$limit", types.Int64Value(limit)),
+		table.ValueParam("$limit", types.Uint64Value(uint64(limit))),
 	}
 
 	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
@@ -133,7 +133,8 @@ func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.D
 
 	// For simplicity, we're not implementing cursor pagination here
 	// In a real implementation, you would need to handle cursor-based pagination
-	return drafts, nil, nil
+	newCursor := ""
+	return drafts, &newCursor, nil
 }
 
 func (r *appRepositoryImpl) RemoveDraft(draftID api.DraftID) error {

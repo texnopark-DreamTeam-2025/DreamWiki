@@ -5,6 +5,7 @@ import Document from "@/pages/Document/Document";
 import IntegrationSettings from "@/pages/IntegrationSettings";
 import IntegrationLogs from "@/pages/IntegrationLogs";
 import Authorization from "@/pages/Authorization";
+import Drafts from "@/pages/Drafts";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
 import { HomePage } from "@/pages/HomePage";
@@ -54,6 +55,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/drafts"
+            element={
+              <ProtectedRoute>
+                <Drafts />
+              </ProtectedRoute>
+            }
+          />
+
           <Route
             path="/integration-settings"
             element={
