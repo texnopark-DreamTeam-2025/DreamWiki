@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Select, Button } from "@gravity-ui/uikit";
-import { ywikiAddPage } from "@/client";
+import { ywikiAddPage, githubAccountPr } from "@/client";
 import { useToast } from "@/hooks/useToast";
 import { MonacoEditor } from "@/components/MonacoEditor";
 import styles from "./IntegrationSettings.module.scss";
@@ -75,10 +75,23 @@ export default function IntegrationSettings() {
 
     setIsAnalyzing(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      console.log("Анализируем ссылку:", prUrl);
+      const response = await githubAccountPr({
+        body: {
+          pr_url: prUrl,
+        },
+      });
+
+      if (response.error) {
+        console.error("Ошибка анализа PR:", response.error);
+        showError("Ошибка", "Не удалось проанализировать PR. Проверьте ссылку и попробуйте снова.");
+        return;
+      }
+
+      console.log("PR успешно проанализирован:", response.data);
+      showSuccess("Успешно", "PR успешно проанализирован!");
     } catch (error) {
-      console.error("Ошибка анализа:", error);
+      console.error("Ошибка анализа PR:", error);
+      showError("Ошибка", "Произошла ошибка при анализе PR.");
     } finally {
       setIsAnalyzing(false);
     }
