@@ -157,18 +157,13 @@ export const MOCK_TREE_DATA: TreeNode[] = [
 
 // MOCK - Начальные состояния для компонента Document
 export const MOCK_INITIAL_SELECTED_NODE = "current";
-export const MOCK_INITIAL_EXPANDED_NODES = new Set([
-  "adyge-khabl",
-  "logistics",
-]);
+export const MOCK_INITIAL_EXPANDED_NODES = new Set(["adyge-khabl", "logistics"]);
 
 // MOCK - Симуляция задержки API
 export const MOCK_API_DELAY = 1000;
 
 // MOCK - Функция симуляции загрузки данных
-export const mockFetchPageData = async (
-  id: string
-): Promise<V1DiagnosticInfoGetResponse> => {
+export const mockFetchPageData = async (id: string): Promise<V1DiagnosticInfoGetResponse> => {
   // Симулируем задержку сети
   await new Promise((resolve) => setTimeout(resolve, MOCK_API_DELAY));
 

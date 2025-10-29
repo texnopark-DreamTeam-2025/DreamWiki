@@ -63,7 +63,7 @@ export default function Drafts() {
   };
 
   return (
-    <Flex direction="column" style={{ padding: 24, height: '100%' }}>
+    <Flex direction="column" style={{ padding: 24, height: "100%" }}>
       <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: 24 }}>
         <Text variant="header-1">Черновики</Text>
         <Button view="action" size="m" onClick={handleCreateDraft}>
@@ -72,14 +72,24 @@ export default function Drafts() {
       </Flex>
 
       {loading ? (
-        <Flex direction="column" alignItems="center" justifyContent="center" style={{ flex: 1, gap: 16 }}>
+        <Flex
+          direction="column"
+          alignItems="center"
+          justifyContent="center"
+          style={{ flex: 1, gap: 16 }}
+        >
           <Loader size="m" />
           <Text>Загрузка черновиков...</Text>
         </Flex>
       ) : (
         <Flex direction="column" style={{ flex: 1 }}>
           {drafts.length === 0 ? (
-            <Flex direction="column" alignItems="center" justifyContent="center" style={{ flex: 1, gap: 16, textAlign: 'center' }}>
+            <Flex
+              direction="column"
+              alignItems="center"
+              justifyContent="center"
+              style={{ flex: 1, gap: 16, textAlign: "center" }}
+            >
               <Text color="secondary">У вас пока нет черновиков</Text>
               <Button view="action" size="m" onClick={handleCreateDraft}>
                 Создать первый черновик
@@ -91,15 +101,15 @@ export default function Drafts() {
                 {
                   id: "title",
                   name: "Название",
-                  template: (item: DraftDigest) => (
-                    <Text variant="body-2">{item.draft_title}</Text>
-                  ),
+                  template: (item: DraftDigest) => <Text variant="body-2">{item.draft_title}</Text>,
                 },
                 {
                   id: "page",
                   name: "Страница",
                   template: (item: DraftDigest) => (
-                    <Text color="secondary" variant="body-2">{item.page_digest.title}</Text>
+                    <Text color="secondary" variant="body-2">
+                      {item.page_digest.title}
+                    </Text>
                   ),
                 },
                 {
@@ -111,11 +121,7 @@ export default function Drafts() {
                   id: "actions",
                   name: "Действия",
                   template: (item: DraftDigest) => (
-                    <Button
-                      view="flat"
-                      size="s"
-                      onClick={() => handleViewDraft(item.draft_id)}
-                    >
+                    <Button view="flat" size="s" onClick={() => handleViewDraft(item.draft_id)}>
                       Открыть
                     </Button>
                   ),

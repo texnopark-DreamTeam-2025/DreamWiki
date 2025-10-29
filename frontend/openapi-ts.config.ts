@@ -1,19 +1,18 @@
-import { defineConfig } from '@hey-api/openapi-ts';
+import { defineConfig } from "@hey-api/openapi-ts";
 
 export default defineConfig({
-  input:
-    '../backend/services/dream-wiki/openapi.yml',
+  input: "../backend/services/dream-wiki/openapi.yml",
   output: {
-    format: 'prettier',
-    path: './src/client',
+    format: "prettier",
+    path: "./src/client",
   },
   plugins: [
-    '@hey-api/client-axios',
-    '@hey-api/schemas',
-    '@hey-api/sdk',
+    "@hey-api/client-axios",
+    "@hey-api/schemas",
+    "@hey-api/sdk",
     {
-      enums: 'javascript',
-      name: '@hey-api/typescript',
+      enums: "javascript",
+      name: "@hey-api/typescript",
     },
   ],
 });

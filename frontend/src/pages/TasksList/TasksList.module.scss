@@ -1,0 +1,97 @@
+.tasksList {
+  padding: 20px;
+}
+
+.loading,
+.error,
+.noTasks {
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+}
+
+.error {
+  color: #ff0000;
+}
+
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.taskItem {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.taskNumber {
+  font-weight: bold;
+  font-size: 18px;
+  color: #333333;
+}
+
+.taskTrigger {
+  background-color: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #666666;
+}
+
+.taskDescription {
+  margin-bottom: 12px;
+  color: #444444;
+}
+
+.progressBarContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 12px;
+  background-color: #f0f0f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.progressFill.statusExecuting {
+  background-color: #4285f4;
+}
+
+.progressFill.statusDone {
+  background-color: #34a853;
+}
+
+.progressFill.statusFailed {
+  background-color: #ea4335;
+}
+
+.progressFill.statusCancelled {
+  background-color: #9aa0a6;
+}
+
+.progressText {
+  font-size: 12px;
+  color: #666666;
+  min-width: 30px;
+  text-align: right;
+}

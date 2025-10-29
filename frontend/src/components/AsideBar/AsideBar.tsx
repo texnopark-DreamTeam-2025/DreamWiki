@@ -41,9 +41,7 @@ export default function AsideBar({ children }: AsideBarProps) {
         id: "search",
         title: "Поиск",
         icon: Magnifier,
-        current:
-          location.pathname === "/search" ||
-          location.pathname === "/search-done",
+        current: location.pathname === "/search" || location.pathname === "/search-done",
         onItemClick: () => navigate("/search"),
         qa: "search",
         tooltipText: "Поиск по документам и статьям",
@@ -83,6 +81,16 @@ export default function AsideBar({ children }: AsideBarProps) {
           category: "Контент",
           qa: "drafts",
           tooltipText: "Управление черновиками документов",
+        },
+        {
+          id: "tasks",
+          title: "Задачи",
+          icon: Clock,
+          current: location.pathname === "/tasks",
+          onItemClick: () => navigate("/tasks"),
+          category: "Система",
+          qa: "tasks",
+          tooltipText: "Просмотр и управление задачами",
         },
         {
           id: "divider",
@@ -154,9 +162,7 @@ export default function AsideBar({ children }: AsideBarProps) {
     </>
   );
 
-  const renderContent = () => (
-    <main className={styles.asideBarMain}>{children}</main>
-  );
+  const renderContent = () => <main className={styles.asideBarMain}>{children}</main>;
 
   return (
     <div className={`${styles.asideBarContainer} ${styles.asideBar}`}>

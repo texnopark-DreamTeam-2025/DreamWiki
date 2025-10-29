@@ -10,6 +10,9 @@ import DraftEditor from "./pages/Drafts/DraftEditor";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import PublicRoute from "@/components/PublicRoute";
 import { HomePage } from "@/pages/HomePage";
+import { TasksList } from "@/pages/TasksList";
+import { TaskDetails } from "@/pages/TaskDetails";
+import { InternalState } from "@/pages/InternalState";
 
 function App() {
   return (
@@ -53,6 +56,33 @@ function App() {
             element={
               <ProtectedRoute>
                 <Document />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/tasks"
+            element={
+              <ProtectedRoute>
+                <TasksList />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/task/:taskId"
+            element={
+              <ProtectedRoute>
+                <TaskDetails />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/task/:taskId/internal-state"
+            element={
+              <ProtectedRoute>
+                <InternalState />
               </ProtectedRoute>
             }
           />

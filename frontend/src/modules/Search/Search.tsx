@@ -25,10 +25,7 @@ export default function Search() {
 
       if (res.error) {
         console.error("Ошибка поиска:", res.error);
-        showError(
-          "Ошибка поиска",
-          "Не удалось выполнить поиск. Попробуйте еще раз."
-        );
+        showError("Ошибка поиска", "Не удалось выполнить поиск. Попробуйте еще раз.");
         setResults([]);
         return;
       }
@@ -37,10 +34,7 @@ export default function Search() {
       setResults(searchResults);
 
       if (searchResults.length > 0) {
-        showSuccess(
-          "Поиск завершен",
-          `Найдено результатов: ${searchResults.length}`
-        );
+        showSuccess("Поиск завершен", `Найдено результатов: ${searchResults.length}`);
       }
     } catch (error) {
       console.error("Ошибка при выполнении поиска:", error);
@@ -97,10 +91,7 @@ export default function Search() {
               onClick={() => handleOpenPage(item.page_id)}
               className={styles.resultItem}
             >
-              <CardInformation
-                title={item.title}
-                description={item.description}
-              />
+              <CardInformation title={item.title} description={item.description} />
             </div>
           ))}
         </div>

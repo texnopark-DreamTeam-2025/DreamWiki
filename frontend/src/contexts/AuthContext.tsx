@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { client } from "@/client/client.gen";
 
 interface AuthContextType {

@@ -7,11 +7,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Select, Card } from "@gravity-ui/uikit";
-import {
-  integrationLogsGet,
-  type IntegrationLogField,
-  type IntegrationId,
-} from "@/client";
+import { integrationLogsGet, type IntegrationLogField, type IntegrationId } from "@/client";
 
 import { MonacoEditor } from "@/components/MonacoEditor";
 import { useToast } from "@/hooks/useToast";
@@ -26,8 +22,7 @@ const INTEGRATION_OPTIONS = [
 
 export default function IntegrationLogs() {
   const { showError } = useToast();
-  const [selectedIntegration, setSelectedIntegration] =
-    useState<IntegrationType>("ywiki");
+  const [selectedIntegration, setSelectedIntegration] = useState<IntegrationType>("ywiki");
   const [logs, setLogs] = useState<IntegrationLogField[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -40,9 +35,7 @@ export default function IntegrationLogs() {
   const formatLogs = useCallback((logFields: IntegrationLogField[]): string => {
     return logFields
       .map((log) => {
-        const timestamp = log.created_at
-          ? new Date(log.created_at).toLocaleString("ru-RU")
-          : "";
+        const timestamp = log.created_at ? new Date(log.created_at).toLocaleString("ru-RU") : "";
         return `[${timestamp}] ${log.content}`;
       })
       .join("\n");
@@ -75,8 +68,7 @@ export default function IntegrationLogs() {
           // Устанавливаем курсор из ответа сервера
           cursorRef.current = res.data.cursor;
           // Есть еще данные, если есть логи и курсор не пустой
-          const hasMoreData =
-            res.data.log_fields.length > 0 && res.data.cursor !== "";
+          const hasMoreData = res.data.log_fields.length > 0 && res.data.cursor !== "";
           setHasMore(hasMoreData);
         }
       } catch (error) {
@@ -89,8 +81,7 @@ export default function IntegrationLogs() {
     [showError]
   ); // Убираем loading из зависимостей  // Загрузка дополнительных логов (бесконечный скролл)
   const loadMoreLogs = useCallback(async () => {
-    if (loading || isLoadingMore.current || !hasMore || !cursorRef.current)
-      return;
+    if (loading || isLoadingMore.current || !hasMore || !cursorRef.current) return;
 
     // Проверяем, не обрабатывали ли уже этот курсор
     if (cursorRef.current === lastProcessedCursor.current) {
@@ -151,13 +142,7 @@ export default function IntegrationLogs() {
   const handleEditorScroll = useCallback(
     (editor: any) => {
       // Строгие проверки для предотвращения лишних запросов
-      if (
-        !editor ||
-        !hasMore ||
-        loading ||
-        isLoadingMore.current ||
-        !cursorRef.current
-      ) {
+      if (!editor || !hasMore || loading || isLoadingMore.current || !cursorRef.current) {
         return;
       }
 
@@ -258,17 +243,13 @@ export default function IntegrationLogs() {
               onScroll={handleEditorScroll}
             />
             {isLoadingMore.current && (
-              <div className={styles.loadingMore}>
-                Загрузка дополнительных логов...
-              </div>
+              <div className={styles.loadingMore}>Загрузка дополнительных логов...</div>
             )}
           </div>
         )}
       </Card>
 
-      {!hasMore && logs.length > 0 && (
-        <div className={styles.endMessage}>Все логи загружены</div>
-      )}
+      {!hasMore && logs.length > 0 && <div className={styles.endMessage}>Все логи загружены</div>}
     </div>
   );
 }

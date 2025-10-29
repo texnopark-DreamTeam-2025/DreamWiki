@@ -74,8 +74,7 @@ export const MonacoEditor = ({
           lineDecorationsWidth: 10,
           lineNumbersMinChars: 3,
           fontSize: 14,
-          fontFamily:
-            'JetBrains Mono, Monaco, Consolas, "Courier New", monospace',
+          fontFamily: 'JetBrains Mono, Monaco, Consolas, "Courier New", monospace',
           automaticLayout: true,
           contextmenu: true,
           selectOnLineNumbers: true,

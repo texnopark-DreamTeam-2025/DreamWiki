@@ -106,25 +106,22 @@ export default function Document() {
   }, []); // Убираем все зависимости
 
   // Функция для переключения раскрытия узла
-  const toggleNodeExpansion = useCallback(
-    (nodeId: string, event: React.MouseEvent) => {
-      event.stopPropagation();
-      setExpandedNodes((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(nodeId)) {
-          newSet.delete(nodeId);
-        } else {
-          newSet.add(nodeId);
-        }
-        return newSet;
-      });
+  const toggleNodeExpansion = useCallback((nodeId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setExpandedNodes((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
 
-      // Примечание: В реальном приложении здесь можно было бы
-      // отправить запрос на сервер для обновления состояния expanded узлов
-      // Но для избежания бесконечных запросов пока оставляем только локальное состояние
-    },
-    []
-  );
+    // Примечание: В реальном приложении здесь можно было бы
+    // отправить запрос на сервер для обновления состояния expanded узлов
+    // Но для избежания бесконечных запросов пока оставляем только локальное состояние
+  }, []);
 
   // Обработчик выбора узла дерева
   const handleNodeSelect = useCallback(
@@ -292,10 +289,7 @@ export default function Document() {
 
       {/* Правая панель с контентом */}
       <div className={styles.mainContent}>
-        <TabProvider
-          value={activeTab}
-          onUpdate={(value) => setActiveTab(value as TabId)}
-        >
+        <TabProvider value={activeTab} onUpdate={(value) => setActiveTab(value as TabId)}>
           {/* Вкладки */}
           <div className={styles.tabsContainer}>
             <TabList size="l">
@@ -318,9 +312,7 @@ export default function Document() {
           <div className={styles.tabContent}>
             <TabPanel value="content">
               <div className={styles.contentPanel}>
-                <div className={styles.contentHeader}>
-                  {/* Здесь можно добавить кнопки */}
-                </div>
+                <div className={styles.contentHeader}>{/* Здесь можно добавить кнопки */}</div>
                 <h1 className={styles.contentTitle}>{page.page.title}</h1>
                 <div className={styles.monacoContainer}>
                   <MonacoEditor

@@ -29,16 +29,11 @@ const TreeNodeRenderer: React.FC<TreeNodeRendererProps> = ({
       style={{ "--level": `${level * 20}px` } as React.CSSProperties}
     >
       <div
-        className={`${styles.treeNodeContent} ${
-          selectedNode === node.id ? styles.selected : ""
-        }`}
+        className={`${styles.treeNodeContent} ${selectedNode === node.id ? styles.selected : ""}`}
         onClick={() => onNodeSelect(node.id)}
       >
         {hasChildren && (
-          <span
-            className={styles.treeNodeExpander}
-            onClick={(e) => onNodeToggle(node.id, e)}
-          >
+          <span className={styles.treeNodeExpander} onClick={(e) => onNodeToggle(node.id, e)}>
             {isExpanded ? "▼" : "▶"}
           </span>
         )}
