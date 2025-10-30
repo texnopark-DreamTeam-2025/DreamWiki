@@ -7,6 +7,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
 
 func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
@@ -90,23 +91,40 @@ func (u *appUsecaseImpl) GithubAccountPRAsync(prURL string) (*api.TaskID, error)
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Initialize task
-	// task := github_account_pr.NewGitHubAccountPRTask(prURL)
-	// Add task to repository
+	taskState := internals.TaskStateGitHubAccountPR{
+		PrUrl:    prURL,
+		TaskType: internals.GithubAccountPr,
+	}
 
-	// repo.CreateTask(task.State())
-
-	// Create TaskStarted action
-
-	// Add taskAction to repository
-	err := repo.EnqueueTaskAction(0)
+	var taskStateUnion internals.TaskState
+	err := taskStateUnion.FromTaskStateGitHubAccountPR(taskState)
 	if err != nil {
 		return nil, err
 	}
 
-	// Commit
-	repo.Commit()
-	return nil, nil
+	taskID, err := repo.CreateTask(taskStateUnion)
+	if err != nil {
+		return nil, err
+	}
+
+	taskAction := internals.TaskAction{}
+	taskAction.FromTaskActionNewTask(internals.TaskActionNewTask{TaskActionType: internals.NewTask})
+	taskActionID, err := repo.CreateTaskAction(*taskID, taskAction)
+	if err != nil {
+		return nil, err
+	}
+
+	err = repo.EnqueueTaskAction(*taskActionID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = repo.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return taskID, nil
 }
 
 func (u *appUsecaseImpl) YwikiFetchAllAsync() (*api.TaskID, error) {

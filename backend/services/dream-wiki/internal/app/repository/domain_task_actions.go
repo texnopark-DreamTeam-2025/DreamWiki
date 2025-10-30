@@ -15,9 +15,8 @@ import (
 
 func (r *appRepositoryImpl) CreateTaskAction(taskID api.TaskID, actionState internals.TaskAction) (*internals.TaskActionID, error) {
 	yql := `
-	INSERT INTO TaskAction(task_action_id, task_id, status, action, created_at, updated_at)
+	INSERT INTO TaskAction(task_id, status, action, created_at, updated_at)
 	VALUES (
-		RandomUuid(4),
 		$taskID,
 		'new',
 		$action,

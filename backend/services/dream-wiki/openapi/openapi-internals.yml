@@ -14,21 +14,25 @@ components:
       oneOf:
         - $ref: '#/components/schemas/TaskActionIndexatePage'
         - $ref: '#/components/schemas/TaskActionAskLLM'
+        - $ref: '#/components/schemas/TaskActionNewTask'
       discriminator:
         propertyName: task_action_type
         mapping:
           indexate_page: '#/components/schemas/TaskActionIndexatePage'
           ask_llm: '#/components/schemas/TaskActionAskLLM'
+          new_task: '#/components/schemas/TaskActionNewTask'
 
     TaskActionResult:
       oneOf:
         - $ref: '#/components/schemas/TaskActionResultIndexatePage'
         - $ref: '#/components/schemas/TaskActionResultAskLLM'
+        - $ref: '#/components/schemas/TaskActionResultNewTask'
       discriminator:
         propertyName: task_action_type
         mapping:
           indexate_page: '#/components/schemas/TaskActionResultIndexatePage'
           ask_llm: '#/components/schemas/TaskActionResultAskLLM'
+          new_task: '#/components/schemas/TaskActionResultNewTask'
 
     TaskType:
       type: string
@@ -41,6 +45,7 @@ components:
       enum:
         - indexate_page
         - ask_llm
+        - new_task
 
     TaskActionStatus:
       type: string
@@ -108,6 +113,14 @@ components:
         - messages
         - model
 
+    TaskActionNewTask:
+      type: object
+      properties:
+        task_action_type:
+          $ref: '#/components/schemas/TaskActionType'
+      required:
+        - task_action_type
+
     TaskActionAdditionalInfo:
       type: object
       properties:
@@ -154,6 +167,14 @@ components:
         - task_action_type
         - messages
         - server_response
+
+    TaskActionResultNewTask:
+      type: object
+      properties:
+        task_action_type:
+          $ref: '#/components/schemas/TaskActionType'
+      required:
+        - task_action_type
 
     TaskActionResultAdditionalInfo:
       type: object
