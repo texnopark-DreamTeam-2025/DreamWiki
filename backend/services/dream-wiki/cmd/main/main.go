@@ -126,7 +126,7 @@ func main() {
 		}
 	}()
 
-	rd, err := topic_reader.NewTopicReader(deps.YDBDriver, logger)
+	rd, err := topic_reader.NewTopicReader(&deps)
 	if err != nil {
 		logger.Error("failed to create topic reader", zap.Error(err))
 		os.Exit(1)

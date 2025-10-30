@@ -63,6 +63,27 @@ components:
         pr_url:
           type: string
           format: uri
+        pr_patch:
+          type: string
+        pr_description:
+          type: string
+        llm_detected_product_changes:
+          type: array
+          items:
+            type: string
+        llm_suggested_search_queries:
+          type: array
+          items:
+            type: string
+        hot_paragraphs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParagraphData'
+        created_draft_ids:
+          type: array
+          items:
+            $ref: '#/components/schemas/DraftID'
+
       required:
         - task_type
         - pr_url
@@ -203,6 +224,10 @@ components:
       type: string
       format: uuid
 
+    DraftID:
+      type: string
+      format: uuid
+
     TaskID:
       type: integer
       format: int64
@@ -229,6 +254,16 @@ components:
       properties:
         current_revision_id:
           $ref: '#/components/schemas/RevisionID'
+
+    ParagraphData:
+      type: object
+      properties:
+        page_id:
+          $ref: '#/components/schemas/PageID'
+        line_number:
+          type: integer
+        paragraph_content:
+          type: string
 
     RawJSON:
       type: object

@@ -16,16 +16,16 @@ func decodeTasksCursor(cursor *api.Cursor) int64 {
 		return 0
 	}
 
-	idFrom, err := strconv.ParseInt(string(*cursor), 10, 64)
+	idUpperLimit, err := strconv.ParseInt(string(*cursor), 10, 64)
 	if err != nil {
 		return 0
 	}
 
-	return idFrom
+	return idUpperLimit
 }
 
-func encodeTasksCursor(idFrom int64) api.Cursor {
-	return api.Cursor(strconv.FormatInt(idFrom, 10))
+func encodeTasksCursor(idUpperLimit int64) api.Cursor {
+	return api.Cursor(strconv.FormatInt(idUpperLimit, 10))
 }
 
 func (r *appRepositoryImpl) CreateTask(taskState internals.TaskState) (*api.TaskID, error) {
@@ -110,16 +110,16 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 		created_at,
 		updated_at
 	FROM Task
-	WHERE task_id > $idFrom
+	WHERE task_id < $idUpperLimit
 	ORDER BY task_id
 	LIMIT $limit;
 	`
 
-	idFrom := decodeTasksCursor(cursor)
+	idUpperLimit := decodeTasksCursor(cursor)
 
 	result, err := r.ydbClient.InTX().Execute(yql,
-		table.ValueParam("$idFrom", types.Int64Value(idFrom)),
-		table.ValueParam("$limit", types.Int64Value(limit)),
+		table.ValueParam("$idUpperLimit", types.Int64Value(idUpperLimit)),
+		table.ValueParam("$limit", types.Uint64Value(uint64(limit))),
 	)
 	if err != nil {
 		return nil, nil, nil, err

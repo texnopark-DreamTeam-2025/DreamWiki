@@ -88,7 +88,8 @@ func (r *appRepositoryImpl) EnqueueTaskAction(actionID internals.TaskActionID) e
 	if err != nil {
 		return err
 	}
-	err = writer.Write(r.ctx, topicwriter.Message{Data: strings.NewReader(fmt.Sprintf("%d", actionID))})
+	reader := strings.NewReader(fmt.Sprintf("%d", actionID))
+	err = writer.Write(r.ctx, topicwriter.Message{Data: reader})
 	if err != nil {
 		return err
 	}
