@@ -9,29 +9,16 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
-func (u *appUsecaseImpl) ListTasks(cursor *string) (tasks []api.TaskDigest, newCursor string, err error) {
+func (u *appUsecaseImpl) ListTasks(cursor *api.Cursor) (tasks []api.TaskDigest, newCursor *api.Cursor, err error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Convert cursor to api.Cursor if needed
-	var apiCursor *api.Cursor
-	if cursor != nil {
-		apiCursor = (*api.Cursor)(cursor)
-	}
-
-	// Get task digests from repository
-	taskDigests, _, newApiCursor, err := repo.ListTasks(apiCursor, 50) // TODO: Make limit configurable
+	taskDigests, _, newCursor, err := repo.ListTasks(cursor, 20)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 
-	// Convert new cursor to string
-	var newCursorStr string
-	if newApiCursor != nil {
-		newCursorStr = string(*newApiCursor)
-	}
-
-	return taskDigests, newCursorStr, nil
+	return taskDigests, newCursor, nil
 }
 
 func (u *appUsecaseImpl) RetryTask(taskID api.TaskID) error {
@@ -53,7 +40,7 @@ func (u *appUsecaseImpl) GetTaskDetails(taskID api.TaskID) (api.Task, error) {
 	}
 
 	// Create task logic creator
-	taskLogicCreator := task_factory.CreateTaskLogicCreator(taskState)
+	taskLogicCreator := task_factory.CreateTaskLogicCreator(u.ctx, u.deps, taskState)
 
 	// Create task instance
 	task := task_common.NewTask(*taskDigest, taskState, taskLogicCreator)

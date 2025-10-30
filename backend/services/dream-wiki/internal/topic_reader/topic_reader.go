@@ -141,7 +141,7 @@ func (t *TopicReaders) readTaskActionResultMessages() {
 			return
 		}
 
-		taskLogicCreator := task_factory.CreateTaskLogicCreator(taskState)
+		taskLogicCreator := task_factory.CreateTaskLogicCreator(context.Background(), t.deps, taskState)
 		task := task_common.NewTask(*taskDigest, taskState, taskLogicCreator)
 
 		taskActionResult, _, err := repo.GetTaskActionResultByID(internals.TaskActionID(taskActionID))

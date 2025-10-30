@@ -1,6 +1,9 @@
 package task_factory
 
 import (
+	"context"
+
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/github_account_pr"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/reindexate_all_pages"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
@@ -9,7 +12,7 @@ import (
 )
 
 // CreateTaskLogicCreator creates a taskLogicCreator function based on the task state
-func CreateTaskLogicCreator(state *internals.TaskState) task_common.TaskLogicCreator {
+func CreateTaskLogicCreator(ctx context.Context, deps *deps.Deps, state *internals.TaskState) task_common.TaskLogicCreator {
 	return func(state *internals.TaskState) task_common.TaskLogic {
 		// Get the task type from the state
 		taskType, err := state.Discriminator()
@@ -31,7 +34,7 @@ func CreateTaskLogicCreator(state *internals.TaskState) task_common.TaskLogicCre
 		case "github_account_pr":
 			// We need to set the state in the task
 			if taskState, err := state.AsTaskStateGitHubAccountPR(); err == nil {
-				task := github_account_pr.NewGitHubAccountPRTask(taskState)
+				task := github_account_pr.NewGitHubAccountPRTask(ctx, deps, taskState)
 				return task
 			}
 			// If we can't get the state, return a default task

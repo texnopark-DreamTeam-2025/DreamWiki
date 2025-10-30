@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"math"
 	"strconv"
 	"time"
 
@@ -13,12 +14,12 @@ import (
 
 func decodeTasksCursor(cursor *api.Cursor) int64 {
 	if cursor == nil {
-		return 0
+		return math.MaxInt64
 	}
 
 	idUpperLimit, err := strconv.ParseInt(string(*cursor), 10, 64)
 	if err != nil {
-		return 0
+		return math.MaxInt64
 	}
 
 	return idUpperLimit
@@ -115,6 +116,8 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 	LIMIT $limit;
 	`
 
+	var newCursor api.Cursor
+
 	idUpperLimit := decodeTasksCursor(cursor)
 
 	result, err := r.ydbClient.InTX().Execute(yql,
@@ -130,10 +133,7 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 	taskStates := make([]internals.TaskState, 0, result.RowCount())
 
 	if result.RowCount() == 0 {
-		if cursor == nil {
-			return taskDigests, taskStates, nil, nil
-		}
-		return taskDigests, taskStates, cursor, nil
+		return taskDigests, taskStates, &newCursor, nil
 	}
 
 	newIDFrom := int64(0)
@@ -168,7 +168,7 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 		newIDFrom = int64(taskID)
 	}
 
-	newCursor := encodeTasksCursor(newIDFrom)
+	newCursor = encodeTasksCursor(newIDFrom)
 	return taskDigests, taskStates, &newCursor, nil
 }
 

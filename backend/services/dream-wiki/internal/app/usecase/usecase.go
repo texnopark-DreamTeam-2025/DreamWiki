@@ -40,7 +40,7 @@ type (
 		// domain_tasks.go
 		CancelTask(taskID api.TaskID) error
 		GetTaskDetails(taskID api.TaskID) (api.Task, error)
-		ListTasks(cursor *string) (tasks []api.TaskDigest, newCursor string, err error)
+		ListTasks(cursor *api.Cursor) (tasks []api.TaskDigest, newCursor *api.Cursor, err error)
 		RetryTask(taskID api.TaskID) error
 		GetTaskInternalState(taskID api.TaskID) (*api.V1TasksInternalStateGetResponse, error)
 		RecreateTask(taskID api.TaskID) (*api.TaskID, error)

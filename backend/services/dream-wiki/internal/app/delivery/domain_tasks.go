@@ -39,7 +39,7 @@ func (d *AppDelivery) ListTasks(ctx context.Context, request api.ListTasksReques
 
 	return api.ListTasks200JSONResponse{
 		Tasks:  result,
-		Cursor: newCursor,
+		Cursor: *newCursor,
 	}, nil
 }
 

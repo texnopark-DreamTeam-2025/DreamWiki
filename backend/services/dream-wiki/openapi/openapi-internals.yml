@@ -79,11 +79,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ParagraphData'
+        llm_rephrased_paragraph_contents:
+          type: array
+          items:
+            type: string
         created_draft_ids:
           type: array
           items:
             $ref: '#/components/schemas/DraftID'
-
       required:
         - task_type
         - pr_url
