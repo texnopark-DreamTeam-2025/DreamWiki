@@ -123,6 +123,17 @@ components:
         updated_at:
           type: string
           format: date-time
+        body:
+          type: string
+          description: Pull request description from author
+      required:
+        - url
+        - patch_url
+        - state
+        - user
+        - created_at
+        - updated_at
+        - body
 
     PullRequestFilesResponse:
       type: array

@@ -3,6 +3,7 @@ package topic_reader
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -18,6 +19,7 @@ import (
 type (
 	TopicReaders struct {
 		ctx                          context.Context
+		cancel                       context.CancelFunc
 		TaskActionsTopicReader       *topicreader.Reader
 		TaskActionResultsTopicReader *topicreader.Reader
 		log                          logger.Logger
@@ -25,25 +27,35 @@ type (
 	}
 )
 
-func NewTopicReader(deps *deps.Deps) (*TopicReaders, error) {
+func NewTopicReader(ctx context.Context, deps *deps.Deps) (*TopicReaders, error) {
+	ctx, cancel := context.WithCancel(ctx)
+
 	topic := deps.YDBDriver.Topic()
-	taskActionsTopicReader, err := topic.StartReader("dream_wiki", topicoptions.ReadTopic("TaskActionToExecute"))
+	taskActionsTopicReader, err := topic.StartReader("dream_wiki",
+		topicoptions.ReadTopic("TaskActionToExecute"),
+		topicoptions.WithReaderOperationTimeout(time.Second),
+	)
 	if err != nil {
+		cancel()
 		return nil, err
 	}
 
-	taskActionResultsTopicReader, err := topic.StartReader("dream_wiki", topicoptions.ReadTopic("TaskActionResultReady"))
+	taskActionResultsTopicReader, err := topic.StartReader("dream_wiki", topicoptions.ReadTopic("TaskActionResultReady"),
+		topicoptions.WithReaderOperationTimeout(time.Second),
+	)
 	if err != nil {
-		taskActionsTopicReader.Close(context.Background())
+		taskActionsTopicReader.Close(ctx)
+		cancel()
 		return nil, err
 	}
 
 	return &TopicReaders{
+		ctx:                          ctx,
+		cancel:                       cancel,
 		TaskActionsTopicReader:       taskActionsTopicReader,
 		TaskActionResultsTopicReader: taskActionResultsTopicReader,
 		log:                          deps.Logger,
 		deps:                         deps,
-		ctx:                          context.Background(), // TODO: use global application context and implement graceful shutdown
 	}, nil
 }
 
@@ -52,6 +64,8 @@ func (t *TopicReaders) Close(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	t.cancel()
 
 	return t.TaskActionResultsTopicReader.Close(ctx)
 }
@@ -63,40 +77,52 @@ func (t *TopicReaders) ReadMessages() {
 
 func readTopic(ctx context.Context, reader *topicreader.Reader, log logger.Logger, onMessage func(int64)) {
 	for {
-		mess, err := reader.ReadMessage(ctx)
-		if err != nil {
-			log.Error("failed to read message", err)
-			break
-		}
+		select {
+		case <-ctx.Done():
+			log.Info("context cancelled, stopping topic reader")
+			return
+		default:
+			mess, err := reader.ReadMessage(ctx)
+			if err != nil {
+				// Check if context was cancelled
+				if ctx.Err() != nil {
+					log.Info("context cancelled, stopping topic reader")
+					return
+				}
+				log.Error("failed to read message", err)
+				continue
+			}
+			log.Info("Got message")
 
-		// We commit here. Reason is not all actions can be idempotent.
-		// There is better to avoid multiple (maybe infinity looped) requests
-		// than get minor reliability improvement
-		commitError := reader.Commit(mess.Context(), mess)
-		if commitError != nil {
-			continue
-		}
+			// We commit here. Reason is not all actions can be idempotent.
+			// There is better to avoid multiple (maybe infinity looped) requests
+			// than get minor reliability improvement
+			commitError := reader.Commit(mess.Context(), mess)
+			if commitError != nil {
+				continue
+			}
 
-		messageContent := make([]byte, 1024)
-		n, readError := mess.Read(messageContent)
-		if readError != nil {
-			log.Error("failed to get message data", "error", err)
-			continue
-		}
-		if n == 0 {
-			log.Error("zero message length")
-			continue
-		}
-		messageContent = messageContent[:n]
+			messageContent := make([]byte, 1024)
+			n, readError := mess.Read(messageContent)
+			if readError != nil {
+				log.Error("failed to get message data", "error", readError)
+				continue
+			}
+			if n == 0 {
+				log.Error("zero message length")
+				continue
+			}
+			messageContent = messageContent[:n]
 
-		actionID, err := strconv.ParseInt(string(messageContent), 10, 64)
-		if err != nil {
-			log.Error("failed to parse action ID from message", " data ", string(messageContent), " error ", err)
-			continue
-		}
+			actionID, err := strconv.ParseInt(string(messageContent), 10, 64)
+			if err != nil {
+				log.Error("failed to parse action ID from message", " data ", string(messageContent), " error ", err)
+				continue
+			}
 
-		log.Info("processing message with task action ID: ", actionID)
-		onMessage(actionID)
+			log.Info("processing message with task action ID: ", actionID)
+			onMessage(actionID)
+		}
 	}
 }
 
@@ -141,8 +167,17 @@ func (t *TopicReaders) readTaskActionResultMessages() {
 			return
 		}
 
-		taskLogicCreator := task_factory.CreateTaskLogicCreator(context.Background(), t.deps, taskState)
-		task := task_common.NewTask(*taskDigest, taskState, taskLogicCreator)
+		taskLogicCreator := task_factory.CreateTaskLogicCreator()
+		task := task_common.NewTask(
+			context.Background(),
+			&task_common.TaskDeps{
+				Deps:   t.deps,
+				Digest: *taskDigest,
+				State:  taskState,
+				Repo:   repo,
+			},
+			taskLogicCreator,
+		)
 
 		taskActionResult, _, err := repo.GetTaskActionResultByID(internals.TaskActionID(taskActionID))
 		if err != nil {
@@ -153,12 +188,6 @@ func (t *TopicReaders) readTaskActionResultMessages() {
 		err = task.OnActionResult(*taskActionResult)
 		if err != nil {
 			t.log.Error("failed to process task action result", "action_id", taskActionID, "error", err)
-			return
-		}
-
-		err = repo.Commit()
-		if err != nil {
-			t.log.Error("failed to commit transaction", "error", err)
 			return
 		}
 

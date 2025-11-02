@@ -2,18 +2,28 @@ package github_account_pr
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
 
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/ycloud_client_gen"
 )
 
 type (
 	gitHubAccountPRTask struct {
-		state internals.TaskStateGitHubAccountPR
-		ctx   context.Context
-		deps  *deps.Deps
+		taskID api.TaskID
+		state  internals.TaskStateGitHubAccountPR
+		ctx    context.Context
+		deps   *deps.Deps
+		repo   repository.AppRepository
 	}
 )
 
@@ -21,20 +31,332 @@ var (
 	_ task_common.TaskLogic = (*gitHubAccountPRTask)(nil)
 )
 
-func NewGitHubAccountPRTask(ctx context.Context, deps *deps.Deps, state internals.TaskStateGitHubAccountPR) *gitHubAccountPRTask {
+func NewGitHubAccountPRTask(ctx context.Context, state internals.TaskStateGitHubAccountPR, deps *task_common.TaskDeps) *gitHubAccountPRTask {
 	return &gitHubAccountPRTask{
-		state: state,
-		ctx:   ctx,
-		deps:  deps,
+		state:  state,
+		ctx:    ctx,
+		deps:   deps.Deps,
+		taskID: deps.Digest.TaskId,
+		repo:   deps.Repo,
 	}
 }
 
+func (t *gitHubAccountPRTask) Close() {
+	t.repo.Rollback()
+}
+
 func (t *gitHubAccountPRTask) CalculateSubtasks() ([]api.Subtask, error) {
-	// For now, return an empty list of subtasks
 	return []api.Subtask{}, nil
 }
 
+func (t *gitHubAccountPRTask) saveChanges() error {
+	taskState := internals.TaskState{}
+	taskState.FromTaskStateGitHubAccountPR(t.state)
+	err := t.repo.SetTaskState(t.taskID, taskState)
+	if err != nil {
+		return err
+	}
+
+	return t.repo.Commit()
+}
+
+func (t *gitHubAccountPRTask) accountResult(result internals.TaskActionResult) error {
+	discriminator, err := result.Discriminator()
+	if err != nil {
+		return err
+	}
+	if internals.TaskActionType(discriminator) != internals.AskLlm {
+		return nil
+	}
+
+	resCast, err := result.AsTaskActionResultAskLLM()
+	if err != nil {
+		return err
+	}
+	if t.state.LlmDetectedProductChanges == nil {
+		res := strings.Split(resCast.ResponseMessage, "\n")
+		t.state.LlmDetectedProductChanges = &res
+		return nil
+	}
+	if t.state.LlmSuggestedSearchQueries == nil {
+		res := strings.Split(resCast.ResponseMessage, "\n")
+		t.state.LlmSuggestedSearchQueries = &res
+		return nil
+	}
+	return fmt.Errorf("Nothing done")
+}
+
 func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) error {
-	// TODO: Implement the full logic
+	t.accountResult(result)
+
+	// Step 1: if pr_patch and pr_description are absent, fetch them and keep going;
+	if t.state.PrPatch == nil || t.state.PrDescription == nil {
+		if err := t.fetchPRData(); err != nil {
+			return fmt.Errorf("failed to fetch PR data: %w", err)
+		}
+	}
+
+	// Step 2: if llm_detected_product_changes is absent, create task action with type ask_llm, provide prompt; then commit transaction and exit;
+	if t.state.LlmDetectedProductChanges == nil {
+		if err := t.askLLMForProductChanges(); err != nil {
+			return fmt.Errorf("failed to ask LLM for product changes: %w", err)
+		}
+		return t.saveChanges()
+	}
+
+	// Step 3: If llm_detected_product_changes is absent, ask llm with sufficient prompt, then exit;
+	// This step seems to be a duplicate of step 2, so we'll skip it
+
+	// Step 4: If llm_suggested_search_queries is absent, ask llm, then truncate to 3, then exit;
+	if t.state.LlmSuggestedSearchQueries == nil {
+		if err := t.askLLMForSearchQueries(); err != nil {
+			return fmt.Errorf("failed to ask LLM for search queries: %w", err)
+		}
+		return t.saveChanges()
+	}
+
+	// Step 5: If hot_paragraphs is empty, do search request (create AppUsecase, call method), then truncate to 2 for each query, then ask LLM to rephrase, then exit;
+	if t.state.HotParagraphs == nil {
+		err := t.searchHotParagraphs()
+		if err != nil {
+			return fmt.Errorf("failed to search hot parageaphs: %w", err)
+		}
+
+		if err := t.startLLMSearchAndRephrase(); err != nil {
+			return fmt.Errorf("failed to perform search and rephrase: %w", err)
+		}
+		return t.saveChanges()
+	}
+
+	// Step 6: If llm_rephrased_paragraph is not empty, create drafts with pages with this paragraph replaced, then finish task
+	if t.state.LlmRephrasedParagraphContents != nil && len(*t.state.LlmRephrasedParagraphContents) > 0 {
+		if err := t.createDraftsWithRephrasedParagraphs(); err != nil {
+			return fmt.Errorf("failed to create drafts with rephrased paragraphs: %w", err)
+		}
+	}
+
+	return t.saveChanges()
+}
+
+func (t *gitHubAccountPRTask) fetchPRData() error {
+	parsedURL, err := url.Parse(t.state.PrUrl)
+	if err != nil {
+		return fmt.Errorf("failed to parse PR URL: %w", err)
+	}
+
+	// Expected format: https://github.com/owner/repo/pull/number
+	pathParts := strings.Split(strings.Trim(parsedURL.Path, "/"), "/")
+	if len(pathParts) < 4 || pathParts[2] != "pull" {
+		return fmt.Errorf("invalid PR URL format")
+	}
+
+	owner := pathParts[0]
+	repoName := pathParts[1]
+	prNumber, err := strconv.Atoi(pathParts[3])
+	if err != nil {
+		return fmt.Errorf("failed to parse PR number: %w", err)
+	}
+
+	prResponse, err := t.deps.GitHubClient.GetPullRequest(t.ctx, owner, repoName, prNumber)
+	if err != nil {
+		return fmt.Errorf("failed to get PR from GitHub: %w", err)
+	}
+
+	t.deps.Logger.Info("fetching patch: ", prResponse.PatchUrl)
+	patchResponse, err := http.Get(prResponse.PatchUrl)
+	if err != nil {
+		return fmt.Errorf("failed to get PR patch from GitHub: %w", err)
+	}
+	t.deps.Logger.Info("patch fetched: ", patchResponse.StatusCode, " ", patchResponse.ContentLength)
+	defer patchResponse.Body.Close()
+
+	patchBytes, err := io.ReadAll(patchResponse.Body)
+	if err != nil {
+		return err
+	}
+	patchStr := string(patchBytes)
+
+	t.state.PrPatch = &patchStr
+	t.state.PrDescription = &prResponse.Body
+
 	return nil
+}
+
+func (t *gitHubAccountPRTask) askLLMForProductChanges() error {
+	// Create a prompt for the LLM to detect product changes
+	prompt := fmt.Sprintf(`Analyze the following GitHub PR and identify product changes:
+PR Description: %s
+PR Patch: %s
+
+Please list the product changes introduced by this PR. Focus on functional changes that affect the product, not implementation details.`,
+		*t.state.PrDescription, *t.state.PrPatch)
+
+	messages := []internals.LLMMessage{
+		{
+			Role:    "user",
+			Content: prompt,
+		},
+	}
+
+	return t.createAskLLMTaskAction(messages)
+}
+
+func (t *gitHubAccountPRTask) askLLMForSearchQueries() error {
+	// Create a prompt for the LLM to suggest search queries
+	productChanges := ""
+	if t.state.LlmDetectedProductChanges != nil {
+		for _, change := range *t.state.LlmDetectedProductChanges {
+			productChanges += fmt.Sprintf("- %s\n", change)
+		}
+	}
+
+	prompt := fmt.Sprintf(`Based on the following product changes, suggest search queries to find relevant documentation pages:
+Product Changes:
+%s
+
+Please provide 5 search queries that would help find relevant documentation pages for these changes.`, productChanges)
+
+	// Ask LLM
+	messages := []internals.LLMMessage{
+		{
+			Role:    string(ycloud_client_gen.User),
+			Content: prompt,
+		},
+	}
+
+	return t.createAskLLMTaskAction(messages)
+}
+
+func (t *gitHubAccountPRTask) searchHotParagraphs() error {
+	var hotParagraphs []internals.ParagraphData
+
+	if t.state.LlmSuggestedSearchQueries == nil {
+		return fmt.Errorf("no suggested search queries")
+	}
+
+	for _, query := range *t.state.LlmSuggestedSearchQueries {
+		// Generate embedding for the query
+		embedding, err := t.deps.InferenceClient.GenerateEmbedding(t.ctx, query)
+		if err != nil {
+			t.deps.Logger.Warn("failed to generate embedding for query: %v", err)
+			continue
+		}
+
+		// Search by embedding
+		results, err := t.repo.SearchByEmbedding(query, embedding)
+		if err != nil {
+			t.deps.Logger.Warn("failed to search by embedding: %v", err)
+			continue
+		}
+
+		// Add up to 2 paragraphs for each query
+		count := 0
+		for _, result := range results {
+			if count >= 2 {
+				break
+			}
+
+			paragraph := internals.ParagraphData{
+				PageId:           result.PageId,
+				LineNumber:       0, // TODO fix
+				ParagraphContent: result.Description,
+			}
+
+			hotParagraphs = append(hotParagraphs, paragraph)
+			count++
+		}
+	}
+
+	t.state.HotParagraphs = &hotParagraphs
+	return nil
+}
+
+func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
+	// Ask LLM to rephrase
+	if len(*t.state.HotParagraphs) == 0 {
+		return fmt.Errorf("empty hot paragraphs")
+	}
+
+	var content strings.Builder
+	for _, paragraph := range *t.state.HotParagraphs {
+		content.WriteString(fmt.Sprintf("Page ID: %s\n", paragraph.PageId))
+		content.WriteString(fmt.Sprintf("Content: %s\n\n", paragraph.ParagraphContent))
+	}
+
+	prompt := `Please rephrase the following documentation paragraphs to better reflect the product changes`
+
+	messages := []internals.LLMMessage{
+		{
+			Role:    string(ycloud_client_gen.System),
+			Content: prompt,
+		},
+		{
+			Role:    "user",
+			Content: content.String(),
+		},
+	}
+
+	return t.createAskLLMTaskAction(messages)
+}
+
+func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
+	// Create drafts with pages with this paragraph replaced
+	// This is a simplified implementation
+
+	if t.state.HotParagraphs == nil || t.state.LlmRephrasedParagraphContents == nil {
+		return nil
+	}
+
+	hotParagraphs := *t.state.HotParagraphs
+	rephrasedParagraphs := *t.state.LlmRephrasedParagraphContents
+
+	// Create a draft for each page
+	createdDraftIDs := make([]api.DraftID, 0)
+
+	for i, paragraph := range hotParagraphs {
+		if i >= len(rephrasedParagraphs) {
+			break
+		}
+
+		// Get the page content
+		page, _, err := t.repo.GetPageByID(paragraph.PageId)
+		if err != nil {
+			t.deps.Logger.Warn("failed to get page by ID: %v", err)
+			continue
+		}
+
+		// Replace the paragraph content with the rephrased version
+		// This is a simplified implementation - in reality, we would need to
+		// find the exact paragraph and replace it
+		newContent := strings.Replace(page.Content, paragraph.ParagraphContent, rephrasedParagraphs[i], 1)
+
+		// Create a draft
+		draftID, err := t.repo.CreateDraft(paragraph.PageId, page.Title, newContent)
+		if err != nil {
+			t.deps.Logger.Warn("failed to create draft: %v", err)
+			continue
+		}
+
+		createdDraftIDs = append(createdDraftIDs, *draftID)
+	}
+
+	t.state.CreatedDraftIds = &createdDraftIDs
+
+	return nil
+}
+
+func (t *gitHubAccountPRTask) createAskLLMTaskAction(prompt []internals.LLMMessage) error {
+	taskAction := internals.TaskAction{}
+	taskAction.FromTaskActionAskLLM(internals.TaskActionAskLLM{
+		TaskActionType: internals.AskLlm,
+		Model:          internals.Yandexgpt5Lite,
+		Messages:       prompt,
+	})
+
+	taskActionID, err := t.repo.CreateTaskAction(t.taskID, taskAction)
+	if err != nil {
+		return err
+	}
+
+	return t.repo.EnqueueTaskAction(*taskActionID)
 }

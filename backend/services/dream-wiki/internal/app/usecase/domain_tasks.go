@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
@@ -40,10 +41,14 @@ func (u *appUsecaseImpl) GetTaskDetails(taskID api.TaskID) (api.Task, error) {
 	}
 
 	// Create task logic creator
-	taskLogicCreator := task_factory.CreateTaskLogicCreator(u.ctx, u.deps, taskState)
+	taskLogicCreator := task_factory.CreateTaskLogicCreator()
 
 	// Create task instance
-	task := task_common.NewTask(*taskDigest, taskState, taskLogicCreator)
+	task := task_common.NewTask(u.ctx, &task_common.TaskDeps{
+		Deps:   u.deps,
+		Digest: *taskDigest,
+		State:  taskState,
+	}, taskLogicCreator)
 
 	// Calculate subtasks
 	subtasks, err := task.CalculateSubtasks()
@@ -63,7 +68,34 @@ func (u *appUsecaseImpl) GetTaskDetails(taskID api.TaskID) (api.Task, error) {
 }
 
 func (u *appUsecaseImpl) GetTaskInternalState(taskID api.TaskID) (*api.V1TasksInternalStateGetResponse, error) {
-	panic("unimplemented")
+	repo := repository.NewAppRepository(u.ctx, u.deps)
+	defer repo.Rollback()
+
+	// Get task digest and state from repository
+	taskDigest, taskState, err := repo.GetTaskByID(taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert taskState to RawJSON
+	taskStateBytes, err := json.Marshal(taskState)
+	if err != nil {
+		return nil, err
+	}
+
+	taskStateRaw := make(map[string]any)
+	if err := json.Unmarshal(taskStateBytes, &taskStateRaw); err != nil {
+		return nil, err
+	}
+
+	// Create and return the internal state response
+	response := &api.V1TasksInternalStateGetResponse{
+		Actions:   []api.RawJSON{}, // TODO: include actions in future
+		TaskId:    taskDigest.TaskId,
+		TaskState: taskStateRaw,
+	}
+
+	return response, nil
 }
 
 func (u *appUsecaseImpl) RecreateTask(taskID api.TaskID) (*api.TaskID, error) {

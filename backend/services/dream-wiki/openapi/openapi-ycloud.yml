@@ -180,11 +180,11 @@ components:
       properties:
         role:
           $ref: '#/components/schemas/MessageRole'
-        content:
+        text:
           type: string
       required:
         - role
-        - content
+        - text
 
     MessageRole:
       type: string

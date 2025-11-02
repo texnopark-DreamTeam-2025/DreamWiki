@@ -1,6 +1,10 @@
 package task_common
 
 import (
+	"context"
+
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
@@ -19,6 +23,7 @@ type (
 		state     *internals.TaskState
 		status    api.TaskStatus
 		taskLogic TaskLogic
+		repo      repository.AppRepository
 	}
 
 	TaskLogic interface {
@@ -26,19 +31,34 @@ type (
 		OnActionResult(result internals.TaskActionResult) error
 	}
 
-	// TaskLogicCreator is a function that creates a TaskLogic based on the task state
-	TaskLogicCreator = func(state *internals.TaskState) TaskLogic
+	// TaskLogicCreator is a function that creates a TaskLogic based on the task state.
+	// Essential to break import cycle.
+	TaskLogicCreator = func(ctx context.Context,
+		deps *TaskDeps) (TaskLogic, error)
+
+	TaskDeps struct {
+		Deps   *deps.Deps
+		Digest api.TaskDigest
+		State  *internals.TaskState
+		Repo   repository.AppRepository
+	}
 )
 
 var (
 	_ Task = (*taskImpl)(nil)
 )
 
-func NewTask(digest api.TaskDigest, state *internals.TaskState, taskLogicCreator TaskLogicCreator) Task {
+func NewTask(ctx context.Context, deps *TaskDeps, taskLogicCreator TaskLogicCreator) Task {
+	taskLogic, err := taskLogicCreator(ctx, deps)
+	if err != nil {
+		panic(err.Error())
+	}
+
 	return &taskImpl{
-		state:     state,
-		status:    digest.Status,
-		taskLogic: taskLogicCreator(state),
+		state:     deps.State,
+		status:    deps.Digest.Status,
+		taskLogic: taskLogic,
+		repo:      deps.Repo,
 	}
 }
 

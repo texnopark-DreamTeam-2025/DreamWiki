@@ -181,15 +181,13 @@ components:
       properties:
         task_action_type:
           $ref: '#/components/schemas/TaskActionType'
-        messages:
-          type: array
-          items:
-            $ref: '#/components/schemas/LLMMessage'
+        response_message:
+          type: string
         server_response:
           $ref: '#/components/schemas/RawJSON'
       required:
         - task_action_type
-        - messages
+        - response_message
         - server_response
 
     TaskActionResultNewTask:
@@ -267,6 +265,10 @@ components:
           type: integer
         paragraph_content:
           type: string
+      required:
+        - page_id
+        - line_number
+        - paragraph_content
 
     RawJSON:
       type: object

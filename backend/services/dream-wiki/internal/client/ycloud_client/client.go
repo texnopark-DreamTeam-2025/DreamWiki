@@ -65,10 +65,18 @@ func (c *yCloudClientImpl) StartAsyncLLMRequest(ctx context.Context, messages []
 		},
 		Messages: messages,
 		ModelUri: "gpt://b1gji9k43bb3qbc31oim/yandexgpt-lite/rc",
-	})
+	},
+		func(ctx context.Context, req *http.Request) error {
+			req.Header.Add("Content-Type", "application/json")
+			req.Header.Add("X-Folder-ID", "b1gji9k43bb3qbc31oim")
+			return nil
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println(string(response.Body))
 
 	operationID := response.JSON200.Id
 	return &operationID, nil
@@ -79,6 +87,8 @@ func (c *yCloudClientImpl) GetLLMResponse(ctx context.Context, operationID yclou
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println(string(response.Body))
 
 	return response.JSON200, nil
 }

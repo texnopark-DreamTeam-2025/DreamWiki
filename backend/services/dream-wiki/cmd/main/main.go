@@ -116,6 +116,10 @@ func main() {
 
 	serverErr := make(chan error, 1)
 
+	// Create a context for the application
+	appCtx, appCancel := context.WithCancel(context.Background())
+	defer appCancel()
+
 	go func() {
 		logger.Info("starting HTTP server",
 			zap.String("address", server.Addr),
@@ -126,7 +130,7 @@ func main() {
 		}
 	}()
 
-	rd, err := topic_reader.NewTopicReader(&deps)
+	rd, err := topic_reader.NewTopicReader(appCtx, &deps)
 	if err != nil {
 		logger.Error("failed to create topic reader", zap.Error(err))
 		os.Exit(1)
@@ -141,17 +145,27 @@ func main() {
 		logger.Error("failed to start server", zap.Error(err))
 		os.Exit(1)
 	case sig := <-quit:
-		// TODO: graceful shutdown for topic readers
 		logger.Info("server is shutting down",
 			zap.String("signal", sig.String()),
 		)
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// Create shutdown context with timeout
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		if err := server.Shutdown(ctx); err != nil {
+		// Shutdown HTTP server
+		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("server shutdown error", zap.Error(err))
+			cancel()
 			os.Exit(1)
+		}
+
+		// Cancel the application context to signal topic readers to stop
+		appCancel()
+
+		// Close topic readers
+		if err := rd.Close(shutdownCtx); err != nil {
+			logger.Error("topic readers shutdown error", zap.Error(err))
 		}
 
 		logger.Info("server stopped")

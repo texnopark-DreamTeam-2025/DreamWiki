@@ -112,7 +112,7 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 		updated_at
 	FROM Task
 	WHERE task_id < $idUpperLimit
-	ORDER BY task_id
+	ORDER BY task_id DESC
 	LIMIT $limit;
 	`
 

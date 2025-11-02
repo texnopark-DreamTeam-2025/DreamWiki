@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { listTasks } from "@/client";
 import type { TaskDigest, TaskStatus } from "@/client";
-import styles from "./TasksList.module.scss";
+import { useNavigate } from "react-router-dom";
+import { Flex, Card, Container, Progress } from "@gravity-ui/uikit";
+import { Text } from "@gravity-ui/uikit";
 
 export const TasksList = () => {
   const [tasks, setTasks] = useState<TaskDigest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -46,56 +49,53 @@ export const TasksList = () => {
     }
   };
 
-  const getStatusColor = (status: TaskStatus) => {
-    switch (status) {
-      case "done":
-        return styles.statusDone;
-      case "failed_by_error":
-      case "failed_by_timeout":
-        return styles.statusFailed;
-      case "cancelled":
-        return styles.statusCancelled;
-      case "executing":
-      default:
-        return styles.statusExecuting;
-    }
-  };
-
   if (loading) {
-    return <div className={styles.loading}>Loading tasks...</div>;
+    return (
+      <Container>
+        <Text variant="header-1">Tasks</Text>
+        <Text>Loading tasks...</Text>
+      </Container>
+    );
   }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>;
+    return (
+      <Container>
+        <Text variant="header-1">Tasks</Text>
+        <Text color="danger">{error}</Text>
+      </Container>
+    );
   }
 
   return (
-    <div className={styles.tasksList}>
-      <h1>Tasks</h1>
+    <Container>
+      <Text variant="header-1">Tasks</Text>
       {tasks.length === 0 ? (
-        <div className={styles.noTasks}>No tasks found</div>
+        <Text>No tasks found</Text>
       ) : (
-        <div className={styles.taskList}>
+        <Flex direction="column" gap="4">
           {tasks.map((task) => (
-            <div key={task.task_id} className={styles.taskItem}>
-              <div className={styles.taskHeader}>
-                <div className={styles.taskNumber}>#{task.task_id}</div>
-                <div className={styles.taskTrigger}>{task.triggered_by}</div>
-              </div>
-              <div className={styles.taskDescription}>{task.description}</div>
-              <div className={styles.progressBarContainer}>
-                <div className={styles.progressBar}>
-                  <div
-                    className={`${styles.progressFill} ${getStatusColor(task.status)}`}
-                    style={{ width: `${getProgressPercentage(task.status)}%` }}
-                  ></div>
-                </div>
-                <div className={styles.progressText}>{getProgressPercentage(task.status)}%</div>
-              </div>
-            </div>
+            <Card
+              key={task.task_id}
+              onClick={() => navigate(`/task/${task.task_id}`)}
+              view="outlined"
+              type='action'
+              size="l"
+            >
+              <Container>
+                <Flex justifyContent="space-between" alignItems="center">
+                  <Text variant="header-2">#{task.task_id}</Text>
+                  <Text variant="caption-1" color="secondary">
+                    {task.triggered_by}
+                  </Text>
+                </Flex>
+                <Text>{task.description}</Text>
+                <Progress value={getProgressPercentage(task.status)} />
+              </Container>
+            </Card>
           ))}
-        </div>
+        </Flex>
       )}
-    </div>
+    </Container>
   );
 };
