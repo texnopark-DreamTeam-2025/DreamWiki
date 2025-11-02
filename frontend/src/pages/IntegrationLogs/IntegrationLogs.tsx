@@ -6,12 +6,11 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Select, Card } from "@gravity-ui/uikit";
+import { Select, Card, Flex, Loader, Text, Container } from "@gravity-ui/uikit";
 import { integrationLogsGet, type IntegrationLogField, type IntegrationId } from "@/client";
 
 import { MonacoEditor } from "@/components/MonacoEditor";
 import { useToast } from "@/hooks/useToast";
-import styles from "./IntegrationLogs.module.scss";
 
 type IntegrationType = "ywiki" | "github";
 
@@ -211,28 +210,31 @@ export default function IntegrationLogs() {
   const isInitialLoading = loading && logs.length === 0;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>Журнал интеграций</h1>
-        <div className={styles.controls}>
+    <Flex direction="column" grow={1} style={{ padding: 20, height: '100vh' }}>
+      <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--g-color-line-generic)' }}>
+        <Text variant="display-1">Журнал интеграций</Text>
+        <Flex maxWidth="s" >
           <Select
             size="l"
             placeholder="Выберите интеграцию"
             value={[selectedIntegration]}
             onUpdate={handleIntegrationChange}
             options={INTEGRATION_OPTIONS}
-            className={styles.integrationSelect}
+            width="max"
           />
-        </div>
-      </div>
+        </Flex>
+      </Flex>
 
-      <Card className={styles.logsContainer}>
+      <Card style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--g-color-base-background)', border: '1px solid var(--g-color-line-generic)', borderRadius: 8 }}>
         {isInitialLoading ? (
-          <div className={styles.loadingState}>
-            <div className={styles.loadingText}>Загрузка логов...</div>
-          </div>
+          <Flex grow={1} alignItems="center" justifyContent="center" style={{ padding: 40 }}>
+            <Text variant="body-1" color="secondary">
+              Загрузка логов...
+            </Text>
+            <Loader size="m" />
+          </Flex>
         ) : (
-          <div className={styles.editorContainer}>
+          <Flex direction="column" grow={1} style={{ position: 'relative', overflow: 'hidden' }}>
             <MonacoEditor
               value={editorContent}
               language="text"
@@ -243,13 +245,31 @@ export default function IntegrationLogs() {
               onScroll={handleEditorScroll}
             />
             {isLoadingMore.current && (
-              <div className={styles.loadingMore}>Загрузка дополнительных логов...</div>
+              <div style={{
+                position: 'absolute',
+                bottom: 10,
+                right: 10,
+                backgroundColor: 'var(--g-color-base-background)',
+                border: '1px solid var(--g-color-line-generic)',
+                borderRadius: 4,
+                padding: '8px 12px',
+                fontSize: 12,
+                color: 'var(--g-color-text-secondary)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                zIndex: 10
+              }}>
+                Загрузка дополнительных логов...
+              </div>
             )}
-          </div>
+          </Flex>
         )}
       </Card>
 
-      {!hasMore && logs.length > 0 && <div className={styles.endMessage}>Все логи загружены</div>}
-    </div>
+      {!hasMore && logs.length > 0 && (
+        <Flex justifyContent="center" style={{ marginTop: 16, padding: 16, backgroundColor: 'var(--g-color-base-float)', borderRadius: 8, border: '1px solid var(--g-color-line-generic)' }}>
+          <Text variant="body-2" color="secondary">Все логи загружены</Text>
+        </Flex>
+      )}
+    </Flex>
   );
 }
