@@ -10,15 +10,15 @@ CREATE TABLE Page (
     page_id             Uuid  NOT NULL,
     title               Text  NOT NULL,
     ywiki_slug          Text  NOT NULL,
-    parent_page_id      Uuid          ,
-    current_revision_id Int64 NOT NULL,
+    parent_page_id      Uuid,
+    current_revision_id Int64,
     PRIMARY KEY (page_id)
 );
 
 CREATE TABLE PageRevision (
     revision_id          Serial8 NOT NULL,
     page_id              Uuid    NOT NULL,
-    previous_revision_id Int64   NOT NULL,
+    previous_revision_id Int64,
     content              Text    NOT NULL,
     PRIMARY KEY (revision_id)
 );

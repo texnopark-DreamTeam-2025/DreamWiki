@@ -44,7 +44,7 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 
 	var pageID api.PageID
 	var title string
-	var ywikiSlug *string
+	var ywikiSlug string
 	var currentRevisionID int64
 	var content string
 	if err = result.FetchExactlyOne(&pageID, &title, &ywikiSlug, &currentRevisionID, &content); err != nil {
@@ -61,12 +61,11 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 
 func (r *appRepositoryImpl) CreatePage(yWikiSlug string, title string, content string) (*api.PageID, error) {
 	yql := `
-	INSERT INTO Page(page_id, title, ywiki_slug, current_revision_id)
+	INSERT INTO Page(page_id, title, ywiki_slug)
 	VALUES (
 		RandomUuid(4),
 		$title,
-		$yWikiSlug,
-		0
+		$yWikiSlug
 	)
 	RETURNING page_id;`
 
@@ -143,16 +142,22 @@ func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent str
 	}
 	defer result1.Close()
 
-	var currentRevisionID int64
+	var currentRevisionID *int64
 	err = result1.FetchExactlyOne(&currentRevisionID)
 	if err != nil {
 		return nil, err
 	}
 
+	var ydbRevisionID types.Value
+	if currentRevisionID != nil {
+		ydbRevisionID = types.OptionalValue(types.Int64Value(*currentRevisionID))
+	} else {
+		ydbRevisionID = types.NullValue(types.TypeInt64)
+	}
+
 	yql2 := `
-	INSERT INTO PageRevision(revision_id, page_id, previous_revision_id, content)
+	INSERT INTO PageRevision(page_id, previous_revision_id, content)
 	VALUES (
-		RandomUuid(4),
 		$pageID,
 		$previousRevisionID,
 		$content
@@ -161,7 +166,7 @@ func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent str
 
 	parameters := []table.ParameterOption{
 		table.ValueParam("$pageID", types.UuidValue(pageID)),
-		table.ValueParam("$previousRevisionID", types.Int64Value(currentRevisionID)),
+		table.ValueParam("$previousRevisionID", ydbRevisionID),
 		table.ValueParam("$content", types.TextValue(newContent)),
 	}
 
@@ -193,7 +198,7 @@ func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent str
 	}
 	defer result3.Close()
 
-	r.log.Debug("Appended page revision with id ", revisionID)
+	r.log.Debug("Appended page ", pageID, " revision with id ", revisionID)
 
 	return &revisionID, nil
 }
@@ -208,7 +213,7 @@ func (r *appRepositoryImpl) GetPageByID(pageID api.PageID) (*api.Page, *internal
 		r.content
 	FROM Page p
 	JOIN PageRevision r ON p.current_revision_id=r.revision_id
-	WHERE page_id=$pageID;
+	WHERE p.page_id=$pageID;
 	`
 
 	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
@@ -219,7 +224,7 @@ func (r *appRepositoryImpl) GetPageByID(pageID api.PageID) (*api.Page, *internal
 
 	var retrievedPageID api.PageID
 	var title string
-	var ywikiSlug *string
+	var ywikiSlug string
 	var currentRevisionID int64
 	var content string
 	if err = result.FetchExactlyOne(&retrievedPageID, &title, &ywikiSlug, &currentRevisionID, &content); err != nil {

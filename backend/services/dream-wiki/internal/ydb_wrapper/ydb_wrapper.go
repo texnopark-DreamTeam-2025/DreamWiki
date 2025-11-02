@@ -59,11 +59,13 @@ type (
 	actorImpl struct {
 		ctx            context.Context
 		tx             query.TxActor
+		log            logger.Logger
 		closingChannel chan any
 	}
 
 	resultImpl struct {
 		ctx           context.Context
+		log           logger.Logger
 		rows          []query.Row
 		rowIdx        int
 		closeCallback func()
@@ -146,6 +148,7 @@ func (y *ydbWrapperImpl) InTX() Actor {
 		ctx:            y.ctx,
 		closingChannel: make(chan any),
 		tx:             *y.tx,
+		log:            y.log,
 	}
 
 	go func() {
@@ -190,6 +193,7 @@ func (a *actorImpl) Execute(yql string, opts ...table.ParameterOption) (ResultSe
 
 	resultSet, err := a.tx.QueryResultSet(a.ctx, yql, query.WithParameters(paramsBuilder.Build()))
 	if err != nil {
+		a.log.Error(err)
 		a.closingChannel <- nil
 		return nil, err
 	}
@@ -206,6 +210,7 @@ func (a *actorImpl) Execute(yql string, opts ...table.ParameterOption) (ResultSe
 	return &resultImpl{
 		ctx:    a.ctx,
 		rows:   rows,
+		log:    a.log,
 		rowIdx: -1,
 		closeCallback: func() {
 			a.closingChannel <- nil
@@ -232,6 +237,9 @@ func (r *resultImpl) FetchExactlyOne(values ...any) error {
 	}
 	r.NextRow()
 	err := r.rows[r.rowIdx].Scan(values...)
+	if err != nil {
+		r.log.Error(err)
+	}
 	return err
 }
 

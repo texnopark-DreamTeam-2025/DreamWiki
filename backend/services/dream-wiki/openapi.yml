@@ -767,6 +767,7 @@ components:
         - page_id
         - content
         - title
+        - ywiki_slug
 
     PageDigest:
       type: object
