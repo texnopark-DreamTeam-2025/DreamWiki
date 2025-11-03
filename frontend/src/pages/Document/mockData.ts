@@ -15,6 +15,7 @@ export const MOCK_PAGE_DATA: V1DiagnosticInfoGetResponse = {
   page: {
     page_id: "missouri-001",
     title: "Миссури",
+    ywiki_slug: "missouri",
     content: `
       <h2>История штата Миссури началась с эпохи заселения территории штата человеком в эпоху палеолитеза около 12 000 лет до нашей эры.</h2>
 

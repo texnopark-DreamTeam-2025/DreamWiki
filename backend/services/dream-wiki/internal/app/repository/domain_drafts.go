@@ -1,13 +1,51 @@
 package repository
 
 import (
+	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
+
+func decodeDraftsCursor(cursor *api.Cursor) (timeFrom time.Time, idFrom api.DraftID) {
+	minTime := time.Unix(0, 0)
+
+	if cursor == nil {
+		return minTime, api.DraftID{}
+	}
+
+	splittedCursor := strings.Split(*cursor, "\n")
+	if len(splittedCursor) != 2 {
+		return minTime, api.DraftID{}
+	}
+
+	timeFrom, err := time.Parse(time.RFC3339, splittedCursor[0])
+	if err != nil {
+		return minTime, api.DraftID{}
+	}
+
+	idFrom, err = uuid.Parse(splittedCursor[1])
+	if err != nil {
+		return minTime, api.DraftID{}
+	}
+
+	return timeFrom, idFrom
+}
+
+func encodeDraftsCursor(timeFrom time.Time, idFrom api.DraftID) string {
+	return timeFrom.Format(time.RFC3339) + "\n" + idFrom.String()
+}
+
+func encodeDraftsNextInfo(timeFrom time.Time, idFrom api.DraftID, numRows int) *api.NextInfo {
+	return &api.NextInfo{
+		Cursor:  encodeDraftsCursor(timeFrom, idFrom),
+		HasMore: numRows > 0,
+	}
+}
 
 func (r *appRepositoryImpl) GetDraftByID(draftID api.DraftID) (*api.Draft, error) {
 	yql := `
@@ -83,22 +121,28 @@ func (r *appRepositoryImpl) GetDraftByID(draftID api.DraftID) (*api.Draft, error
 	}, nil
 }
 
-func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.DraftDigest, *api.Cursor, error) {
+func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.DraftDigest, *api.NextInfo, error) {
 	yql := `
 	SELECT
 		d.draft_id,
 		d.draft_title,
 		d.status,
+		d.created_at,
 		p.page_id,
 		p.title
 	FROM Draft d
 	JOIN Page p ON d.page_revision_id = p.current_revision_id
-	ORDER BY d.updated_at DESC
+	WHERE (d.created_at, d.draft_id) < ($timeFrom, $idFrom)
+	ORDER BY d.created_at DESC, d.draft_id DESC
 	LIMIT $limit;
 	`
 
+	timeFrom, idFrom := decodeDraftsCursor(cursor)
+
 	parameters := []table.ParameterOption{
-		table.ValueParam("$limit", types.Uint64Value(uint64(limit))),
+		table.ValueParam("$limit", types.Uint64Value(uint64(limit+1))), // Fetch one extra to check if there are more
+		table.ValueParam("$timeFrom", types.TimestampValueFromTime(timeFrom)),
+		table.ValueParam("$idFrom", types.UuidValue(idFrom)),
 	}
 
 	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
@@ -108,14 +152,20 @@ func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.D
 	defer result.Close()
 
 	drafts := make([]api.DraftDigest, 0, result.RowCount())
-	for result.NextRow() {
+
+	newIDFrom := api.DraftID{}
+	newTimeFrom := time.Time{}
+	count := 0
+
+	for result.NextRow() && count < int(limit) {
 		var draftID api.DraftID
 		var draftTitle string
 		var status string
+		var createdAt time.Time
 		var pageID api.PageID
 		var pageTitle string
 
-		err := result.FetchRow(&draftID, &draftTitle, &status, &pageID, &pageTitle)
+		err := result.FetchRow(&draftID, &draftTitle, &status, &createdAt, &pageID, &pageTitle)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -129,12 +179,13 @@ func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.D
 			},
 			Status: api.DraftStatus(status),
 		})
+
+		newIDFrom = draftID
+		newTimeFrom = createdAt
+		count++
 	}
 
-	// For simplicity, we're not implementing cursor pagination here
-	// In a real implementation, you would need to handle cursor-based pagination
-	newCursor := ""
-	return drafts, &newCursor, nil
+	return drafts, encodeDraftsNextInfo(newTimeFrom, newIDFrom, result.RowCount()), nil
 }
 
 func (r *appRepositoryImpl) RemoveDraft(draftID api.DraftID) error {

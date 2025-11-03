@@ -19,12 +19,12 @@ type (
 		GetDraft(draftID api.DraftID) (*api.Draft, error)
 		UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error
 		ApplyDraft(draftID api.DraftID) error
-		ListDrafts(cursor *string) ([]api.DraftDigest, *api.Cursor, error)
+		ListDrafts(cursor *api.Cursor) ([]api.DraftDigest, *api.NextInfo, error)
 
 		// domain_integrations.go
 		FetchPageFromYWiki(pageURL string) error
 		YwikiFetchAllAsync() (*api.TaskID, error)
-		GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error)
+		GetIntegrationLogs(integrationID api.IntegrationID, cursor *api.Cursor) ([]api.IntegrationLogField, *api.NextInfo, error)
 		GithubAccountPRAsync(prURL string) (*api.TaskID, error)
 
 		// domain_page_indexation.go
@@ -40,7 +40,7 @@ type (
 		// domain_tasks.go
 		CancelTask(taskID api.TaskID) error
 		GetTaskDetails(taskID api.TaskID) (api.Task, error)
-		ListTasks(cursor *api.Cursor) (tasks []api.TaskDigest, newCursor *api.Cursor, err error)
+		ListTasks(cursor *api.Cursor) ([]api.TaskDigest, *api.NextInfo, error)
 		RetryTask(taskID api.TaskID) error
 		GetTaskInternalState(taskID api.TaskID) (*api.V1TasksInternalStateGetResponse, error)
 		RecreateTask(taskID api.TaskID) (*api.TaskID, error)

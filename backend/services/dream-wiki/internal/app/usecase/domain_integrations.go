@@ -79,12 +79,11 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	return repo.Commit()
 }
 
-func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, newCursor string, err error) {
+func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, nextInfo *api.NextInfo, err error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	fields, newCursor, err = repo.GetIntegrationLogFields(integrationID, cursor, 50)
-	return
+	return repo.GetIntegrationLogFields(integrationID, cursor, 50)
 }
 
 func (u *appUsecaseImpl) GithubAccountPRAsync(prURL string) (*api.TaskID, error) {

@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Select, Card, Flex, Loader, Text, Container } from "@gravity-ui/uikit";
+import { Select, Card, Flex, Loader, Text } from "@gravity-ui/uikit";
 import { integrationLogsGet, type IntegrationLogField, type IntegrationId } from "@/client";
 
 import { MonacoEditor } from "@/components/MonacoEditor";
@@ -64,11 +64,8 @@ export default function IntegrationLogs() {
 
         if (res.data) {
           setLogs(res.data.log_fields);
-          // Устанавливаем курсор из ответа сервера
-          cursorRef.current = res.data.cursor;
-          // Есть еще данные, если есть логи и курсор не пустой
-          const hasMoreData = res.data.log_fields.length > 0 && res.data.cursor !== "";
-          setHasMore(hasMoreData);
+          cursorRef.current = res.data.next_info.cursor;
+          setHasMore(res.data.next_info.has_more);
         }
       } catch (error) {
         console.error("Ошибка загрузки логов:", error);
@@ -108,20 +105,14 @@ export default function IntegrationLogs() {
         lastProcessedCursor.current = currentCursor;
 
         // Если получили пустой массив логов или пустой курсор - данных больше нет
-        if (res.data.log_fields.length === 0 || res.data.cursor === "") {
-          setHasMore(false);
-          return; // Выходим, не обновляя курсор
-        }
-
-        // Если курсор не изменился по сравнению с тем что отправляли - данных больше нет
-        if (res.data.cursor === currentCursor) {
+        if (!res.data.next_info.has_more) {
           setHasMore(false);
           return; // Выходим, не обновляя курсор
         }
 
         // Добавляем новые логи и обновляем курсор
         setLogs((prev) => [...prev, ...res.data!.log_fields]);
-        cursorRef.current = res.data.cursor;
+        cursorRef.current = res.data.next_info.cursor;
 
         // Проверяем, есть ли еще данные
         setHasMore(true); // Если дошли до этого места, значит есть данные и новый курсор

@@ -539,15 +539,15 @@ components:
     V1IntegrationLogsGetResponse:
       type: object
       properties:
-        cursor:
-          $ref: '#/components/schemas/Cursor'
         log_fields:
           type: array
           items:
             $ref: '#/components/schemas/IntegrationLogField'
+        next_info:
+          $ref: '#/components/schemas/NextInfo'
       required:
-        - cursor
         - log_fields
+        - next_info
 
     V1PagesTreeGetRequest:
       type: object
@@ -651,11 +651,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TaskDigest'
-        cursor:
-          $ref: '#/components/schemas/Cursor'
+        next_info:
+          $ref: '#/components/schemas/NextInfo'
       required:
         - tasks
-        - cursor
+        - next_info
 
     V1DraftsListRequest:
       type: object
@@ -670,11 +670,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DraftDigest'
-        cursor:
-          $ref: '#/components/schemas/Cursor'
+        next_info:
+          $ref: '#/components/schemas/NextInfo'
       required:
         - drafts
-        - cursor
+        - next_info
 
     V1DraftsGetRequest:
       type: object
@@ -971,6 +971,17 @@ components:
       required:
         - only_my_tasks
         - only_active
+
+    NextInfo:
+      type: object
+      properties:
+        has_more:
+          type: boolean
+        cursor:
+          $ref: '#/components/schemas/Cursor'
+      required:
+        - has_more
+        - cursor
 
     RawJSON:
       type: object

@@ -19,7 +19,7 @@ type (
 		// domain_drafts.go
 		CreateDraft(pageID api.PageID, draftTitle string, draftContent string) (*api.DraftID, error)
 		GetDraftByID(draftID api.DraftID) (*api.Draft, error)
-		ListDrafts(cursor *api.Cursor, limit int64) ([]api.DraftDigest, *api.Cursor, error)
+		ListDrafts(cursor *api.Cursor, limit int64) ([]api.DraftDigest, *api.NextInfo, error)
 		RemoveDraft(draftID api.DraftID) error
 		SetDraftStatus(draftID api.DraftID, newStatus api.DraftStatus) error
 		SetDraftContent(draftID api.DraftID, newContent string) error
@@ -28,7 +28,7 @@ type (
 
 		// domain_integration_logs.go
 		WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error
-		GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit uint64) ([]api.IntegrationLogField, api.Cursor, error)
+		GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit uint64) ([]api.IntegrationLogField, *api.NextInfo, error)
 
 		// domain_page_indexation.go
 		RemovePageIndexation(pageID api.PageID) error
@@ -49,7 +49,7 @@ type (
 
 		// domain_tasks.go
 		GetTaskByID(taskID api.TaskID) (*api.TaskDigest, *internals.TaskState, error)
-		ListTasks(cursor *api.Cursor, limit int64) ([]api.TaskDigest, []internals.TaskState, *api.Cursor, error)
+		ListTasks(cursor *api.Cursor, limit int64) ([]api.TaskDigest, []internals.TaskState, *api.NextInfo, error)
 		CreateTask(taskState internals.TaskState) (*api.TaskID, error)
 		SetTaskStatus(taskID api.TaskID, newStatus api.TaskStatus) error
 		SetTaskState(taskID api.TaskID, newState internals.TaskState) error

@@ -53,15 +53,15 @@ func (d *AppDelivery) ApplyDraft(ctx context.Context, request api.ApplyDraftRequ
 
 func (d *AppDelivery) ListDrafts(ctx context.Context, request api.ListDraftsRequestObject) (api.ListDraftsResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
-	result, newCursor, err := usecase.ListDrafts(request.Body.Cursor)
+	result, nextInfo, err := usecase.ListDrafts(request.Body.Cursor)
 	if err != nil {
 		d.log.Error(err.Error())
 		return api.ListDrafts500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 
 	return api.ListDrafts200JSONResponse{
-		Drafts: result,
-		Cursor: *newCursor,
+		Drafts:   result,
+		NextInfo: *nextInfo,
 	}, nil
 }
 

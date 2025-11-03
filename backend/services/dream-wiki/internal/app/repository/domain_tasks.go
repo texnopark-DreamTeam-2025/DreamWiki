@@ -29,6 +29,13 @@ func encodeTasksCursor(idUpperLimit int64) api.Cursor {
 	return api.Cursor(strconv.FormatInt(idUpperLimit, 10))
 }
 
+func encodeTasksNextInfo(newIDUpperLimit int64, numRows int) *api.NextInfo {
+	return &api.NextInfo{
+		Cursor:  encodeTasksCursor(newIDUpperLimit),
+		HasMore: numRows > 0,
+	}
+}
+
 func (r *appRepositoryImpl) CreateTask(taskState internals.TaskState) (*api.TaskID, error) {
 	yql := `
 	INSERT INTO Task (status, state, created_at, updated_at)
@@ -102,7 +109,7 @@ func (r *appRepositoryImpl) GetTaskByID(taskID api.TaskID) (*api.TaskDigest, *in
 	return taskDigest, &taskState, nil
 }
 
-func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.TaskDigest, []internals.TaskState, *api.Cursor, error) {
+func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.TaskDigest, []internals.TaskState, *api.NextInfo, error) {
 	yql := `
 	SELECT
 		task_id,
@@ -115,8 +122,6 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 	ORDER BY task_id DESC
 	LIMIT $limit;
 	`
-
-	var newCursor api.Cursor
 
 	idUpperLimit := decodeTasksCursor(cursor)
 
@@ -131,10 +136,6 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 
 	taskDigests := make([]api.TaskDigest, 0, result.RowCount())
 	taskStates := make([]internals.TaskState, 0, result.RowCount())
-
-	if result.RowCount() == 0 {
-		return taskDigests, taskStates, &newCursor, nil
-	}
 
 	newIDFrom := int64(0)
 	for result.NextRow() {
@@ -168,8 +169,7 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 		newIDFrom = int64(taskID)
 	}
 
-	newCursor = encodeTasksCursor(newIDFrom)
-	return taskDigests, taskStates, &newCursor, nil
+	return taskDigests, taskStates, encodeTasksNextInfo(newIDFrom, len(taskDigests)), nil
 }
 
 func (r *appRepositoryImpl) SetTaskState(taskID api.TaskID, newState internals.TaskState) error {

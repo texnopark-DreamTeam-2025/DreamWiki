@@ -39,6 +39,13 @@ func encodeIntegrationLogsCursor(timeFrom time.Time, idFrom int64) string {
 	return timeFrom.Format(time.RFC3339) + "\n" + strconv.FormatInt(idFrom, 10)
 }
 
+func encodeIntegrationLogsNextInfo(timeFrom time.Time, idFrom int64, numRows int) *api.NextInfo {
+	return &api.NextInfo{
+		Cursor:  encodeIntegrationLogsCursor(timeFrom, idFrom),
+		HasMore: numRows > 0,
+	}
+}
+
 func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.IntegrationID, logText string) error {
 	yql := `INSERT INTO IntegrationLogField (integration_id, log_text, created_at)
 	VALUES ($integrationID, $logText, CurrentUtcDatetime())`
@@ -55,7 +62,7 @@ func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.Integrati
 	return nil
 }
 
-func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit uint64) ([]api.IntegrationLogField, api.Cursor, error) {
+func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.IntegrationID, cursor *api.Cursor, limit uint64) ([]api.IntegrationLogField, *api.NextInfo, error) {
 	yql := `
 		SELECT field_id, log_text, created_at
 		FROM IntegrationLogField
@@ -77,32 +84,29 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.Integratio
 		table.ValueParam("$idFrom", types.Uint64Value(uint64(idFrom))),
 	)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	defer result.Close()
 
 	fields := make([]api.IntegrationLogField, 0, limit)
-	if result.RowCount() == 0 {
-		if cursor == nil {
-			return fields, "", nil
-		}
-		return fields, *cursor, nil
-	}
 
 	newIDFrom := int64(0)
+	newTimeFrom := time.Time{}
 	for result.NextRow() {
 		var content string
 		var createdAt time.Time
 		err := result.FetchRow(&newIDFrom, &content, &createdAt)
 		if err != nil {
-			return nil, "", err
+			return nil, nil, err
 		}
 		fields = append(fields, api.IntegrationLogField{
 			Content:   content,
 			CreatedAt: createdAt,
 		})
+		if newTimeFrom.Before(createdAt) {
+			newTimeFrom = createdAt
+		}
 	}
 
-	newTimeFrom := fields[len(fields)-1].CreatedAt
-	return fields, encodeIntegrationLogsCursor(newTimeFrom, newIDFrom), nil
+	return fields, encodeIntegrationLogsNextInfo(newTimeFrom, newIDFrom, len(fields)), nil
 }

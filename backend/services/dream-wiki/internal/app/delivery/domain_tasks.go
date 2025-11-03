@@ -31,15 +31,15 @@ func (d *AppDelivery) GetTaskDetails(ctx context.Context, request api.GetTaskDet
 
 func (d *AppDelivery) ListTasks(ctx context.Context, request api.ListTasksRequestObject) (api.ListTasksResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
-	result, newCursor, err := usecase.ListTasks(request.Body.Cursor)
+	result, nextInfo, err := usecase.ListTasks(request.Body.Cursor)
 	if err != nil {
 		d.log.Error(err.Error())
 		return api.ListTasks500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
 
 	return api.ListTasks200JSONResponse{
-		Tasks:  result,
-		Cursor: *newCursor,
+		Tasks:    result,
+		NextInfo: *nextInfo,
 	}, nil
 }
 

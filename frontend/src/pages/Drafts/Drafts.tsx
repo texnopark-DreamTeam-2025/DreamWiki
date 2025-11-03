@@ -28,7 +28,7 @@ export default function Drafts() {
       }
 
       setDrafts(response.data.drafts);
-      setCursor(response.data.cursor || null);
+      setCursor(response.data.next_info.cursor || null);
     } catch (error) {
       console.error("Ошибка получения черновиков:", error);
       showError("Ошибка", "Произошла ошибка при загрузке черновиков");

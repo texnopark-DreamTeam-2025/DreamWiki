@@ -10,7 +10,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
-func (u *appUsecaseImpl) ListTasks(cursor *api.Cursor) (tasks []api.TaskDigest, newCursor *api.Cursor, err error) {
+func (u *appUsecaseImpl) ListTasks(cursor *api.Cursor) (tasks []api.TaskDigest, newCursor *api.NextInfo, err error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 

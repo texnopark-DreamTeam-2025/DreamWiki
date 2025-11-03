@@ -88,7 +88,7 @@ func (u *appUsecaseImpl) ApplyDraft(draftID api.DraftID) error {
 	return repo.Commit()
 }
 
-func (u *appUsecaseImpl) ListDrafts(cursor *string) ([]api.DraftDigest, *api.Cursor, error) {
+func (u *appUsecaseImpl) ListDrafts(cursor *string) ([]api.DraftDigest, *api.NextInfo, error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 

@@ -21,12 +21,12 @@ func (d *AppDelivery) GithubAccountPR(ctx context.Context, request api.GithubAcc
 func (d *AppDelivery) IntegrationLogsGet(ctx context.Context, request api.IntegrationLogsGetRequestObject) (api.IntegrationLogsGetResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
 
-	logs, newCursor, err := usecase.GetIntegrationLogs(request.Body.IntegrationId, request.Body.Cursor)
+	logs, nextInfo, err := usecase.GetIntegrationLogs(request.Body.IntegrationId, request.Body.Cursor)
 	if err != nil {
 		d.log.Error(err.Error())
 		return api.IntegrationLogsGet500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil
 	}
-	return api.IntegrationLogsGet200JSONResponse{LogFields: logs, Cursor: newCursor}, nil
+	return api.IntegrationLogsGet200JSONResponse{LogFields: logs, NextInfo: *nextInfo}, nil
 }
 
 func (d *AppDelivery) YwikiAddPage(ctx context.Context, request api.YwikiAddPageRequestObject) (api.YwikiAddPageResponseObject, error) {
