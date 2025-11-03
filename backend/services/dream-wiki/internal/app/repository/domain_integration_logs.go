@@ -11,25 +11,25 @@ import (
 )
 
 func decodeIntegrationLogsCursor(cursor *string) (timeFrom time.Time, idFrom int64) {
-	minTime := time.Unix(0, 0)
+	defaultTime := time.Now().Add(time.Hour)
 
 	if cursor == nil {
-		return minTime, 0
+		return defaultTime, 0
 	}
 
 	splittedCursor := strings.Split(*cursor, "\n")
 	if len(splittedCursor) != 2 {
-		return minTime, 0
+		return defaultTime, 0
 	}
 
 	timeFrom, err := time.Parse(time.RFC3339, splittedCursor[0])
 	if err != nil {
-		return minTime, 0
+		return defaultTime, 0
 	}
 
 	idFrom, err = strconv.ParseInt(splittedCursor[1], 10, 64)
 	if err != nil {
-		return minTime, 0
+		return defaultTime, 0
 	}
 
 	return timeFrom, idFrom
@@ -68,7 +68,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.Integratio
 		FROM IntegrationLogField
 		WHERE integration_id=$integrationID
 			AND (
-				created_at > $timeFrom
+				created_at < $timeFrom
 				OR (created_at = $timeFrom AND field_id > $idFrom)
 			)
 		ORDER BY created_at DESC
@@ -91,7 +91,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.Integratio
 	fields := make([]api.IntegrationLogField, 0, limit)
 
 	newIDFrom := int64(0)
-	newTimeFrom := time.Time{}
+	newTimeFrom := time.Now().Add(10000 * time.Hour)
 	for result.NextRow() {
 		var content string
 		var createdAt time.Time
@@ -103,7 +103,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.Integratio
 			Content:   content,
 			CreatedAt: createdAt,
 		})
-		if newTimeFrom.Before(createdAt) {
+		if newTimeFrom.After(createdAt) {
 			newTimeFrom = createdAt
 		}
 	}

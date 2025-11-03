@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Select, Card, Flex, Loader, Text } from "@gravity-ui/uikit";
 import { integrationLogsGet, type IntegrationLogField, type IntegrationId } from "@/client";
 
@@ -15,241 +15,133 @@ export default function IntegrationLogs() {
   const [selectedIntegration, setSelectedIntegration] = useState<IntegrationId>("ywiki");
   const [logs, setLogs] = useState<IntegrationLogField[]>([]);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(false);
-  const editorRef = useRef<any>(null);
-  const isLoadingMore = useRef(false);
-  const cursorRef = useRef<string>("");
-  const lastProcessedCursor = useRef<string>("");
+  const [hasMore, setHasMore] = useState(true);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
 
-  // Форматирование логов для отображения в Monaco Editor
+  let loadingAtNow = false;
+
   const formatLogs = useCallback((logFields: IntegrationLogField[]): string => {
     return logFields
       .map((log) => {
-        const timestamp = log.created_at ? new Date(log.created_at).toLocaleString("ru-RU") : "";
+        const timestamp = log.created_at ? new Date(log.created_at).toLocaleString() : "";
         return `[${timestamp}] ${log.content}`;
       })
       .join("\n");
   }, []);
 
-  // Загрузка первой порции логов
-  const loadInitialLogs = useCallback(
-    async (integrationId: IntegrationId) => {
-      setLoading(true);
-      setLogs([]);
-      cursorRef.current = ""; // Сбрасываем ref
-      setHasMore(false);
-
-      try {
-        const res = await integrationLogsGet({
-          body: {
-            integration_id: integrationId as IntegrationId,
-            cursor: "",
-          },
-        });
-
-        if (res.error) {
-          console.error("Ошибка загрузки логов:", res.error);
-          showError("Ошибка", "Не удалось загрузить логи интеграции");
-          return;
-        }
-
-        if (res.data) {
-          setLogs(res.data.log_fields);
-          cursorRef.current = res.data.next_info.cursor;
-          setHasMore(res.data.next_info.has_more);
-        }
-      } catch (error) {
-        console.error("Ошибка загрузки логов:", error);
-        showError("Ошибка", "Произошла ошибка при загрузке логов");
-      } finally {
-        setLoading(false);
-      }
-    },
-    [showError]
-  ); // Убираем loading из зависимостей  // Загрузка дополнительных логов (бесконечный скролл)
-  const loadMoreLogs = useCallback(async () => {
-    if (loading || isLoadingMore.current || !hasMore || !cursorRef.current) return;
-
-    // Проверяем, не обрабатывали ли уже этот курсор
-    if (cursorRef.current === lastProcessedCursor.current) {
-      return;
-    }
-
-    isLoadingMore.current = true;
-    const currentCursor = cursorRef.current;
-
+  const loadLogs = async (integrationId: IntegrationId, currentCursor?: string) => {
     try {
       const res = await integrationLogsGet({
         body: {
-          integration_id: selectedIntegration as IntegrationId,
+          integration_id: integrationId,
           cursor: currentCursor,
         },
       });
 
       if (res.error) {
-        console.error("Ошибка загрузки дополнительных логов:", res.error);
+        console.error("Error loading logs:", res.error);
+        showError("Error", "Failed to load integration logs");
         return;
       }
 
       if (res.data) {
-        // Отмечаем этот курсор как обработанный
-        lastProcessedCursor.current = currentCursor;
-
-        // Если получили пустой массив логов или пустой курсор - данных больше нет
-        if (!res.data.next_info.has_more) {
-          setHasMore(false);
-          return; // Выходим, не обновляя курсор
+        // If loading more logs, append to existing logs
+        if (currentCursor) {
+          setLogs((prev) => [...prev, ...res.data!.log_fields]);
+        } else {
+          setLogs(res.data.log_fields);
         }
-
-        // Добавляем новые логи и обновляем курсор
-        setLogs((prev) => [...prev, ...res.data!.log_fields]);
-        cursorRef.current = res.data.next_info.cursor;
-
-        // Проверяем, есть ли еще данные
-        setHasMore(true); // Если дошли до этого места, значит есть данные и новый курсор
-      } else {
-        // Если нет data в ответе - данных больше нет
-        lastProcessedCursor.current = currentCursor;
-        setHasMore(false);
+        setCursor(res.data.next_info.cursor);
+        setHasMore(res.data.next_info.has_more);
       }
     } catch (error) {
-      console.error("Ошибка загрузки дополнительных логов:", error);
+      console.error("Error loading logs:", error);
+      showError("Error", "An error occurred while loading logs");
     } finally {
-      isLoadingMore.current = false;
+      setLoading(false);
     }
-  }, [loading, hasMore, selectedIntegration]);
+  };
 
-  // Обработчик скролла в Monaco Editor
+  const loadMoreLogs = () => {
+    if (!hasMore || loading || loadingAtNow) {
+      return;
+    }
+    setLoading(true);
+    loadingAtNow = true;
+    loadLogs(selectedIntegration, cursor);
+  };
+
+  useEffect(() => {
+    loadMoreLogs();
+  });
+
+  const handleIntegrationChange = useCallback((values: string[]) => {
+    const newIntegration = values[0] as IntegrationId;
+    setSelectedIntegration(newIntegration);
+    setLogs([]);
+    setLoading(false);
+    setHasMore(true);
+    setCursor(undefined);
+  }, []);
+
   const handleEditorScroll = useCallback(
     (editor: any) => {
-      // Строгие проверки для предотвращения лишних запросов
-      if (!editor || !hasMore || loading || isLoadingMore.current || !cursorRef.current) {
-        return;
-      }
-
-      const currentCursor = cursorRef.current;
-
-      // Проверяем, что этот курсор еще не обрабатывался
-      if (currentCursor === lastProcessedCursor.current) {
-        return;
-      }
+      if (!editor || !hasMore || loading) return;
 
       const scrollTop = editor.getScrollTop();
       const scrollHeight = editor.getScrollHeight();
       const clientHeight = editor.getLayoutInfo().height;
 
-      // Загружаем больше данных когда приближаемся к концу (90% прокрутки для менее частых вызовов)
-      if (scrollTop + clientHeight >= scrollHeight * 0.9) {
-        // Дополнительная проверка перед вызовом
-        if (
-          hasMore &&
-          !loading &&
-          !isLoadingMore.current &&
-          currentCursor &&
-          currentCursor !== lastProcessedCursor.current
-        ) {
-          loadMoreLogs();
-        }
+      // Load more data when approaching the end (95% scroll)
+      if (scrollTop + clientHeight >= scrollHeight * 0.95) {
+        loadMoreLogs();
       }
     },
     [hasMore, loadMoreLogs, loading]
   );
 
-  // Начальная загрузка логов
-  useEffect(() => {
-    loadInitialLogs(selectedIntegration);
-  }, [selectedIntegration]); // Убираем loadInitialLogs из зависимостей
-
-  // Обработчик изменения типа интеграции
-  const handleIntegrationChange = useCallback((values: string[]) => {
-    const newIntegration = values[0] as IntegrationId;
-    setSelectedIntegration(newIntegration);
-  }, []);
-
-  // Настройка обработчика скролла для Monaco Editor
-  const handleEditorMount = useCallback(
-    (editor: any) => {
-      editorRef.current = editor;
-      let scrollTimeout: number;
-
-      // Добавляем обработчик скролла с debouncing
-      editor.onDidScrollChange(() => {
-        // Очищаем предыдущий timeout
-        if (scrollTimeout) {
-          clearTimeout(scrollTimeout);
-        }
-
-        // Устанавливаем новый timeout для предотвращения частых вызовов
-        scrollTimeout = setTimeout(() => {
-          handleEditorScroll(editor);
-        }, 100); // 100ms debounce
-      });
-    },
-    [handleEditorScroll]
-  );
-
   const editorContent = formatLogs(logs);
-  const isInitialLoading = loading && logs.length === 0;
 
   return (
-    <Flex direction="column" grow={1} style={{ padding: 20, height: '100vh' }}>
-      <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: 20, paddingBottom: 16, borderBottom: '1px solid var(--g-color-line-generic)' }}>
-        <Text variant="display-1">Журнал интеграций</Text>
-        <Flex maxWidth="s" >
-          <Select
-            size="l"
-            placeholder="Выберите интеграцию"
-            value={[selectedIntegration]}
-            onUpdate={handleIntegrationChange}
-            options={INTEGRATION_OPTIONS}
-            width="max"
-          />
-        </Flex>
+    <Flex direction="column" gap="4" style={{ padding: 20, height: "100vh" }}>
+      <Flex justifyContent="space-between" alignItems="center">
+        <Text variant="display-1">Integration Logs</Text>
+        <Select
+          size="l"
+          placeholder="Select integration"
+          value={[selectedIntegration]}
+          onUpdate={handleIntegrationChange}
+          options={INTEGRATION_OPTIONS}
+          width="max"
+        />
       </Flex>
 
-      <Card style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--g-color-base-background)', border: '1px solid var(--g-color-line-generic)', borderRadius: 8 }}>
-        {isInitialLoading ? (
-          <Flex grow={1} alignItems="center" justifyContent="center" style={{ padding: 40 }}>
-            <Text variant="body-1" color="secondary">
-              Загрузка логов...
-            </Text>
+      <Card style={{ flexGrow: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {loading && logs.length === 0 ? (
+          <Flex grow={1} alignItems="center" justifyContent="center" gap="2">
             <Loader size="m" />
+            <Text variant="body-1" color="secondary">
+              Loading logs...
+            </Text>
           </Flex>
         ) : (
-          <Flex direction="column" grow={1} style={{ position: 'relative', overflow: 'hidden' }}>
+          <Flex direction="column" grow={1} style={{ position: "relative", overflow: "hidden" }}>
             <MonacoEditor
               value={editorContent}
               language="text"
               height="100%"
               readOnly={true}
-              theme="dark"
-              onMount={handleEditorMount}
               onScroll={handleEditorScroll}
             />
-            {isLoadingMore.current && (
-              <div style={{
-                position: 'absolute',
-                bottom: 10,
-                right: 10,
-                backgroundColor: 'var(--g-color-base-background)',
-                border: '1px solid var(--g-color-line-generic)',
-                borderRadius: 4,
-                padding: '8px 12px',
-                fontSize: 12,
-                color: 'var(--g-color-text-secondary)',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-                zIndex: 10
-              }}>
-                Загрузка дополнительных логов...
-              </div>
-            )}
           </Flex>
         )}
       </Card>
 
       {!hasMore && logs.length > 0 && (
-        <Flex justifyContent="center" style={{ marginTop: 16, padding: 16, backgroundColor: 'var(--g-color-base-float)', borderRadius: 8, border: '1px solid var(--g-color-line-generic)' }}>
-          <Text variant="body-2" color="secondary">Все логи загружены</Text>
+        <Flex justifyContent="center">
+          <Text variant="body-2" color="secondary">
+            All logs loaded
+          </Text>
         </Flex>
       )}
     </Flex>
