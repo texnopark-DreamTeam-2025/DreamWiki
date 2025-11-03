@@ -18,6 +18,7 @@ import {
 } from "@gravity-ui/icons";
 import styles from "./AsideBar.module.scss";
 import { useAuth } from "@/contexts";
+import { Container } from "@gravity-ui/uikit";
 
 interface AsideBarProps {
   children: React.ReactNode;
@@ -162,7 +163,7 @@ export default function AsideBar({ children }: AsideBarProps) {
     </>
   );
 
-  const renderContent = () => <main className={styles.asideBarMain}>{children}</main>;
+  const renderContent = () => <Container>{children}</Container>;
 
   return (
     <div className={`${styles.asideBarContainer} ${styles.asideBar}`}>

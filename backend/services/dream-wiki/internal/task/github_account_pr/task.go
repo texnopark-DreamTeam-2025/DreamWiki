@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 type (
 	gitHubAccountPRTask struct {
 		taskID api.TaskID
+		status api.TaskStatus
 		state  internals.TaskStateGitHubAccountPR
 		ctx    context.Context
 		deps   *deps.Deps
@@ -34,6 +36,7 @@ var (
 func NewGitHubAccountPRTask(ctx context.Context, state internals.TaskStateGitHubAccountPR, deps *task_common.TaskDeps) *gitHubAccountPRTask {
 	return &gitHubAccountPRTask{
 		state:  state,
+		status: deps.Digest.Status,
 		ctx:    ctx,
 		deps:   deps.Deps,
 		taskID: deps.Digest.TaskId,
@@ -46,7 +49,103 @@ func (t *gitHubAccountPRTask) Close() {
 }
 
 func (t *gitHubAccountPRTask) CalculateSubtasks() ([]api.Subtask, error) {
-	return []api.Subtask{}, nil
+	subtasks := []api.Subtask{}
+
+	subtask1 := api.Subtask{
+		Description: "Fetch PR data from GitHub",
+		Status:      t.getSubtaskStatus(t.state.PrPatch != nil && t.state.PrDescription != nil, api.Done),
+		Subsubtasks: []api.SubSubtask{},
+	}
+	subtasks = append(subtasks, subtask1)
+
+	subtask2 := api.Subtask{
+		Description: "Detect product changes with LLM",
+		Status:      t.getSubtaskStatus(t.state.LlmDetectedProductChanges != nil, subtasks[len(subtasks)-1].Status),
+		Subsubtasks: []api.SubSubtask{},
+	}
+	subtasks = append(subtasks, subtask2)
+
+	subtask3 := api.Subtask{
+		Description: "Generate search queries with LLM",
+		Status:      t.getSubtaskStatus(t.state.LlmSuggestedSearchQueries != nil, subtasks[len(subtasks)-1].Status),
+		Subsubtasks: []api.SubSubtask{},
+	}
+	subtasks = append(subtasks, subtask3)
+
+	subtask4 := api.Subtask{
+		Description: "Search for relevant documentation",
+		Status:      t.getSubtaskStatus(t.state.HotParagraphs != nil, subtasks[len(subtasks)-1].Status),
+		Subsubtasks: []api.SubSubtask{},
+	}
+	subtasks = append(subtasks, subtask4)
+
+	subtask5 := api.Subtask{
+		Description: "Rephrase documentation with LLM",
+		Status:      t.getSubtaskStatus(t.state.LlmRephrasedParagraphContents != nil, subtasks[len(subtasks)-1].Status),
+		Subsubtasks: []api.SubSubtask{},
+	}
+	subtasks = append(subtasks, subtask5)
+
+	subtask6 := api.Subtask{
+		Description: "Create drafts with rephrased content",
+		Status:      t.getSubtaskStatus(t.state.CreatedDraftIds != nil, subtasks[len(subtasks)-1].Status),
+		Subsubtasks: []api.SubSubtask{},
+	}
+	subtasks = append(subtasks, subtask6)
+
+	if t.state.LlmSuggestedSearchQueries != nil {
+		for i, query := range *t.state.LlmSuggestedSearchQueries {
+			if i >= 3 {
+				break
+			}
+			subsubtask := api.SubSubtask{
+				Description: fmt.Sprintf("Search query: %s", query),
+				Status:      t.getSubtaskStatus(t.state.HotParagraphs != nil, subtasks[len(subtasks)-1].Status),
+			}
+			subtasks[3].Subsubtasks = append(subtasks[3].Subsubtasks, subsubtask)
+		}
+	}
+
+	if t.state.HotParagraphs != nil {
+		for i, paragraph := range *t.state.HotParagraphs {
+			if i >= 3 {
+				break
+			}
+			subsubtask := api.SubSubtask{
+				Description: fmt.Sprintf("Rephrasing paragraph from page %s", paragraph.PageId),
+				Status:      t.getSubtaskStatus(t.state.LlmRephrasedParagraphContents != nil, subtasks[len(subtasks)-1].Status),
+			}
+			subtasks[4].Subsubtasks = append(subtasks[4].Subsubtasks, subsubtask)
+		}
+	}
+
+	if t.state.CreatedDraftIds != nil {
+		for i, draftID := range *t.state.CreatedDraftIds {
+			if i >= 3 {
+				break
+			}
+			subsubtask := api.SubSubtask{
+				Description: fmt.Sprintf("Created draft %s", draftID),
+				Status:      api.Done,
+			}
+			subtasks[5].Subsubtasks = append(subtasks[5].Subsubtasks, subsubtask)
+		}
+	}
+
+	return subtasks, nil
+}
+
+func (t *gitHubAccountPRTask) getSubtaskStatus(completed bool, previousStatus api.TaskStatus) api.TaskStatus {
+	if completed {
+		return api.Done
+	}
+	if slices.Contains([]api.TaskStatus{api.FailedByError, api.Cancelled, api.FailedByTimeout}, previousStatus) {
+		return api.Cancelled
+	}
+	if t.status == api.FailedByError || t.status == api.FailedByTimeout {
+		return t.status
+	}
+	return api.Executing
 }
 
 func (t *gitHubAccountPRTask) saveChanges() error {

@@ -1,18 +1,9 @@
-/**
- * Страница журнала интеграций
- *
- * Отображает логи интеграций с бесконечным скроллом в Monaco Editor
- * Поддерживает выбор типа интеграции (ywiki, github)
- */
-
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Select, Card, Flex, Loader, Text } from "@gravity-ui/uikit";
 import { integrationLogsGet, type IntegrationLogField, type IntegrationId } from "@/client";
 
 import { MonacoEditor } from "@/components/MonacoEditor";
 import { useToast } from "@/hooks/useToast";
-
-type IntegrationType = "ywiki" | "github";
 
 const INTEGRATION_OPTIONS = [
   { value: "ywiki", content: "Yandex Wiki" },
@@ -21,7 +12,7 @@ const INTEGRATION_OPTIONS = [
 
 export default function IntegrationLogs() {
   const { showError } = useToast();
-  const [selectedIntegration, setSelectedIntegration] = useState<IntegrationType>("ywiki");
+  const [selectedIntegration, setSelectedIntegration] = useState<IntegrationId>("ywiki");
   const [logs, setLogs] = useState<IntegrationLogField[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
@@ -42,7 +33,7 @@ export default function IntegrationLogs() {
 
   // Загрузка первой порции логов
   const loadInitialLogs = useCallback(
-    async (integrationId: IntegrationType) => {
+    async (integrationId: IntegrationId) => {
       setLoading(true);
       setLogs([]);
       cursorRef.current = ""; // Сбрасываем ref
@@ -171,7 +162,7 @@ export default function IntegrationLogs() {
 
   // Обработчик изменения типа интеграции
   const handleIntegrationChange = useCallback((values: string[]) => {
-    const newIntegration = values[0] as IntegrationType;
+    const newIntegration = values[0] as IntegrationId;
     setSelectedIntegration(newIntegration);
   }, []);
 

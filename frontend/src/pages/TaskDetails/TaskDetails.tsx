@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getTaskDetails } from "@/client";
 import type { Task, TaskStatus } from "@/client";
-import { Flex, Text, Button, Loader } from "@gravity-ui/uikit";
+import { Flex, Text, Button, Loader, Card, Label } from "@gravity-ui/uikit";
 
 export const TaskDetails = () => {
   const { taskId } = useParams<{ taskId: string }>();
@@ -82,16 +82,16 @@ export const TaskDetails = () => {
 
   if (loading) {
     return (
-      <Flex justifyContent="center" alignItems="center" style={{ padding: 20 }}>
+      <Flex justifyContent="center" alignItems="center" gap="2">
         <Loader size="m" />
-        <Text variant="body-1" style={{ marginLeft: 10 }}>Loading task details...</Text>
+        <Text variant="body-1">Loading task details...</Text>
       </Flex>
     );
   }
 
   if (error) {
     return (
-      <Flex justifyContent="center" alignItems="center" style={{ padding: 20 }}>
+      <Flex justifyContent="center" alignItems="center">
         <Text variant="body-1" color="danger">{error}</Text>
       </Flex>
     );
@@ -99,119 +99,69 @@ export const TaskDetails = () => {
 
   if (!task) {
     return (
-      <Flex justifyContent="center" alignItems="center" style={{ padding: 20 }}>
+      <Flex justifyContent="center" alignItems="center">
         <Text variant="body-1" color="danger">Task not found</Text>
       </Flex>
     );
   }
 
   return (
-    <Flex direction="column" style={{ padding: 20 }}>
-      <Flex justifyContent="space-between" alignItems="flex-start" style={{ marginBottom: 24, gap: 20 }}>
-        <Flex direction="column">
+    <Flex direction="column" gap="5">
+      <Flex justifyContent="space-between" alignItems="flex-start" gap="4">
+        <Flex direction="column" gap="2">
           <Text variant="display-1">Task #{task.task_digest.task_id}</Text>
-          <Flex
-            alignItems="center"
-            justifyContent="center"
-            style={{
-              backgroundColor: '#f0f0f0',
-              padding: '4px 8px',
-              borderRadius: 4,
-              fontSize: 14,
-              color: '#666666',
-              display: 'inline-flex',
-              marginTop: 8
-            }}
-          >
+          <Label theme="normal" size="m">
             {task.task_digest.triggered_by}
-          </Flex>
+          </Label>
         </Flex>
         <Button onClick={handleViewInternalState} size="m">
           View Internal State
         </Button>
       </Flex>
 
-      <Flex direction="column" style={{ marginBottom: 24 }}>
-        <Text variant="header-2" style={{ marginBottom: 12 }}>Description</Text>
-        <Text variant="body-1" style={{ lineHeight: 1.5 }}>{task.task_digest.description}</Text>
-      </Flex>
+      <Card theme="normal" size="l">
+        <Flex direction="column" gap="3">
+          <Text variant="header-2">Description</Text>
+          <Text variant="body-1">{task.task_digest.description}</Text>
+        </Flex>
+      </Card>
 
-      <Flex direction="column">
-        <Text variant="header-2" style={{ marginBottom: 16 }}>Subtasks</Text>
+      <Flex direction="column" gap="4">
+        <Text variant="header-2">Subtasks</Text>
         {task.subtasks.length === 0 ? (
-          <Text variant="body-1" color="secondary" style={{ fontStyle: 'italic' }}>No subtasks</Text>
+          <Text variant="body-1" color="secondary">No subtasks</Text>
         ) : (
-          <Flex direction="column" style={{ gap: 16 }}>
+          <Flex direction="column" gap="4">
             {task.subtasks.map((subtask, index) => (
-              <Flex
-                key={index}
-                direction="column"
-                style={{
-                  border: '1px solid #e0e0e0',
-                  borderRadius: 8,
-                  padding: 16,
-                  backgroundColor: '#ffffff',
-                  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
-                }}
-              >
-                <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: 12 }}>
-                  <Text variant="body-2">{subtask.description}</Text>
-                  <Flex
-                    alignItems="center"
-                    justifyContent="center"
-                    style={{
-                      padding: '4px 8px',
-                      borderRadius: 4,
-                      fontSize: 12,
-                      fontWeight: 500
-                    }}
-                  >
-                    <Text variant="caption-1" color={getSubtaskStatusColor(subtask.status)}>
+              <Card key={index} theme="normal" size="l">
+                <Flex direction="column" gap="3">
+                  <Flex justifyContent="space-between" alignItems="center">
+                    <Text variant="body-2">{subtask.description}</Text>
+                    <Label theme={getSubtaskStatusColor(subtask.status) as any} size="s">
                       {getSubtaskStatusText(subtask.status)}
-                    </Text>
+                    </Label>
                   </Flex>
-                </Flex>
-                {subtask.subsubtasks.length > 0 && (
-                  <Flex
-                    direction="column"
-                    style={{
-                      marginTop: 12,
-                      paddingLeft: 16,
-                      borderLeft: '2px solid #f0f0f0'
-                    }}
-                  >
-                    {subtask.subsubtasks.map((subsubtask, subIndex) => (
-                      <Flex
-                        key={subIndex}
-                        justifyContent="space-between"
-                        alignItems="center"
-                        style={{
-                          padding: '8px 0',
-                          borderBottom: '1px solid #f0f0f0'
-                        }}
-                      >
-                        <Text variant="body-1" color="secondary" style={{ fontSize: 14 }}>
-                          {subsubtask.description}
-                        </Text>
+                  {subtask.subsubtasks.length > 0 && (
+                    <Flex direction="column" gap="2" style={{ paddingLeft: 16 }}>
+                      {subtask.subsubtasks.map((subsubtask, subIndex) => (
                         <Flex
+                          key={subIndex}
+                          justifyContent="space-between"
                           alignItems="center"
-                          justifyContent="center"
-                          style={{
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            fontSize: 11,
-                            fontWeight: 500
-                          }}
+                          gap="4"
                         >
-                          <Text variant="caption-2" color={getSubtaskStatusColor(subsubtask.status)}>
-                            {getSubtaskStatusText(subsubtask.status)}
+                          <Text variant="body-1" color="secondary">
+                            {subsubtask.description}
                           </Text>
+                          <Label theme={getSubtaskStatusColor(subsubtask.status) as any} size="xs">
+                            {getSubtaskStatusText(subsubtask.status)}
+                          </Label>
                         </Flex>
-                      </Flex>
-                    ))}
-                  </Flex>
-                )}
-              </Flex>
+                      ))}
+                    </Flex>
+                  )}
+                </Flex>
+              </Card>
             ))}
           </Flex>
         )}

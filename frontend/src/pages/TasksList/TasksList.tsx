@@ -69,7 +69,7 @@ export const TasksList = () => {
 
   return (
     <Container>
-      <Text variant="header-1">Tasks</Text>
+      <Text variant="header-1">Задачи</Text>
       {tasks.length === 0 ? (
         <Text>No tasks found</Text>
       ) : (
