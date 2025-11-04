@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { getTaskDetails } from "@/client";
 import type { Task, TaskStatus } from "@/client";
-import { Flex, Text, Button, Loader, Card, Label } from "@gravity-ui/uikit";
+import { Flex, Text, Button, Loader, Card, Label, Breadcrumbs, Box } from "@gravity-ui/uikit";
+import { ActionBar } from "@gravity-ui/navigation";
 
 export const TaskDetails = () => {
   const { taskId } = useParams<{ taskId: string }>();
@@ -92,7 +93,9 @@ export const TaskDetails = () => {
   if (error) {
     return (
       <Flex justifyContent="center" alignItems="center">
-        <Text variant="body-1" color="danger">{error}</Text>
+        <Text variant="body-1" color="danger">
+          {error}
+        </Text>
       </Flex>
     );
   }
@@ -100,13 +103,24 @@ export const TaskDetails = () => {
   if (!task) {
     return (
       <Flex justifyContent="center" alignItems="center">
-        <Text variant="body-1" color="danger">Task not found</Text>
+        <Text variant="body-1" color="danger">
+          Task not found
+        </Text>
       </Flex>
     );
   }
 
   return (
     <Flex direction="column" gap="5">
+      <ActionBar>
+        <Flex alignItems="center" dir="horizontal" width="100%">
+          <Breadcrumbs style={{ width: "100%" }} showRoot>
+            <Breadcrumbs.Item onClick={() => navigate("/tasks")}>Задачи</Breadcrumbs.Item>
+            <Breadcrumbs.Item>Задача #{task.task_digest.task_id}</Breadcrumbs.Item>
+          </Breadcrumbs>
+        </Flex>
+      </ActionBar>
+
       <Flex justifyContent="space-between" alignItems="flex-start" gap="4">
         <Flex direction="column" gap="2">
           <Text variant="display-1">Task #{task.task_digest.task_id}</Text>
@@ -129,7 +143,9 @@ export const TaskDetails = () => {
       <Flex direction="column" gap="4">
         <Text variant="header-2">Subtasks</Text>
         {task.subtasks.length === 0 ? (
-          <Text variant="body-1" color="secondary">No subtasks</Text>
+          <Text variant="body-1" color="secondary">
+            No subtasks
+          </Text>
         ) : (
           <Flex direction="column" gap="4">
             {task.subtasks.map((subtask, index) => (

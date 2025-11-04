@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Select, Card, Flex, Loader, Text } from "@gravity-ui/uikit";
+import { Select, Card, Flex, Loader, Text, Box } from "@gravity-ui/uikit";
 import { integrationLogsGet, type IntegrationLogField, type IntegrationId } from "@/client";
 
 import { MonacoEditor } from "@/components/MonacoEditor";
@@ -103,20 +103,22 @@ export default function IntegrationLogs() {
   const editorContent = formatLogs(logs);
 
   return (
-    <Flex direction="column" gap="4" style={{ padding: 20, height: "100vh" }}>
+    <Flex direction="column" gap="4" height="100vh">
       <Flex justifyContent="space-between" alignItems="center">
-        <Text variant="display-1">Integration Logs</Text>
-        <Select
-          size="l"
-          placeholder="Select integration"
-          value={[selectedIntegration]}
-          onUpdate={handleIntegrationChange}
-          options={INTEGRATION_OPTIONS}
-          width="max"
-        />
+        <Text variant="header-1">Журнал интеграций</Text>
+        <Box width="200px">
+          <Select
+            size="l"
+            placeholder="Select integration"
+            value={[selectedIntegration]}
+            onUpdate={handleIntegrationChange}
+            options={INTEGRATION_OPTIONS}
+            width="max"
+          />
+        </Box>
       </Flex>
 
-      <Card style={{ flexGrow: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <Flex grow={1} dir="column" overflow="hidden">
         {loading && logs.length === 0 ? (
           <Flex grow={1} alignItems="center" justifyContent="center" gap="2">
             <Loader size="m" />
@@ -125,7 +127,7 @@ export default function IntegrationLogs() {
             </Text>
           </Flex>
         ) : (
-          <Flex direction="column" grow={1} style={{ position: "relative", overflow: "hidden" }}>
+          <Flex direction="column" grow={1} overflow="hidden" position="relative">
             <MonacoEditor
               value={editorContent}
               language="text"
@@ -135,12 +137,12 @@ export default function IntegrationLogs() {
             />
           </Flex>
         )}
-      </Card>
+      </Flex>
 
       {!hasMore && logs.length > 0 && (
         <Flex justifyContent="center">
           <Text variant="body-2" color="secondary">
-            All logs loaded
+            Больше нет логов
           </Text>
         </Flex>
       )}

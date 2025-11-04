@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { listTasks } from "@/client";
 import type { TaskDigest, TaskStatus } from "@/client";
 import { useNavigate } from "react-router-dom";
-import { Flex, Card, Container, Progress } from "@gravity-ui/uikit";
-import { Text } from "@gravity-ui/uikit";
+import { Flex, Card, Progress, Text, Loader, Label, Box } from "@gravity-ui/uikit";
 
 export const TasksList = () => {
-  const [tasks, setTasks] = useState<TaskDigest[]>([]);
+  const [tasks, setTasks] = useState<TaskDigest[] | undefined>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -35,67 +34,79 @@ export const TasksList = () => {
     fetchTasks();
   }, []);
 
-  const getProgressPercentage = (status: TaskStatus) => {
+  const getTaskStatusColor = (status: TaskStatus) => {
     switch (status) {
       case "done":
-        return 100;
+        return "success";
       case "failed_by_error":
       case "failed_by_timeout":
+        return "danger";
       case "cancelled":
-        return 0;
+        return "misc";
       case "executing":
       default:
-        return 50;
+        return "info";
     }
   };
 
-  if (loading) {
-    return (
-      <Container>
-        <Text variant="header-1">Tasks</Text>
-        <Text>Loading tasks...</Text>
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container>
-        <Text variant="header-1">Tasks</Text>
-        <Text color="danger">{error}</Text>
-      </Container>
-    );
-  }
+  const getTaskStatusText = (status: TaskStatus) => {
+    switch (status) {
+      case "done":
+        return "Done";
+      case "failed_by_error":
+        return "Failed (Error)";
+      case "failed_by_timeout":
+        return "Failed (Timeout)";
+      case "cancelled":
+        return "Cancelled";
+      case "executing":
+      default:
+        return "Executing";
+    }
+  };
 
   return (
-    <Container>
+    <Flex direction="column" gap="4">
       <Text variant="header-1">Задачи</Text>
-      {tasks.length === 0 ? (
-        <Text>No tasks found</Text>
-      ) : (
+      {loading && <Loader />}
+      {!loading && !tasks && <Text>Error loading tasks</Text>}
+      {!loading && tasks && tasks.length === 0 && <Text>No tasks found</Text>}
+      {!loading && tasks && tasks.length > 0 && (
         <Flex direction="column" gap="4">
           {tasks.map((task) => (
             <Card
               key={task.task_id}
-              onClick={() => navigate(`/task/${task.task_id}`)}
-              view="outlined"
-              type='action'
+              theme="normal"
               size="l"
+              style={{ cursor: "pointer", padding: 10 }}
             >
-              <Container>
+              <Flex direction="column" gap="3" onClick={() => navigate(`/task/${task.task_id}`)}>
                 <Flex justifyContent="space-between" alignItems="center">
                   <Text variant="header-2">#{task.task_id}</Text>
-                  <Text variant="caption-1" color="secondary">
-                    {task.triggered_by}
-                  </Text>
+                  <Label theme={getTaskStatusColor(task.status) as any} size="m">
+                    {getTaskStatusText(task.status)}
+                  </Label>
                 </Flex>
-                <Text>{task.description}</Text>
-                <Progress value={getProgressPercentage(task.status)} />
-              </Container>
+                <Text variant="body-1">{task.description}</Text>
+                <Box width="100%">
+                  <Progress
+                    colorStops={[
+                      {
+                        stop: task.progress_percentage,
+                        theme: getTaskStatusColor(task.status),
+                      },
+                    ]}
+                    value={task.progress_percentage}
+                  />
+                </Box>
+                <Text variant="body-2" color="secondary">
+                  Triggered by: {task.triggered_by}
+                </Text>
+              </Flex>
             </Card>
           ))}
         </Flex>
       )}
-    </Container>
+    </Flex>
   );
 };

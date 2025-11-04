@@ -2,21 +2,53 @@ package usecase
 
 import (
 	"encoding/json"
+	"math"
 	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_factory"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
+
+func makeTaskDescription(taskDigest api.TaskDigest, state internals.TaskState) string {
+	if discriminator, _ := state.Discriminator(); internals.TaskType(discriminator) == internals.GithubAccountPr {
+		return "Применить PR GitHub"
+	}
+	if discriminator, _ := state.Discriminator(); internals.TaskType(discriminator) == internals.ReindexateAllPages {
+		return "Проиндексировать все страницы"
+	}
+	return "Какая-то задача"
+}
 
 func (u *appUsecaseImpl) ListTasks(cursor *api.Cursor) (tasks []api.TaskDigest, newCursor *api.NextInfo, err error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	taskDigests, _, newCursor, err := repo.ListTasks(cursor, 20)
+	taskDigests, taskStates, newCursor, err := repo.ListTasks(cursor, 20)
 	if err != nil {
 		return nil, nil, err
+	}
+	for i := range taskDigests {
+		taskDigests[i].Description = makeTaskDescription(taskDigests[i], taskStates[i])
+		task := task_common.NewTask(u.ctx, &task_common.TaskDeps{
+			Deps:   u.deps,
+			Digest: taskDigests[i],
+			State:  &taskStates[i],
+		}, task_factory.CreateTaskLogicCreator())
+
+		subtasks, err := task.CalculateSubtasks()
+		if err != nil {
+			return nil, nil, err
+		}
+		doneSubtasks := 0
+		for _, subtask := range subtasks {
+			if subtask.Status == api.Done {
+				doneSubtasks++
+			}
+		}
+		taskDigests[i].ProgressPercentage = int(math.Round(float64(100) * float64(doneSubtasks) / float64(len(subtasks))))
 	}
 
 	return taskDigests, newCursor, nil
@@ -34,29 +66,24 @@ func (u *appUsecaseImpl) GetTaskDetails(taskID api.TaskID) (api.Task, error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Get task digest and state from repository
 	taskDigest, taskState, err := repo.GetTaskByID(taskID)
 	if err != nil {
 		return api.Task{}, err
 	}
 
-	// Create task logic creator
 	taskLogicCreator := task_factory.CreateTaskLogicCreator()
 
-	// Create task instance
 	task := task_common.NewTask(u.ctx, &task_common.TaskDeps{
 		Deps:   u.deps,
 		Digest: *taskDigest,
 		State:  taskState,
 	}, taskLogicCreator)
 
-	// Calculate subtasks
 	subtasks, err := task.CalculateSubtasks()
 	if err != nil {
 		return api.Task{}, err
 	}
 
-	// Create and return the task details
 	taskDetails := api.Task{
 		CreatedAt:  time.Now(), // TODO: Get actual created time from task state
 		Subtasks:   subtasks,

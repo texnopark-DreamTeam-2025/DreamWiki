@@ -891,11 +891,14 @@ components:
           type: string
         description:
           type: string
+        progress_percentage:
+          type: integer
       required:
         - task_id
         - status
         - triggered_by
         - description
+        - progress_percentage
 
     Task:
       type: object
