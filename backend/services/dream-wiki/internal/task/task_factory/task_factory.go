@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/github_account_pr"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/reindexate_all_pages"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/reindexate_pages"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
@@ -18,12 +18,12 @@ func CreateTaskLogicCreator() task_common.TaskLogicCreator {
 		}
 
 		switch internals.TaskType(taskType) {
-		case internals.ReindexateAllPages:
-			taskState, err := deps.State.AsTaskStateReindexateAllPages()
+		case internals.ReindexatePages:
+			taskState, err := deps.State.AsTaskStateReindexatePages()
 			if err != nil {
 				return nil, err
 			}
-			task := reindexate_all_pages.NewReindexateAllPagesTask(taskState)
+			task := reindexate_pages.NewReindexatePagesTask(ctx, taskState, deps)
 			if task == nil {
 				return nil, fmt.Errorf("task is nil")
 			}

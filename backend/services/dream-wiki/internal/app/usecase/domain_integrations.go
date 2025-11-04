@@ -16,13 +16,11 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Write integration log
 	err := repo.WriteIntegrationLogField("ywiki", fmt.Sprintf("Fetching page with slug: %s", slug))
 	if err != nil {
 		u.log.Errorf("Failed to write integration log: %v", err)
 	}
 
-	// 2. Go to YWiki client from deps, fetch page
 	pageResponse, err := u.deps.YWikiClient.GetPage(u.ctx, slug)
 	if err != nil {
 		// TODO: If fetch return 404, delete page
@@ -31,7 +29,6 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 		return err
 	}
 
-	// 3. Upsert page to repository
 	pageFromYWIki := api.Page{
 		Content: *pageResponse.Content,
 		Title:   pageResponse.Title,
@@ -65,17 +62,12 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 		}
 	}
 
-	// 4. Indexate page using usecase function
-	indexateReq := api.V1IndexatePageRequest{
-		PageId: pageID,
-	}
-	_, err = u.indexatePageInTransaction(repo, indexateReq.PageId)
+	_, err = u.CreatePageReindexationTask([]api.PageID{pageID})
 	if err != nil {
 		u.log.Errorf("Failed to indexate page: %w", err)
 		return err
 	}
 
-	// 5. Commit transaction
 	return repo.Commit()
 }
 

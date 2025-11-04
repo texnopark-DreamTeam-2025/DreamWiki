@@ -44,6 +44,7 @@ type (
 		RetryTask(taskID api.TaskID) error
 		GetTaskInternalState(taskID api.TaskID) (*api.V1TasksInternalStateGetResponse, error)
 		RecreateTask(taskID api.TaskID) (*api.TaskID, error)
+		CreatePageReindexationTask(pageIDs []api.PageID) (*api.TaskID, error)
 	}
 
 	appUsecaseImpl struct {

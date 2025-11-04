@@ -3,12 +3,12 @@ components:
     TaskState:
       oneOf:
         - $ref: '#/components/schemas/TaskStateGitHubAccountPR'
-        - $ref: '#/components/schemas/TaskStateReindexateAllPages'
+        - $ref: '#/components/schemas/TaskStateReindexatePages'
       discriminator:
         propertyName: task_type
         mapping:
           github_account_pr: '#/components/schemas/TaskStateGitHubAccountPR'
-          reindexate_all_pages: '#/components/schemas/TaskStateReindexateAllPages'
+          reindexate_pages: '#/components/schemas/TaskStateReindexatePages'
 
     TaskAction:
       oneOf:
@@ -38,7 +38,7 @@ components:
       type: string
       enum:
         - github_account_pr
-        - reindexate_all_pages
+        - reindexate_pages
 
     TaskActionType:
       type: string
@@ -91,7 +91,7 @@ components:
         - task_type
         - pr_url
 
-    TaskStateReindexateAllPages:
+    TaskStateReindexatePages:
       type: object
       properties:
         task_type:
@@ -104,10 +104,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PageID'
+        page_titles:
+          type: object
+          description: map "page_id -> title"
+          additionalProperties:
+            type: string
       required:
         - task_type
-        - page_ids_to_indexate
+        - pages_to_indexate_ids
         - indexated_page_ids
+        - page_titles
 
     TaskActionIndexatePage:
       type: object

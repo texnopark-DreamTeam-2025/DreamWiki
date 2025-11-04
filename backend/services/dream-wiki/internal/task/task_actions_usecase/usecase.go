@@ -4,10 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"time"
 
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
@@ -51,9 +54,30 @@ func (u *taskActionUsecaseImpl) failTaskActionAndTask(repo repository.AppReposit
 	}
 }
 
-func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) error {
+func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) (err error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
+
+	defer func() {
+		if r := recover(); r != nil {
+			stackBuf := make([]byte, 4096)
+			stackBuf = stackBuf[:runtime.Stack(stackBuf, false)]
+			u.log.Error("panic recovered in task action execution",
+				"action_id", actionID,
+				"panic", r,
+				"stack", string(stackBuf))
+
+			_, taskActionAdditionalInfo, getErr := repo.GetTaskActionByID(actionID)
+			if getErr != nil {
+				u.log.Error("failed to get task action info for panic handling", "error", getErr)
+				err = fmt.Errorf("panic occurred: %v, and failed to get task info: %w", r, getErr)
+				return
+			}
+
+			u.failTaskActionAndTask(repo, actionID, taskActionAdditionalInfo.TaskId)
+			err = fmt.Errorf("panic occurred in task action execution: %v", r)
+		}
+	}()
 
 	taskAction, taskActionAdditionalInfo, err := repo.GetTaskActionByID(actionID)
 	if err != nil {
@@ -66,11 +90,13 @@ func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) e
 		return fmt.Errorf("failed to get task action type: %w", err)
 	}
 
-	switch actionType {
-	case string(internals.NewTask):
+	switch internals.TaskActionType(actionType) {
+	case internals.NewTask:
 		err = u.executeNewTaskAction(repo, actionID, taskAction)
-	case string(internals.AskLlm):
+	case internals.AskLlm:
 		err = u.executeAskLLMAction(repo, actionID, taskAction)
+	case internals.IndexatePage:
+		err = u.executeIndexatePageAction(repo, actionID, taskAction)
 	default:
 		err = fmt.Errorf("unsupported task action type: %s", actionType)
 	}
@@ -203,6 +229,80 @@ pollingLoop:
 	}
 
 	// Enqueue result
+	err = repo.EnqueueTaskActionResult(actionID)
+	if err != nil {
+		return fmt.Errorf("failed to enqueue task action result: %w", err)
+	}
+
+	return nil
+}
+
+func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository, pageID api.PageID) error {
+	err := repo.RemovePageIndexation(pageID)
+	if err != nil {
+		return err
+	}
+
+	page, _, err := repo.GetPageByID(pageID)
+	if err != nil {
+		return err
+	}
+
+	paragraphs := indexing.SplitPageToParagraphs(page.Content)
+
+	embeddings, err := u.deps.InferenceClient.GenerateEmbeddings(u.ctx, paragraphs)
+	if err != nil {
+		return err
+	}
+
+	for i, paragraph := range paragraphs {
+		paragraphWithEmbedding := models.ParagraphWithEmbedding{
+			PageID:     pageID,
+			LineNumber: int64(i),
+			Content:    paragraph,
+			Embedding:  embeddings[i],
+		}
+
+		err = repo.AddIndexedParagraph(paragraphWithEmbedding)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (u *taskActionUsecaseImpl) executeIndexatePageAction(repo repository.AppRepository, actionID internals.TaskActionID, taskAction *internals.TaskAction) error {
+	indexatePageAction, err := taskAction.AsTaskActionIndexatePage()
+	if err != nil {
+		return fmt.Errorf("failed to parse task action as TaskActionIndexatePage: %w", err)
+	}
+
+	err = u.indexatePageInTransaction(repo, indexatePageAction.PageId)
+	if err != nil {
+		return fmt.Errorf("failed to indexate page: %w", err)
+	}
+
+	err = repo.SetTaskActionStatus(actionID, internals.Finished)
+	if err != nil {
+		return fmt.Errorf("failed to set task action status to finished: %w", err)
+	}
+
+	result := internals.TaskActionResult{}
+	indexatePageResult := internals.TaskActionResultIndexatePage{
+		TaskActionType: internals.IndexatePage,
+		PageId:         indexatePageAction.PageId,
+	}
+	err = result.FromTaskActionResultIndexatePage(indexatePageResult)
+	if err != nil {
+		return fmt.Errorf("failed to create task action result: %w", err)
+	}
+
+	err = repo.CreateTaskActionResult(actionID, result)
+	if err != nil {
+		return fmt.Errorf("failed to create task action result: %w", err)
+	}
+
 	err = repo.EnqueueTaskActionResult(actionID)
 	if err != nil {
 		return fmt.Errorf("failed to enqueue task action result: %w", err)

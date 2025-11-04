@@ -16,8 +16,8 @@ func makeTaskDescription(taskDigest api.TaskDigest, state internals.TaskState) s
 	if discriminator, _ := state.Discriminator(); internals.TaskType(discriminator) == internals.GithubAccountPr {
 		return "Применить PR GitHub"
 	}
-	if discriminator, _ := state.Discriminator(); internals.TaskType(discriminator) == internals.ReindexateAllPages {
-		return "Проиндексировать все страницы"
+	if discriminator, _ := state.Discriminator(); internals.TaskType(discriminator) == internals.ReindexatePages {
+		return "Проиндексировать страницы"
 	}
 	return "Какая-то задача"
 }
@@ -127,4 +127,55 @@ func (u *appUsecaseImpl) GetTaskInternalState(taskID api.TaskID) (*api.V1TasksIn
 
 func (u *appUsecaseImpl) RecreateTask(taskID api.TaskID) (*api.TaskID, error) {
 	panic("unimplemented")
+}
+
+func (u *appUsecaseImpl) CreatePageReindexationTask(pageIDs []api.PageID) (*api.TaskID, error) {
+	repo := repository.NewAppRepository(u.ctx, u.deps)
+	defer repo.Rollback()
+
+	pageTitles := make(map[string]string)
+	for _, pageID := range pageIDs {
+		page, _, err := repo.GetPageByID(pageID)
+		if err != nil {
+			return nil, err
+		}
+		pageTitles[pageID.String()] = page.Title
+	}
+
+	taskState := internals.TaskStateReindexatePages{
+		PagesToIndexateIds: pageIDs,
+		IndexatedPageIds:   []api.PageID{},
+		PageTitles:         pageTitles,
+		TaskType:           internals.ReindexatePages,
+	}
+
+	var taskStateUnion internals.TaskState
+	err := taskStateUnion.FromTaskStateReindexatePages(taskState)
+	if err != nil {
+		return nil, err
+	}
+
+	taskID, err := repo.CreateTask(taskStateUnion)
+	if err != nil {
+		return nil, err
+	}
+
+	taskAction := internals.TaskAction{}
+	taskAction.FromTaskActionNewTask(internals.TaskActionNewTask{TaskActionType: internals.NewTask})
+	taskActionID, err := repo.CreateTaskAction(*taskID, taskAction)
+	if err != nil {
+		return nil, err
+	}
+
+	err = repo.EnqueueTaskAction(*taskActionID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = repo.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return taskID, nil
 }

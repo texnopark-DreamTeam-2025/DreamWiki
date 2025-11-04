@@ -8,11 +8,12 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TabProvider, TabList, Tab, TabPanel } from "@gravity-ui/uikit";
+import { TabProvider, TabList, Tab, TabPanel, Button, Text } from "@gravity-ui/uikit";
 import { FileText, ChartColumn, Clock } from "@gravity-ui/icons";
 import {
   getDiagnosticInfo,
   pagesTreeGet,
+  indexatePage,
   type V1DiagnosticInfoGetResponse,
   type TreeItem,
   type PageId,
@@ -25,7 +26,6 @@ import styles from "./Document.module.scss";
 
 type TabId = "content" | "diagnostics" | "history" | "statistics";
 
-// Функция для преобразования TreeItem из API в TreeNode для компонента
 const convertTreeItemToTreeNode = (item: TreeItem): TreeNode => {
   return {
     id: item.page_digest.page_id,
@@ -35,7 +35,6 @@ const convertTreeItemToTreeNode = (item: TreeItem): TreeNode => {
   };
 };
 
-// Функция для сбора всех expanded узлов из дерева
 const collectExpandedNodes = (items: TreeNode[]): Set<string> => {
   const expandedSet = new Set<string>();
 
@@ -57,22 +56,19 @@ const collectExpandedNodes = (items: TreeNode[]): Set<string> => {
 export default function Document() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { showError } = useToast();
+  const { showError, showSuccess } = useToast();
 
-  // Состояние для данных документа
   const [page, setPage] = useState<V1DiagnosticInfoGetResponse | undefined>();
   const [loading, setLoading] = useState(true);
 
-  // Состояние для дерева навигации
   const [treeData, setTreeData] = useState<TreeNode[]>([]);
   const [treeLoading, setTreeLoading] = useState(true);
 
-  // Состояние для UI
   const [activeTab, setActiveTab] = useState<TabId>("content");
   const [selectedNode, setSelectedNode] = useState<string | null>(id || null);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [reindexLoading, setReindexLoading] = useState(false);
 
-  // Функция для загрузки дерева страниц
   const loadPagesTree = useCallback(async (currentId?: string) => {
     setTreeLoading(true);
 
@@ -154,11 +150,23 @@ export default function Document() {
       }
     }, 100);
 
-    // Очистка при размонтировании
     return () => {
       resizeObserver.disconnect();
     };
   }, []);
+
+  const handleReindex = async () => {
+    try {
+      setReindexLoading(true);
+      await indexatePage({ body: { page_id: page!.page.page_id } });
+      showSuccess("Успешно", "Переиндексация запущена");
+    } catch (err) {
+      console.error("Error triggering reindex:", err);
+      showError("Ошибка", "Не удалось запустить переиндексацию");
+    } finally {
+      setReindexLoading(false);
+    }
+  };
 
   // Функция для загрузки данных документа
   const loadDocument = useCallback(async (pageId: string) => {
@@ -187,14 +195,12 @@ export default function Document() {
     } finally {
       setLoading(false);
     }
-  }, []); // Убираем showError из зависимостей
+  }, []);
 
-  // Эффект для загрузки дерева страниц при монтировании и изменении ID
   useEffect(() => {
     loadPagesTree();
-  }, [id]); // Убираем loadPagesTree из зависимостей
+  }, [id]);
 
-  // Эффект для загрузки документа при изменении ID
   useEffect(() => {
     if (!id) {
       setLoading(false);
@@ -203,7 +209,7 @@ export default function Document() {
 
     setSelectedNode(id);
     loadDocument(id);
-  }, [id]); // Убираем loadDocument из зависимостей
+  }, [id]);
 
   if (loading || treeLoading) {
     return (
@@ -329,6 +335,12 @@ export default function Document() {
 
             <TabPanel value="diagnostics">
               <div className={styles.contentPanel}>
+                <div className={styles.diagnosticsHeader}>
+                  <Text variant="header-2">Диагностическая информация</Text>
+                  <Button onClick={handleReindex} disabled={reindexLoading}>
+                    {reindexLoading ? "Запуск..." : "Принудительно переиндексировать"}
+                  </Button>
+                </div>
                 <div
                   style={{
                     padding: "40px",
@@ -336,7 +348,6 @@ export default function Document() {
                     color: "var(--g-color-text-secondary)",
                   }}
                 >
-                  <h2>Диагностическая информация</h2>
                   <p>Раздел в разработке</p>
                 </div>
               </div>
