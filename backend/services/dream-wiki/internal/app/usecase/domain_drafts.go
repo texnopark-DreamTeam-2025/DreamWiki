@@ -5,26 +5,22 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
-func (u *appUsecaseImpl) CreateDraft(pageURL string) (*api.DraftDigest, error) {
+func (u *appUsecaseImpl) CreateDraft(originalPageID api.PageID) (*api.DraftDigest, error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Extract the YWiki slug from the page URL
-	slug := extractYWikiSlugFromURL(pageURL)
+	u.log.Info("PAGE ID: #############", originalPageID)
 
-	// Get the page by its slug
-	page, err := repo.GetPageBySlug(slug)
+	page, _, err := repo.GetPageByID(originalPageID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Create a draft with the page ID, title, and content
 	draftID, err := repo.CreateDraft(page.PageId, page.Title, page.Content)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get the created draft to return its digest
 	draft, err := repo.GetDraftByID(*draftID)
 	if err != nil {
 		return nil, err
@@ -42,7 +38,6 @@ func (u *appUsecaseImpl) DeleteDraft(draftID api.DraftID) error {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Remove the draft by its ID
 	err := repo.RemoveDraft(draftID)
 	if err != nil {
 		return err
@@ -55,7 +50,6 @@ func (u *appUsecaseImpl) GetDraft(draftID api.DraftID) (*api.Draft, error) {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Get the draft by its ID
 	draft, err := repo.GetDraftByID(draftID)
 	if err != nil {
 		return nil, err
@@ -68,13 +62,11 @@ func (u *appUsecaseImpl) ApplyDraft(draftID api.DraftID) error {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Get the draft by its ID
 	draft, err := repo.GetDraftByID(draftID)
 	if err != nil {
 		return err
 	}
 
-	// Append a new revision to the page with the draft content
 	_, err = repo.AppendPageRevision(draft.DraftDigest.PageDigest.PageId, draft.Content)
 	if err != nil {
 		return err
@@ -92,13 +84,11 @@ func (u *appUsecaseImpl) ListDrafts(cursor *string) ([]api.DraftDigest, *api.Nex
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	// Convert string cursor to *api.Cursor
 	var apiCursor *api.Cursor
 	if cursor != nil {
 		apiCursor = (*api.Cursor)(cursor)
 	}
 
-	// List drafts with a reasonable limit (e.g., 50)
 	drafts, newCursor, err := repo.ListDrafts(apiCursor, 50)
 	if err != nil {
 		return nil, nil, err

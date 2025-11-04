@@ -16,8 +16,6 @@ export default function NewDraft() {
   const fetchPages = async () => {
     try {
       setLoading(true);
-      // Получаем дерево страниц с пустым массивом active_page_ids
-      // Это даст нам все корневые страницы
       const response = await pagesTreeGet({
         body: {
           active_page_ids: [],
@@ -30,7 +28,6 @@ export default function NewDraft() {
         return;
       }
 
-      // Преобразуем дерево в плоский список страниц
       const flattenPages = (items: TreeItem[]): PageDigest[] => {
         let result: PageDigest[] = [];
         for (const item of items) {
@@ -45,7 +42,6 @@ export default function NewDraft() {
       const allPages = flattenPages(response.data.tree);
       setPages(allPages);
 
-      // Если есть страницы, выбираем первую по умолчанию
       if (allPages.length > 0 && !selectedPageId) {
         setSelectedPageId(allPages[0].page_id);
       }
@@ -71,7 +67,7 @@ export default function NewDraft() {
       setCreating(true);
       const response = await createDraft({
         body: {
-          page_url: selectedPageId, // В API ожидается page_url, но по факту передается page_id
+          page_id: selectedPageId, // В API ожидается page_url, но по факту передается page_id
         },
       });
 
@@ -98,33 +94,33 @@ export default function NewDraft() {
 
   if (loading) {
     return (
-      <Box height="100%" display="flex" alignItems="center" justifyContent="center" gap={4}>
+      <Flex height="100%">
         <Loader size="m" />
         <Text>Загрузка страниц...</Text>
-      </Box>
+      </Flex>
     );
   }
 
   return (
-    <Box padding={6} height="100%">
-      <Box marginBottom={6}>
+    <Box height="100%">
+      <Box>
         <Text variant="header-1">Создать черновик</Text>
       </Box>
 
-      <Box flex={1} display="flex" flexDirection="column" gap={4}>
+      <Flex style={{ flex: 1 }} dir="column" gap={4}>
         <Text variant="body-2">Выберите страницу для создания черновика:</Text>
 
         <Select
           value={selectedPageId ? [selectedPageId] : []}
           onUpdate={(value) => setSelectedPageId(value[0] || null)}
-          options={pages.map(page => ({
+          options={pages.map((page) => ({
             value: page.page_id,
-            content: page.title
+            content: page.title,
           }))}
           placeholder="Выберите страницу..."
         />
 
-        <Box marginTop={4}>
+        <Box>
           <Button
             view="action"
             size="m"
@@ -135,16 +131,11 @@ export default function NewDraft() {
           >
             Создать черновик
           </Button>
-          <Button
-            view="outlined"
-            size="m"
-            onClick={handleCancel}
-            disabled={creating}
-          >
+          <Button view="outlined" size="m" onClick={handleCancel} disabled={creating}>
             Отмена
           </Button>
         </Box>
-      </Box>
+      </Flex>
     </Box>
   );
 }

@@ -14,7 +14,7 @@ type (
 		Login(req api.V1LoginRequest) (*api.V1LoginResponse, error)
 
 		// domain_drafts.go
-		CreateDraft(pageURL string) (*api.DraftDigest, error)
+		CreateDraft(originalPageID api.PageID) (*api.DraftDigest, error)
 		DeleteDraft(draftID api.DraftID) error
 		GetDraft(draftID api.DraftID) (*api.Draft, error)
 		UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error

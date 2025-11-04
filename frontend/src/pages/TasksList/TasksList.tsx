@@ -7,7 +7,6 @@ import { Flex, Card, Progress, Text, Loader, Label, Box } from "@gravity-ui/uiki
 export const TasksList = () => {
   const [tasks, setTasks] = useState<TaskDigest[] | undefined>();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,7 +23,6 @@ export const TasksList = () => {
         });
         setTasks(response.data?.tasks || []);
       } catch (err) {
-        setError("Failed to fetch tasks");
         console.error("Error fetching tasks:", err);
       } finally {
         setLoading(false);

@@ -9,7 +9,7 @@ import (
 
 func (d *AppDelivery) CreateDraft(ctx context.Context, request api.CreateDraftRequestObject) (api.CreateDraftResponseObject, error) {
 	usecase := usecase.NewAppUsecaseImpl(ctx, d.deps)
-	result, err := usecase.CreateDraft(request.Body.PageUrl)
+	result, err := usecase.CreateDraft(request.Body.PageId)
 	if err != nil {
 		d.log.Error(err.Error())
 		return api.CreateDraft500JSONResponse{ErrorResponseJSONResponse: api.ErrorResponseJSONResponse{Message: internalErrorMessage}}, nil

@@ -58,11 +58,12 @@ func (r *appRepositoryImpl) GetDraftByID(draftID api.DraftID) (*api.Draft, error
 		d.updated_at,
 		d.page_revision_id,
 		r.revision_id,
+		r.content,
 		p.page_id,
 		p.title
 	FROM Draft d
 	JOIN PageRevision r ON r.revision_id=d.page_revision_id
-	JOIN Page p ON r.page_id = p.current_revision_id
+	JOIN Page p ON r.page_id = p.page_id
 	WHERE d.draft_id = $draftID;
 	`
 
@@ -93,6 +94,7 @@ func (r *appRepositoryImpl) GetDraftByID(draftID api.DraftID) (*api.Draft, error
 		&updatedAt,
 		&pageRevisionID,
 		&baseRevisionID,
+		&originalContent,
 		&pageID,
 		&pageTitle,
 	)

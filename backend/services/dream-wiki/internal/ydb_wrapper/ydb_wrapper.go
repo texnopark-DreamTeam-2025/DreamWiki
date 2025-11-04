@@ -230,9 +230,11 @@ func (r *resultImpl) RowCount() int {
 func (r *resultImpl) FetchExactlyOne(values ...any) error {
 	rowCount := r.RowCount()
 	if rowCount == 0 {
+		r.log.Error("no rows")
 		return models.ErrNoRows
 	}
 	if rowCount > 1 {
+		r.log.Error(rowCount, "rows instead of 1")
 		return fmt.Errorf("expected exactly one row")
 	}
 	r.NextRow()

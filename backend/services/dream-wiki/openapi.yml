@@ -695,11 +695,10 @@ components:
     V1DraftsCreateRequest:
       type: object
       properties:
-        page_url:
-          type: string
-          format: uri
+        page_id:
+          $ref: '#/components/schemas/PageID'
       required:
-        - page_url
+        - page_id
 
     V1DraftsCreateResponse:
       type: object

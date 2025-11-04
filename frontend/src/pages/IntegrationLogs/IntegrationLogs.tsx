@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Select, Card, Flex, Loader, Text, Box } from "@gravity-ui/uikit";
+import { Select, Flex, Loader, Text, Box } from "@gravity-ui/uikit";
 import { integrationLogsGet, type IntegrationLogField, type IntegrationId } from "@/client";
 
 import { MonacoEditor } from "@/components/MonacoEditor";

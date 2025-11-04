@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getTaskDetails } from "@/client";
 import type { Task, TaskStatus } from "@/client";
-import { Flex, Text, Button, Loader, Card, Label, Breadcrumbs, Box } from "@gravity-ui/uikit";
+import { Flex, Text, Button, Loader, Card, Label, Breadcrumbs } from "@gravity-ui/uikit";
 import { ActionBar } from "@gravity-ui/navigation";
 
 export const TaskDetails = () => {

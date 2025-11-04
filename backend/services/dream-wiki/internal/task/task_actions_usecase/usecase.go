@@ -9,6 +9,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/ycloud_client_gen"
 )
@@ -33,17 +34,35 @@ func NewTaskActionUsecase(ctx context.Context, deps *deps.Deps) TaskActionUsecas
 	}
 }
 
+func (u *taskActionUsecaseImpl) failTaskActionAndTask(repo repository.AppRepository, actionID internals.TaskActionID, taskID api.TaskID) {
+	setErr := repo.SetTaskActionStatus(actionID, internals.Failed)
+	if setErr != nil {
+		u.log.Error("failed to set task action status to failed", "action_id", actionID, "error", setErr)
+	}
+
+	setTaskErr := repo.SetTaskStatus(taskID, api.FailedByError)
+	if setTaskErr != nil {
+		u.log.Error("failed to set task status to failed_by_error", "task_id", taskID, "error", setTaskErr)
+	}
+
+	commitErr := repo.Commit()
+	if commitErr != nil {
+		u.log.Error("failed to commit transaction", "action_id", actionID, "error", commitErr)
+	}
+}
+
 func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) error {
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	taskAction, _, err := repo.GetTaskActionByID(actionID)
+	taskAction, taskActionAdditionalInfo, err := repo.GetTaskActionByID(actionID)
 	if err != nil {
 		return fmt.Errorf("failed to get task action by ID: %w", err)
 	}
 
 	actionType, err := taskAction.Discriminator()
 	if err != nil {
+		u.failTaskActionAndTask(repo, actionID, taskActionAdditionalInfo.TaskId)
 		return fmt.Errorf("failed to get task action type: %w", err)
 	}
 
@@ -57,6 +76,7 @@ func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) e
 	}
 
 	if err != nil {
+		u.failTaskActionAndTask(repo, actionID, taskActionAdditionalInfo.TaskId)
 		return err
 	}
 

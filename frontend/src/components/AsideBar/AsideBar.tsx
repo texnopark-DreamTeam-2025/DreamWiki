@@ -18,7 +18,7 @@ import {
 } from "@gravity-ui/icons";
 import styles from "./AsideBar.module.scss";
 import { useAuth } from "@/contexts";
-import { Box, Container } from "@gravity-ui/uikit";
+import { Container } from "@gravity-ui/uikit";
 
 interface AsideBarProps {
   children: React.ReactNode;
