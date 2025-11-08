@@ -1,3 +1,5 @@
+SERVER_PORT ?= 7000
+SERVER_FLAGS := SERVER_PORT=$(SERVER_PORT)
 define setup_env
 	$(eval ENV_FILE := ../../../.env)
 	@echo "==> Load $(ENV_FILE)"
@@ -9,7 +11,7 @@ load-env:
 	$(call setup_env)
 
 run: load-env
-	SERVER_PORT=7000 LOG_MODE=dev YDB_DSN=grpc://127.0.0.1:2136/?database=/local \
+	${SERVER_FLAGS} LOG_MODE=dev YDB_DSN=grpc://127.0.0.1:2136/?database=/local \
 	INFERENCE_API_URL=http://localhost:8082 JWT_SECRET_KEY=secret \
 	go run cmd/main/main.go
 
