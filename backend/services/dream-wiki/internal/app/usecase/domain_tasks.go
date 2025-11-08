@@ -2,9 +2,11 @@ package usecase
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"time"
 
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_factory"
@@ -137,9 +139,13 @@ func (u *appUsecaseImpl) CreatePageReindexationTask(pageIDs []api.PageID) (*api.
 	for _, pageID := range pageIDs {
 		page, _, err := repo.GetPageByID(pageID)
 		if err != nil {
-			return nil, err
+			if !errors.Is(err, models.ErrNoRows) {
+				return nil, err
+			}
+			pageTitles[pageID.String()] = "NewPage"
+		} else {
+			pageTitles[pageID.String()] = page.Title
 		}
-		pageTitles[pageID.String()] = page.Title
 	}
 
 	taskState := internals.TaskStateReindexatePages{
