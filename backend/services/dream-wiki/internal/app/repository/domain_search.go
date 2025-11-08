@@ -11,7 +11,6 @@ import (
 
 func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding internals.Embedding) ([]internals.SearchResultItem, error) {
 	yql := `
-		$K = 20;
 		$targetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
 
 		SELECT
@@ -26,12 +25,14 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 		FROM Paragraph par
 		JOIN Page page USING(page_id)
 		ORDER BY Knn::CosineDistance(embedding, $targetEmbedding)
-		LIMIT $K;
+		LIMIT $limit;
 	`
 
 	yqlEmbedding := embeddingToYDBList(queryEmbedding)
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$queryEmbedding", yqlEmbedding))
+	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$queryEmbedding", yqlEmbedding),
+		table.ValueParam("$limit", types.Uint64Value(uint64(limit))),
+	)
 	if err != nil {
 		return nil, err
 	}

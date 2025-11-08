@@ -107,6 +107,10 @@ func (t *gitHubAccountPRTask) CalculateSubtasks() ([]api.Subtask, error) {
 	}
 
 	if t.state.HotParagraphs != nil {
+		if t.state.LlmRephrasedParagraphContents == nil {
+			temp := make([]string, 0)
+			t.state.LlmRephrasedParagraphContents = &temp
+		}
 		for i, paragraph := range *t.state.HotParagraphs {
 			if i >= 3 {
 				break
@@ -182,7 +186,11 @@ func (t *gitHubAccountPRTask) accountResult(result internals.TaskActionResult) e
 		t.state.LlmSuggestedSearchQueries = &res
 		return nil
 	}
-	return fmt.Errorf("Nothing done")
+
+	rephrased := t.state.LlmRephrasedParagraphContents
+	*rephrased = append(*rephrased, resCast.ResponseMessage)
+
+	return nil
 }
 
 func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) error {
@@ -208,7 +216,10 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 		return t.saveChanges()
 	}
 
-	if t.state.HotParagraphs == nil {
+	maybeHotParagraphs := t.state.HotParagraphs
+	maybeRephrased := t.state.LlmRephrasedParagraphContents
+
+	if maybeHotParagraphs == nil {
 		err := t.searchHotParagraphs()
 		if err != nil {
 			return fmt.Errorf("failed to search hot parageaphs: %w", err)
@@ -218,6 +229,12 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 			return fmt.Errorf("failed to perform search and rephrase: %w", err)
 		}
 		return t.saveChanges()
+	}
+
+	if maybeRephrased != nil && len(*maybeRephrased) != len(*maybeHotParagraphs) {
+		if err := t.startLLMSearchAndRephrase(); err != nil {
+			return fmt.Errorf("failed to perform search and rephrase: %w", err)
+		}
 	}
 
 	if t.state.LlmRephrasedParagraphContents != nil && len(*t.state.LlmRephrasedParagraphContents) > 0 {
@@ -348,7 +365,10 @@ func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 		}
 	}
 
+	hotParagraphs = hotParagraphs[:5]
 	t.state.HotParagraphs = &hotParagraphs
+	temp := make([]string, 0)
+	t.state.LlmRephrasedParagraphContents = &temp
 	return nil
 }
 
@@ -356,12 +376,7 @@ func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
 	if len(*t.state.HotParagraphs) == 0 {
 		return fmt.Errorf("empty hot paragraphs")
 	}
-
-	var content strings.Builder
-	for _, paragraph := range *t.state.HotParagraphs {
-		content.WriteString(fmt.Sprintf("Page ID: %s\n", paragraph.PageId))
-		content.WriteString(fmt.Sprintf("Content: %s\n\n", paragraph.Content))
-	}
+	currentParagraphContent := (*t.state.HotParagraphs)[len(*t.state.LlmRephrasedParagraphContents)].Content
 
 	prompt := `Please rephrase the following documentation paragraphs to better reflect the product changes`
 
@@ -372,7 +387,7 @@ func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
 		},
 		{
 			Role:    "user",
-			Content: content.String(),
+			Content: currentParagraphContent,
 		},
 	}
 

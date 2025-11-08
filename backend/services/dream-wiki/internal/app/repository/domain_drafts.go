@@ -64,7 +64,7 @@ func (r *appRepositoryImpl) GetDraftByID(draftID api.DraftID) (*api.Draft, error
 	FROM Draft d
 	JOIN PageRevision r ON r.revision_id=d.page_revision_id
 	JOIN Page p ON r.page_id = p.page_id
-	WHERE d.draft_id = $draftID;
+	-- WHERE d.draft_id = $draftID;
 	`
 
 	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$draftID", types.UuidValue(draftID)))

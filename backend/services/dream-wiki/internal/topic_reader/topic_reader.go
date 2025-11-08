@@ -11,6 +11,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_factory"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicoptions"
 	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicreader"
@@ -143,6 +144,20 @@ func (t *TopicReaders) readTaskActionMessages() {
 	readTopic(t.ctx, t.TaskActionsTopicReader, t.log, processTaskActionMessage)
 }
 
+func (t *TopicReaders) failTaskAndCommit(repo repository.AppRepository, taskID api.TaskID, taskActionID int64) {
+	setTaskErr := repo.SetTaskStatus(taskID, api.FailedByError)
+	if setTaskErr != nil {
+		t.log.Error("failed to set task status to failed", "task_id", taskID, "error", setTaskErr)
+	} else {
+		commitErr := repo.Commit()
+		if commitErr != nil {
+			t.log.Error("failed to commit transaction when setting task status to failed", "error", commitErr)
+		} else {
+			t.log.Info("successfully set task status to failed", "task_id", taskID)
+		}
+	}
+}
+
 func (t *TopicReaders) readTaskActionResultMessages() {
 	t.log.Info("START READING TaskActionResultsTopicReader")
 	processTaskActionResultMessage := func(taskActionID int64) {
@@ -184,6 +199,7 @@ func (t *TopicReaders) readTaskActionResultMessages() {
 		err = task.OnActionResult(*taskActionResult)
 		if err != nil {
 			t.log.Error("failed to process task action result", "action_id", taskActionID, "error", err)
+			t.failTaskAndCommit(repo, taskActionAdditionalInfo.TaskId, taskActionID)
 			return
 		}
 

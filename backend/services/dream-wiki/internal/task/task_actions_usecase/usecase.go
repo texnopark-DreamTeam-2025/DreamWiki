@@ -10,6 +10,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
@@ -81,6 +82,19 @@ func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) (
 	taskAction, taskActionAdditionalInfo, err := repo.GetTaskActionByID(actionID)
 	if err != nil {
 		return fmt.Errorf("failed to get task action by ID: %w", err)
+	}
+
+	taskDigest, _, err := repo.GetTaskByID(taskActionAdditionalInfo.TaskId)
+	if err != nil {
+		return fmt.Errorf("failed to get task by ID: %w", err)
+	}
+
+	if task_common.IsTerminalTaskStatus(taskDigest.Status) {
+		u.log.Info("skipping task action execution because task is already in terminal status",
+			"action_id", actionID,
+			"task_id", taskActionAdditionalInfo.TaskId,
+			"task_status", taskDigest.Status)
+		return nil
 	}
 
 	actionType, err := taskAction.Discriminator()
