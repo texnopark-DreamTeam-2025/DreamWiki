@@ -138,10 +138,6 @@ func (t *TopicReaders) readTaskActionMessages() {
 		} else {
 			t.log.Info("successfully executed task action", "action_id", taskActionID)
 		}
-
-		if err != nil {
-			t.log.Error("failed to commit task action message", "action_id", taskActionID, "error", err)
-		}
 	}
 
 	readTopic(t.ctx, t.TaskActionsTopicReader, t.log, processTaskActionMessage)

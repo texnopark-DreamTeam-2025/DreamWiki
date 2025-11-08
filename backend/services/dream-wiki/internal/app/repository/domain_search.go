@@ -15,7 +15,7 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding model
 
 		SELECT
 			par.page_id,
-			page.slug,
+			page.ywiki_slug,
 			par.paragraph_index,
 			page.title,
 			par.content,
