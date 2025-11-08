@@ -247,22 +247,24 @@ func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRep
 		return err
 	}
 
-	paragraphs := indexing.SplitPageToParagraphs(page.Content)
+	paragraphs := indexing.SplitPageToParagraphs(pageID, page.Content)
 
-	embeddings, err := u.deps.InferenceClient.GenerateEmbeddings(u.ctx, paragraphs)
+	// Extract content strings for embedding generation
+	contentStrings := make([]string, len(paragraphs))
+	for i, paragraph := range paragraphs {
+		contentStrings[i] = paragraph.Content
+	}
+
+	embeddings, err := u.deps.InferenceClient.GenerateEmbeddings(u.ctx, contentStrings)
 	if err != nil {
 		return err
 	}
 
 	for i, paragraph := range paragraphs {
-		paragraphWithEmbedding := internals.ParagraphWithEmbedding{
-			PageId:     pageID,
-			LineNumber: i,
-			Content:    paragraph,
-			Embedding:  embeddings[i],
-		}
+		// Add embedding to the paragraph
+		paragraph.Embedding = embeddings[i]
 
-		err = repo.AddIndexedParagraph(paragraphWithEmbedding)
+		err = repo.AddIndexedParagraph(paragraph)
 		if err != nil {
 			return err
 		}
