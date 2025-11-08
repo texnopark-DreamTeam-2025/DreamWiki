@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
@@ -256,9 +255,9 @@ func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRep
 	}
 
 	for i, paragraph := range paragraphs {
-		paragraphWithEmbedding := models.ParagraphWithEmbedding{
-			PageID:     pageID,
-			LineNumber: int64(i),
+		paragraphWithEmbedding := internals.ParagraphWithEmbedding{
+			PageId:     pageID,
+			LineNumber: i,
 			Content:    paragraph,
 			Embedding:  embeddings[i],
 		}

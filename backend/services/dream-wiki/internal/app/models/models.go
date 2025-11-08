@@ -9,13 +9,6 @@ import (
 type (
 	Embedding []float32
 
-	ParagraphWithEmbedding struct {
-		PageID     uuid.UUID
-		LineNumber int64
-		Content    string
-		Embedding  Embedding
-	}
-
 	User struct {
 		ID           uuid.UUID
 		Login        string

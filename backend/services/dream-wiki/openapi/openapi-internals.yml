@@ -279,3 +279,36 @@ components:
     RawJSON:
       type: object
       additionalProperties: true
+
+    ParagraphWithEmbedding:
+      type: object
+      properties:
+        page_id:
+          $ref: '#/components/schemas/PageID'
+        line_number:
+          type: integer
+        content:
+          type: string
+        embedding:
+          $ref: '#/components/schemas/Embedding'
+        anchor_slug:
+          type: string
+        headers:
+          type: array
+          items:
+            type: string
+        paragraph_index:
+          type: integer
+      required:
+        - page_id
+        - line_number
+        - content
+        - embedding
+        - headers
+        - paragraph_index
+    
+    Embedding:
+      type: array
+      items:
+        type: number
+        format: float  

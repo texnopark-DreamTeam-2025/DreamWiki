@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
@@ -23,7 +23,7 @@ func (r *appRepositoryImpl) RemovePageIndexation(pageID api.PageID) error {
 	return nil
 }
 
-func (r *appRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error {
+func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWithEmbedding) error {
 	yql := `
 		INSERT INTO Paragraph (page_id, line_number, content, embedding, anchor_link_slug)
 		VALUES (
@@ -36,8 +36,8 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph models.ParagraphWithEm
 	`
 
 	result, err := r.ydbClient.InTX().Execute(yql,
-		table.ValueParam("$pageID", types.UuidValue(paragraph.PageID)),
-		table.ValueParam("$lineNumber", types.Int64Value(paragraph.LineNumber)),
+		table.ValueParam("$pageID", types.UuidValue(paragraph.PageId)),
+		table.ValueParam("$lineNumber", types.Int64Value(int64(paragraph.LineNumber))),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
 		table.ValueParam("$anchorLineSlug", types.TextValue("")), // TODO

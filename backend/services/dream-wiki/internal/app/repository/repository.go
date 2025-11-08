@@ -32,7 +32,7 @@ type (
 
 		// domain_page_indexation.go
 		RemovePageIndexation(pageID api.PageID) error
-		AddIndexedParagraph(paragraph models.ParagraphWithEmbedding) error
+		AddIndexedParagraph(paragraph internals.ParagraphWithEmbedding) error
 
 		// domain_pages.go
 		GetPageBySlug(yWikiSlug string) (*api.Page, error)
