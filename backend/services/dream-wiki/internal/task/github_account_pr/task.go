@@ -337,7 +337,7 @@ func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 			continue
 		}
 
-		results, err := t.repo.SearchByEmbeddingWithContext(query, embedding, 1)
+		results, err := t.repo.SearchByEmbeddingWithContext(query, internals.Embedding(embedding), 1)
 		if err != nil {
 			t.deps.Logger.Warn("failed to search by embedding: %v", err)
 			continue

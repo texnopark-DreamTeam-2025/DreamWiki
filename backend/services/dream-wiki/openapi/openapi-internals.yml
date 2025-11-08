@@ -330,6 +330,8 @@ components:
             type: string
         paragraph_index:
           type: integer
+        is_header:
+          type: boolean
       required:
         - page_id
         - line_number
@@ -337,6 +339,7 @@ components:
         - embedding
         - headers
         - paragraph_index
+        - is_header
 
     Embedding:
       type: array

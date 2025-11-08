@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/inference_client_gen"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
 
 type (
@@ -15,8 +15,8 @@ type (
 	}
 
 	InferenceClient interface {
-		GenerateEmbedding(ctx context.Context, text string) (models.Embedding, error)
-		GenerateEmbeddings(ctx context.Context, texts []string) ([]models.Embedding, error)
+		GenerateEmbedding(ctx context.Context, text string) (internals.Embedding, error)
+		GenerateEmbeddings(ctx context.Context, texts []string) ([]internals.Embedding, error)
 	}
 )
 
@@ -28,7 +28,7 @@ func NewInferenceClient(config *config.Config) (InferenceClient, error) {
 	return &inferenceClientImpl{client}, nil
 }
 
-func (c *inferenceClientImpl) GenerateEmbedding(ctx context.Context, text string) (models.Embedding, error) {
+func (c *inferenceClientImpl) GenerateEmbedding(ctx context.Context, text string) (internals.Embedding, error) {
 	resp, err := c.client.GenerateEmbeddingWithResponse(ctx, inference_client_gen.GenerateEmbeddingJSONRequestBody{Texts: []string{text}})
 	if err != nil {
 		return nil, err
@@ -39,10 +39,10 @@ func (c *inferenceClientImpl) GenerateEmbedding(ctx context.Context, text string
 	if len(resp.JSON200.Embeddings) != 1 {
 		return nil, fmt.Errorf("no embeddings returned")
 	}
-	return models.Embedding(resp.JSON200.Embeddings[0]), nil
+	return internals.Embedding(resp.JSON200.Embeddings[0]), nil
 }
 
-func (c *inferenceClientImpl) GenerateEmbeddings(ctx context.Context, texts []string) ([]models.Embedding, error) {
+func (c *inferenceClientImpl) GenerateEmbeddings(ctx context.Context, texts []string) ([]internals.Embedding, error) {
 	resp, err := c.client.GenerateEmbeddingWithResponse(ctx, inference_client_gen.GenerateEmbeddingJSONRequestBody{Texts: texts})
 	if err != nil {
 		return nil, err
@@ -51,9 +51,9 @@ func (c *inferenceClientImpl) GenerateEmbeddings(ctx context.Context, texts []st
 		return nil, fmt.Errorf("failed to generate embeddings")
 	}
 
-	embeddings := make([]models.Embedding, len(resp.JSON200.Embeddings))
+	embeddings := make([]internals.Embedding, len(resp.JSON200.Embeddings))
 	for i, embedding := range resp.JSON200.Embeddings {
-		embeddings[i] = models.Embedding(embedding)
+		embeddings[i] = internals.Embedding(embedding)
 	}
 	return embeddings, nil
 }

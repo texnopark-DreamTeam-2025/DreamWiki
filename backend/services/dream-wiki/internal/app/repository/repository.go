@@ -45,8 +45,8 @@ type (
 		DeleteAllPages() error
 
 		// domain_search.go
-		SearchByEmbedding(query string, queryEmbedding models.Embedding) ([]internals.SearchResultItem, error)
-		SearchByEmbeddingWithContext(query string, queryEmbedding models.Embedding, contextSize int) ([]internals.ParagraphWithContext, error)
+		SearchByEmbedding(query string, queryEmbedding internals.Embedding) ([]internals.SearchResultItem, error)
+		SearchByEmbeddingWithContext(query string, queryEmbedding internals.Embedding, contextSize int) ([]internals.ParagraphWithContext, error)
 
 		// domain_tasks.go
 		GetTaskByID(taskID api.TaskID) (*api.TaskDigest, *internals.TaskState, error)

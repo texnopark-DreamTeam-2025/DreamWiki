@@ -2,7 +2,6 @@ package repository
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
@@ -28,7 +27,7 @@ func (r *appRepositoryImpl) RemovePageIndexation(pageID api.PageID) error {
 
 func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWithEmbedding) error {
 	yql := `
-		INSERT INTO Paragraph (page_id, line_number, content, embedding, anchor_link_slug, paragraph_index, headers)
+		INSERT INTO Paragraph (page_id, line_number, content, embedding, anchor_link_slug, paragraph_index, headers, is_header)
 		VALUES (
 			$pageID,
 			$lineNumber,
@@ -36,16 +35,22 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 			Untag(Knn::ToBinaryStringFloat($embedding), "FloatVector"),
 			$anchorLinkSlug,
 			$paragraphIndex,
-			$headers
+			$headers,
+			$isHeader
 		);
 	`
 
-	var anchorLinkSlug types.Value
+	anchorLinkSlug := types.TextValue("")
 	if paragraph.AnchorSlug != nil {
-		anchorLinkSlug = types.OptionalValue(types.TextValue(*paragraph.AnchorSlug))
-	} else {
-		anchorLinkSlug = types.NullValue(types.TypeText)
+		anchorLinkSlug = types.TextValue(*paragraph.AnchorSlug)
 	}
+
+	// Convert headers to YDB list
+	headerValues := make([]types.Value, len(paragraph.Headers))
+	for i, header := range paragraph.Headers {
+		headerValues[i] = types.TextValue(header)
+	}
+	headersList := types.ListValue(headerValues...)
 
 	if len(paragraph.Embedding) == 0 {
 		return fmt.Errorf("embedding is empty for paragraph with page_id: %s, line_number: %d", paragraph.PageId, paragraph.LineNumber)
@@ -58,7 +63,8 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
 		table.ValueParam("$anchorLinkSlug", anchorLinkSlug),
 		table.ValueParam("$paragraphIndex", types.Int64Value(int64(paragraph.ParagraphIndex))),
-		table.ValueParam("$headers", types.UTF8Value(strings.Join(paragraph.Headers, "\n"))),
+		table.ValueParam("$headers", headersList),
+		table.ValueParam("$isHeader", types.BoolValue(paragraph.IsHeader)),
 	)
 	if err != nil {
 		return err

@@ -3,14 +3,13 @@ package repository
 import (
 	"strings"
 
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
-func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding models.Embedding) ([]internals.SearchResultItem, error) {
+func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding internals.Embedding) ([]internals.SearchResultItem, error) {
 	yql := `
 		$K = 20;
 		$targetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
@@ -76,7 +75,7 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding model
 	return searchResult, nil
 }
 
-func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbedding models.Embedding, contextSize int) ([]internals.ParagraphWithContext, error) {
+func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbedding internals.Embedding, contextSize int) ([]internals.ParagraphWithContext, error) {
 	initialResults, err := r.SearchByEmbedding(query, queryEmbedding)
 	if err != nil {
 		return nil, err

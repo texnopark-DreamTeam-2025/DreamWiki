@@ -7,8 +7,6 @@ import (
 )
 
 type (
-	Embedding []float32
-
 	User struct {
 		ID           uuid.UUID
 		Login        string

@@ -3,6 +3,7 @@ package usecase
 import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
 
 func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse, error) {
@@ -13,7 +14,7 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	results, err := repo.SearchByEmbedding(req.Query, embedding)
+	results, err := repo.SearchByEmbedding(req.Query, internals.Embedding(embedding))
 	if err != nil {
 		return nil, err
 	}

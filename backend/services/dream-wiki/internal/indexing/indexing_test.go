@@ -41,6 +41,7 @@ This is the conclusion paragraph. It should be contentful as well.`
 		require.Equal(t, 0, paragraphs[0].LineNumber)
 		require.Equal(t, 0, paragraphs[0].ParagraphIndex)
 		require.Equal(t, "# Introduction", paragraphs[0].Content)
+		require.True(t, paragraphs[0].IsHeader)
 
 		// Check that headers are tracked
 		require.Equal(t, 1, len(paragraphs[0].Headers))
@@ -76,10 +77,12 @@ This paragraph should be contentful.`
 		// Check first paragraph (the list)
 		require.Equal(t, 0, paragraphs[0].LineNumber)
 		require.Equal(t, "# Flowers", paragraphs[0].Content)
+		require.True(t, paragraphs[0].IsHeader)
 
 		// Check second paragraph
 		require.Equal(t, 6, paragraphs[2].LineNumber)
 		require.Equal(t, "This paragraph should be contentful.", paragraphs[2].Content)
+		require.False(t, paragraphs[2].IsHeader)
 
 		// Check headers for both paragraphs
 		require.Equal(t, 1, len(paragraphs[0].Headers))
@@ -88,10 +91,10 @@ This paragraph should be contentful.`
 		require.Equal(t, "Flowers", paragraphs[1].Headers[0])
 
 		// Check anchor slugs
-		require.NotNil(t, paragraphs[0].AnchorSlug)
-		require.Equal(t, "#flowers", *paragraphs[0].AnchorSlug)
 		require.NotNil(t, paragraphs[1].AnchorSlug)
 		require.Equal(t, "#flowers", *paragraphs[1].AnchorSlug)
+		require.NotNil(t, paragraphs[2].AnchorSlug)
+		require.Equal(t, "#flowers", *paragraphs[2].AnchorSlug)
 	})
 
 	t.Run("non contentful paragraphs", func(t *testing.T) {
@@ -112,6 +115,7 @@ Also too few.`
 
 		// Check content
 		require.Equal(t, "# Header", paragraphs[0].Content)
+		require.True(t, paragraphs[0].IsHeader)
 
 		// Check that headers are still tracked
 		require.Equal(t, 1, len(paragraphs[0].Headers))
@@ -142,6 +146,16 @@ Also too few.`
 
 		// Should have 3 paragraphs (no longer filtering empty paragraphs)
 		require.Equal(t, 3, len(paragraphs))
+
+		// Check that all paragraphs are headers
+		for _, p := range paragraphs {
+			require.True(t, p.IsHeader)
+		}
+
+	})
+
+	t.Run("special characters in headers", func(t *testing.T) {
+		t.Parallel()
 	})
 
 	t.Run("special characters in headers", func(t *testing.T) {
@@ -159,6 +173,116 @@ This is a contentful paragraph.`
 		// Check anchor slug generation
 		require.NotNil(t, paragraphs[0].AnchorSlug)
 		require.Equal(t, "#header-with-characters-symbols", *paragraphs[0].AnchorSlug)
+	})
+	t.Run("headers with multiple levels", func(t *testing.T) {
+		content := `# Main Header
+
+Some content here.
+
+## Sub Header
+
+More content.
+
+### Deep Header
+
+Deep content.
+
+Back to main content.`
+
+		paragraphs := SplitPageToParagraphs(pageID, content)
+		require.Equal(t, 7, len(paragraphs))
+
+		// Check that header paragraphs have IsHeader = true
+		require.True(t, paragraphs[0].IsHeader) // # Main Header
+		require.True(t, paragraphs[2].IsHeader) // ## Sub Header
+		require.True(t, paragraphs[4].IsHeader) // ### Deep Header
+
+		// Check that content paragraphs have IsHeader = false
+		require.False(t, paragraphs[1].IsHeader) // Some content here.
+		require.False(t, paragraphs[3].IsHeader) // More content.
+		require.False(t, paragraphs[5].IsHeader) // Deep content.
+		require.False(t, paragraphs[6].IsHeader) // Back to main content.
+
+		require.Equal(t, 1, len(paragraphs[0].Headers))
+		require.Equal(t, "Main Header", paragraphs[0].Headers[0])
+
+		require.Equal(t, 2, len(paragraphs[2].Headers))
+		require.Equal(t, "Main Header", paragraphs[2].Headers[0])
+		require.Equal(t, "Sub Header", paragraphs[2].Headers[1])
+
+		require.Equal(t, 3, len(paragraphs[4].Headers))
+		require.Equal(t, "Main Header", paragraphs[4].Headers[0])
+		require.Equal(t, "Sub Header", paragraphs[4].Headers[1])
+		require.Equal(t, "Deep Header", paragraphs[4].Headers[2])
+	})
+
+	t.Run("headers without content paragraphs", func(t *testing.T) {
+		content := `# Header 1
+
+# Header 2
+
+# Header 3`
+
+		paragraphs := SplitPageToParagraphs(pageID, content)
+		require.Equal(t, 3, len(paragraphs))
+
+		for i, p := range paragraphs {
+			require.Equal(t, i*2, p.LineNumber)
+			require.Equal(t, i, p.ParagraphIndex)
+			// All paragraphs should be headers
+			require.True(t, p.IsHeader)
+		}
+	})
+
+	t.Run("mixed content with lists and headers", func(t *testing.T) {
+		content := `# Getting Started
+
+This is introduction.
+
+## Prerequisites
+
+- Item 1
+- Item 2
+
+## Installation
+
+To install, run:
+
+    code example
+
+Final content.`
+
+		paragraphs := SplitPageToParagraphs(pageID, content)
+		require.Equal(t, 8, len(paragraphs))
+
+		require.Equal(t, 0, paragraphs[0].LineNumber) // # Getting Started
+		require.True(t, paragraphs[0].IsHeader)
+		require.Equal(t, 2, paragraphs[1].LineNumber) // This is introduction.
+		require.False(t, paragraphs[1].IsHeader)
+		require.Equal(t, 4, paragraphs[2].LineNumber) // ## Prerequisites
+		require.True(t, paragraphs[2].IsHeader)
+		require.Equal(t, 6, paragraphs[3].LineNumber) // - Item 1
+		require.False(t, paragraphs[3].IsHeader)
+		require.Equal(t, 9, paragraphs[4].LineNumber) // ## Installation
+		require.True(t, paragraphs[4].IsHeader)
+		require.Equal(t, 11, paragraphs[5].LineNumber) // Final content.
+		require.False(t, paragraphs[5].IsHeader)
+	})
+
+	t.Run("header with special symbols", func(t *testing.T) {
+		content := `# Header with: symbols, and - punctuation!
+
+Content here.`
+
+		paragraphs := SplitPageToParagraphs(pageID, content)
+		require.Equal(t, 2, len(paragraphs))
+
+		// Check that the header paragraph has IsHeader = true
+		require.True(t, paragraphs[0].IsHeader)
+		// Check that the content paragraph has IsHeader = false
+		require.False(t, paragraphs[1].IsHeader)
+
+		require.Equal(t, "#header-with-symbols-and-punctuation", *paragraphs[0].AnchorSlug)
 	})
 }
 
