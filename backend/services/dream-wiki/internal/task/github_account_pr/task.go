@@ -324,7 +324,7 @@ func (t *gitHubAccountPRTask) askLLMForSearchQueries() error {
 }
 
 func (t *gitHubAccountPRTask) searchHotParagraphs() error {
-	var hotParagraphs []internals.ParagraphData
+	hotParagraphs := make([]internals.ParagraphWithContext, 0)
 
 	if t.state.LlmSuggestedSearchQueries == nil {
 		return fmt.Errorf("no suggested search queries")
@@ -337,26 +337,14 @@ func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 			continue
 		}
 
-		results, err := t.repo.SearchByEmbedding(query, embedding)
+		results, err := t.repo.SearchByEmbeddingWithContext(query, embedding, 1)
 		if err != nil {
 			t.deps.Logger.Warn("failed to search by embedding: %v", err)
 			continue
 		}
 
-		count := 0
 		for _, result := range results {
-			if count >= 2 {
-				break
-			}
-
-			paragraph := internals.ParagraphData{
-				PageId:           result.PageId,
-				LineNumber:       0, // TODO fix
-				ParagraphContent: result.Description,
-			}
-
-			hotParagraphs = append(hotParagraphs, paragraph)
-			count++
+			hotParagraphs = append(hotParagraphs, result)
 		}
 	}
 
@@ -372,7 +360,7 @@ func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
 	var content strings.Builder
 	for _, paragraph := range *t.state.HotParagraphs {
 		content.WriteString(fmt.Sprintf("Page ID: %s\n", paragraph.PageId))
-		content.WriteString(fmt.Sprintf("Content: %s\n\n", paragraph.ParagraphContent))
+		content.WriteString(fmt.Sprintf("Content: %s\n\n", paragraph.Content))
 	}
 
 	prompt := `Please rephrase the following documentation paragraphs to better reflect the product changes`
@@ -412,7 +400,7 @@ func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
 			continue
 		}
 
-		newContent := strings.Replace(page.Content, paragraph.ParagraphContent, rephrasedParagraphs[i], 1)
+		newContent := strings.Replace(page.Content, paragraph.Content, rephrasedParagraphs[i], 1)
 
 		draftID, err := t.repo.CreateDraft(paragraph.PageId, page.Title, newContent)
 		if err != nil {

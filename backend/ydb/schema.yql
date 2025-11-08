@@ -24,14 +24,14 @@ CREATE TABLE PageRevision (
 );
 
 CREATE TABLE Paragraph (
-    page_id          Uuid         NOT NULL,
-    line_number      Int64        NOT NULL,
-    content          Text         NOT NULL,
-    anchor_link_slug Text         NOT NULL,
-    embedding        String       NOT NULL,
-    paragraph_index  Int64        NOT NULL,
-    headers          List<String> NOT NULL,
-    PRIMARY KEY (page_id, line_number)
+    page_id          Uuid   NOT NULL,
+    paragraph_index  Int64  NOT NULL,
+    line_number      Int64  NOT NULL,
+    content          Text   NOT NULL,
+    anchor_link_slug Text   NOT NULL,
+    embedding        String NOT NULL,
+    headers          Json   NOT NULL,
+    PRIMARY KEY (page_id, paragraph_index)
 );
 
 CREATE TABLE IntegrationLogField (

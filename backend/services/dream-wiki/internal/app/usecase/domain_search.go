@@ -22,8 +22,8 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	for i, result := range results {
 		apiResults[i] = api.SearchResultItem{
 			PageId:      result.PageId,
-			Title:       result.Title,
-			Description: result.Description,
+			Title:       result.PageTitle,
+			Description: result.ParagraphContent,
 		}
 	}
 

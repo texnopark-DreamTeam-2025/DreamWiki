@@ -78,7 +78,7 @@ components:
         hot_paragraphs:
           type: array
           items:
-            $ref: '#/components/schemas/ParagraphData'
+            $ref: '#/components/schemas/ParagraphWithContext'
         llm_rephrased_paragraph_contents:
           type: array
           items:
@@ -262,19 +262,50 @@ components:
         current_revision_id:
           $ref: '#/components/schemas/RevisionID'
 
-    ParagraphData:
+    ParagraphWithContext:
       type: object
       properties:
         page_id:
           $ref: '#/components/schemas/PageID'
-        line_number:
+        paragraph_index:
           type: integer
-        paragraph_content:
+        start_line_number:
+          type: integer
+        end_line_number:
+          type: integer
+        content:
           type: string
       required:
         - page_id
-        - line_number
+        - paragraph_index
+        - start_line_number
+        - end_line_number
+        - content
+
+    SearchResultItem:
+      type: object
+      properties:
+        page_id:
+          $ref: '#/components/schemas/PageID'
+        page_slug:
+          type: string
+        paragraph_index:
+          type: integer
+        page_title:
+          type: string
+        paragraph_content:
+          type: string
+        anchor_slug:
+          type: string
+        headers:
+          $ref: '#/components/schemas/HeadersList'
+      required:
+        - page_id
+        - page_slug
+        - paragraph_index
+        - page_title
         - paragraph_content
+        - headers
 
     RawJSON:
       type: object
@@ -306,9 +337,14 @@ components:
         - embedding
         - headers
         - paragraph_index
-    
+
     Embedding:
       type: array
       items:
         type: number
-        format: float  
+        format: float
+
+    HeadersList:
+      type: array
+      items:
+        type: string
