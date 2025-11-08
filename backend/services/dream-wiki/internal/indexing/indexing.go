@@ -1,6 +1,7 @@
 package indexing
 
 import (
+	"log"
 	"regexp"
 	"strings"
 
@@ -41,6 +42,7 @@ func SplitPageToParagraphs(pageID api.PageID, page string) []internals.Paragraph
 		if len(headers) > 0 {
 			slug := generateAnchorSlug(headers[len(headers)-1])
 			anchorSlug = &slug
+			log.Fatal("There is page slug: ", anchorSlug)
 		}
 
 		paragraphs = append(paragraphs, internals.ParagraphWithEmbedding{

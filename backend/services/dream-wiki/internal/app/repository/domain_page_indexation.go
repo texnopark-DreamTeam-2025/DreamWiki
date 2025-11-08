@@ -40,9 +40,11 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		);
 	`
 
-	anchorLinkSlug := ""
+	var anchorLinkSlug types.Value
 	if paragraph.AnchorSlug != nil {
-		anchorLinkSlug = *paragraph.AnchorSlug
+		anchorLinkSlug = types.OptionalValue(types.TextValue(*paragraph.AnchorSlug))
+	} else {
+		anchorLinkSlug = types.NullValue(types.TypeText)
 	}
 
 	if len(paragraph.Embedding) == 0 {
@@ -54,7 +56,7 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		table.ValueParam("$lineNumber", types.Int64Value(int64(paragraph.LineNumber))),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
-		table.ValueParam("$anchorLinkSlug", types.TextValue(anchorLinkSlug)),
+		table.ValueParam("$anchorLinkSlug", anchorLinkSlug),
 		table.ValueParam("$paragraphIndex", types.Int64Value(int64(paragraph.ParagraphIndex))),
 		table.ValueParam("$headers", types.UTF8Value(strings.Join(paragraph.Headers, "\n"))),
 	)
