@@ -1,8 +1,6 @@
 package repository
 
 import (
-	"sort"
-
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
@@ -74,15 +72,12 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 	}
 
 	var allParagraphs []internals.ParagraphWithContext
-	pageParagraphs := make(map[string][]internals.ParagraphWithContext)
+	allRetrievedParagraphs := make([]internals.ParagraphWithContext, 0)
 
 	for _, result := range initialResults {
 		paragraphIndex := result.ParagraphIndex
 
 		startIndex := int32(paragraphIndex - contextSize)
-		if startIndex < 0 {
-			startIndex = 0
-		}
 		endIndex := int32(paragraphIndex + contextSize)
 
 		yql := `
@@ -124,47 +119,17 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 				Content:         content,
 			}
 
-			pageKey := string(pageID[:])
-			pageParagraphs[pageKey] = append(pageParagraphs[pageKey], paragraphWithContext)
+			allRetrievedParagraphs = append(allRetrievedParagraphs, paragraphWithContext)
 		}
 		result.Close()
 	}
 
+	pageParagraphs := groupParagraphsByPages(allRetrievedParagraphs)
+
 	for _, paragraphs := range pageParagraphs {
-		merged := r.mergeOverlappingParagraphs(paragraphs)
+		merged := mergeOverlappingParagraphs(paragraphs)
 		allParagraphs = append(allParagraphs, merged...)
 	}
 
 	return allParagraphs, nil
-}
-
-func (r *appRepositoryImpl) mergeOverlappingParagraphs(paragraphs []internals.ParagraphWithContext) []internals.ParagraphWithContext {
-	if len(paragraphs) == 0 {
-		return paragraphs
-	}
-
-	sort.Slice(paragraphs, func(i, j int) bool {
-		return paragraphs[i].StartLineNumber < paragraphs[j].StartLineNumber
-	})
-
-	var merged []internals.ParagraphWithContext
-	current := paragraphs[0]
-
-	for i := 1; i < len(paragraphs); i++ {
-		next := paragraphs[i]
-
-		if next.StartLineNumber <= current.EndLineNumber+1 {
-			current.Content += "\n" + next.Content
-			if next.EndLineNumber > current.EndLineNumber {
-				current.EndLineNumber = next.EndLineNumber
-			}
-		} else {
-			merged = append(merged, current)
-			current = next
-		}
-	}
-
-	merged = append(merged, current)
-
-	return merged
 }
