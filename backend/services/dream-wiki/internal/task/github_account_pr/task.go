@@ -188,14 +188,12 @@ func (t *gitHubAccountPRTask) accountResult(result internals.TaskActionResult) e
 func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) error {
 	t.accountResult(result)
 
-	// Step 1: if pr_patch and pr_description are absent, fetch them and keep going;
 	if t.state.PrPatch == nil || t.state.PrDescription == nil {
 		if err := t.fetchPRData(); err != nil {
 			return fmt.Errorf("failed to fetch PR data: %w", err)
 		}
 	}
 
-	// Step 2: if llm_detected_product_changes is absent, create task action with type ask_llm, provide prompt; then commit transaction and exit;
 	if t.state.LlmDetectedProductChanges == nil {
 		if err := t.askLLMForProductChanges(); err != nil {
 			return fmt.Errorf("failed to ask LLM for product changes: %w", err)
@@ -203,10 +201,6 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 		return t.saveChanges()
 	}
 
-	// Step 3: If llm_detected_product_changes is absent, ask llm with sufficient prompt, then exit;
-	// This step seems to be a duplicate of step 2, so we'll skip it
-
-	// Step 4: If llm_suggested_search_queries is absent, ask llm, then truncate to 3, then exit;
 	if t.state.LlmSuggestedSearchQueries == nil {
 		if err := t.askLLMForSearchQueries(); err != nil {
 			return fmt.Errorf("failed to ask LLM for search queries: %w", err)
@@ -214,7 +208,6 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 		return t.saveChanges()
 	}
 
-	// Step 5: If hot_paragraphs is empty, do search request (create AppUsecase, call method), then truncate to 2 for each query, then ask LLM to rephrase, then exit;
 	if t.state.HotParagraphs == nil {
 		err := t.searchHotParagraphs()
 		if err != nil {
@@ -227,7 +220,6 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 		return t.saveChanges()
 	}
 
-	// Step 6: If llm_rephrased_paragraph is not empty, create drafts with pages with this paragraph replaced, then finish task
 	if t.state.LlmRephrasedParagraphContents != nil && len(*t.state.LlmRephrasedParagraphContents) > 0 {
 		if err := t.createDraftsWithRephrasedParagraphs(); err != nil {
 			return fmt.Errorf("failed to create drafts with rephrased paragraphs: %w", err)
@@ -282,12 +274,15 @@ func (t *gitHubAccountPRTask) fetchPRData() error {
 }
 
 func (t *gitHubAccountPRTask) askLLMForProductChanges() error {
-	// Create a prompt for the LLM to detect product changes
-	prompt := fmt.Sprintf(`Analyze the following GitHub PR and identify product changes:
-PR Description: %s
-PR Patch: %s
+	prompt := fmt.Sprintf(`Проанализируй этот GitHub PR и определи продуктовые изменения.
+Сфокусируйся на продуктовых изменениях, а не на деталях реализации.
+Обозначь максимум 2 изменения. Если значимых продуктовых изменений
+не было, просто напиши NO_CHANGES и ничего больше не пиши.
+Не учитывай исправление опечаток или что-то схожее.
 
-Please list the product changes introduced by this PR. Focus on functional changes that affect the product, not implementation details.`,
+Вот информация:
+Описание PR: %s
+PR Patch: %s`,
 		*t.state.PrDescription, *t.state.PrPatch)
 
 	messages := []internals.LLMMessage{
@@ -309,13 +304,15 @@ func (t *gitHubAccountPRTask) askLLMForSearchQueries() error {
 		}
 	}
 
-	prompt := fmt.Sprintf(`Based on the following product changes, suggest search queries to find relevant documentation pages:
-Product Changes:
+	prompt := fmt.Sprintf(`Я перечислю изменения в продукте. На основе их предложи поисковые запросы.
+У компании есть база знаний, по которой есть семантический поиск. Надо сформировать поисковые запросы, которые могут
+найти такие фрагменты базы знаний, которые теоретически надо изменить при внесении изменений в продукт.
+Сформулируй как можно меньше запросов. Максимум - 3 запроса.
+
+Вот продуктовые изменения:
 %s
+`, productChanges)
 
-Please provide 5 search queries that would help find relevant documentation pages for these changes.`, productChanges)
-
-	// Ask LLM
 	messages := []internals.LLMMessage{
 		{
 			Role:    string(ycloud_client_gen.User),
@@ -334,21 +331,18 @@ func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 	}
 
 	for _, query := range *t.state.LlmSuggestedSearchQueries {
-		// Generate embedding for the query
 		embedding, err := t.deps.InferenceClient.GenerateEmbedding(t.ctx, query)
 		if err != nil {
 			t.deps.Logger.Warn("failed to generate embedding for query: %v", err)
 			continue
 		}
 
-		// Search by embedding
 		results, err := t.repo.SearchByEmbedding(query, embedding)
 		if err != nil {
 			t.deps.Logger.Warn("failed to search by embedding: %v", err)
 			continue
 		}
 
-		// Add up to 2 paragraphs for each query
 		count := 0
 		for _, result := range results {
 			if count >= 2 {
@@ -371,7 +365,6 @@ func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 }
 
 func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
-	// Ask LLM to rephrase
 	if len(*t.state.HotParagraphs) == 0 {
 		return fmt.Errorf("empty hot paragraphs")
 	}
@@ -399,9 +392,6 @@ func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
 }
 
 func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
-	// Create drafts with pages with this paragraph replaced
-	// This is a simplified implementation
-
 	if t.state.HotParagraphs == nil || t.state.LlmRephrasedParagraphContents == nil {
 		return nil
 	}
@@ -409,7 +399,6 @@ func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
 	hotParagraphs := *t.state.HotParagraphs
 	rephrasedParagraphs := *t.state.LlmRephrasedParagraphContents
 
-	// Create a draft for each page
 	createdDraftIDs := make([]api.DraftID, 0)
 
 	for i, paragraph := range hotParagraphs {
@@ -417,19 +406,14 @@ func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
 			break
 		}
 
-		// Get the page content
 		page, _, err := t.repo.GetPageByID(paragraph.PageId)
 		if err != nil {
 			t.deps.Logger.Warn("failed to get page by ID: %v", err)
 			continue
 		}
 
-		// Replace the paragraph content with the rephrased version
-		// This is a simplified implementation - in reality, we would need to
-		// find the exact paragraph and replace it
 		newContent := strings.Replace(page.Content, paragraph.ParagraphContent, rephrasedParagraphs[i], 1)
 
-		// Create a draft
 		draftID, err := t.repo.CreateDraft(paragraph.PageId, page.Title, newContent)
 		if err != nil {
 			t.deps.Logger.Warn("failed to create draft: %v", err)
