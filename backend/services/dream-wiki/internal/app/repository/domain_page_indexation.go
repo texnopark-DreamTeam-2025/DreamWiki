@@ -1,6 +1,9 @@
 package repository
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
@@ -43,12 +46,14 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		anchorLinkSlug = *paragraph.AnchorSlug
 	}
 
-	// Convert headers to YDB list
-	headerValues := make([]types.Value, len(paragraph.Headers))
-	for i, header := range paragraph.Headers {
-		headerValues[i] = types.TextValue(header)
+	headersJSON, err := json.Marshal(paragraph.Headers)
+	if err != nil {
+		return err
 	}
-	headersList := types.ListValue(headerValues...)
+
+	if len(paragraph.Embedding) == 0 {
+		return fmt.Errorf("embedding is empty for paragraph with page_id: %s, line_number: %d", paragraph.PageId, paragraph.LineNumber)
+	}
 
 	result, err := r.ydbClient.InTX().Execute(yql,
 		table.ValueParam("$pageID", types.UuidValue(paragraph.PageId)),
@@ -57,7 +62,7 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
 		table.ValueParam("$anchorLinkSlug", types.TextValue(anchorLinkSlug)),
 		table.ValueParam("$paragraphIndex", types.Int64Value(int64(paragraph.ParagraphIndex))),
-		table.ValueParam("$headers", headersList),
+		table.ValueParam("$headers", types.JSONValueFromBytes(headersJSON)),
 	)
 	if err != nil {
 		return err

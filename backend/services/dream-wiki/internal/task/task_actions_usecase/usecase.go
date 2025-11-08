@@ -137,13 +137,11 @@ func (u *taskActionUsecaseImpl) executeNewTaskAction(repo repository.AppReposito
 }
 
 func (u *taskActionUsecaseImpl) executeAskLLMAction(repo repository.AppRepository, actionID internals.TaskActionID, taskAction *internals.TaskAction) error {
-	// Parse the task action as TaskActionAskLLM
 	askLLMAction, err := taskAction.AsTaskActionAskLLM()
 	if err != nil {
 		return fmt.Errorf("failed to parse task action as TaskActionAskLLM: %w", err)
 	}
 
-	// Convert LLMMessage to ycloud_client_gen.Message
 	var messages []ycloud_client_gen.Message
 	for _, msg := range askLLMAction.Messages {
 		messages = append(messages, ycloud_client_gen.Message{
@@ -152,14 +150,11 @@ func (u *taskActionUsecaseImpl) executeAskLLMAction(repo repository.AppRepositor
 		})
 	}
 
-	// Send request to ycloud
 	operationID, err := u.deps.YCloudClient.StartAsyncLLMRequest(u.ctx, messages)
 	if err != nil {
 		return fmt.Errorf("failed to start async LLM request: %w", err)
 	}
 
-	// Poll ycloud each 5 seconds until operation status is not done
-	// Timeout 3 minutes
 	timeout := time.After(3 * time.Minute)
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
@@ -180,7 +175,6 @@ pollingLoop:
 				return fmt.Errorf("operation is nil")
 			}
 
-			// Check if operation is done
 			if operation.Done {
 				break pollingLoop
 			}
@@ -227,7 +221,6 @@ pollingLoop:
 		return fmt.Errorf("failed to create task action result: %w", err)
 	}
 
-	// Enqueue result
 	err = repo.EnqueueTaskActionResult(actionID)
 	if err != nil {
 		return fmt.Errorf("failed to enqueue task action result: %w", err)
@@ -249,7 +242,6 @@ func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRep
 
 	paragraphs := indexing.SplitPageToParagraphs(pageID, page.Content)
 
-	// Extract content strings for embedding generation
 	contentStrings := make([]string, len(paragraphs))
 	for i, paragraph := range paragraphs {
 		contentStrings[i] = paragraph.Content
@@ -261,7 +253,6 @@ func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRep
 	}
 
 	for i, paragraph := range paragraphs {
-		// Add embedding to the paragraph
 		paragraph.Embedding = embeddings[i]
 
 		err = repo.AddIndexedParagraph(paragraph)

@@ -134,7 +134,7 @@ func (t *TopicReaders) readTaskActionMessages() {
 		taskActionUsecase := task_actions_usecase.NewTaskActionUsecase(context.Background(), t.deps)
 		err := taskActionUsecase.ExecuteAction(internals.TaskActionID(taskActionID))
 		if err != nil {
-			t.log.Error("failed to execute task action", "action_id", taskActionID, "error", err)
+			t.log.Error("failed to execute task action", " action_id ", taskActionID, " error ", err)
 		} else {
 			t.log.Info("successfully executed task action", "action_id", taskActionID)
 		}
