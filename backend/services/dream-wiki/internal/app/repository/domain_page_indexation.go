@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
@@ -40,15 +40,9 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		);
 	`
 
-	// Handle anchor slug (can be nil)
 	anchorLinkSlug := ""
 	if paragraph.AnchorSlug != nil {
 		anchorLinkSlug = *paragraph.AnchorSlug
-	}
-
-	headersJSON, err := json.Marshal(paragraph.Headers)
-	if err != nil {
-		return err
 	}
 
 	if len(paragraph.Embedding) == 0 {
@@ -62,7 +56,7 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		table.ValueParam("$embedding", embeddingToYDBList(paragraph.Embedding)),
 		table.ValueParam("$anchorLinkSlug", types.TextValue(anchorLinkSlug)),
 		table.ValueParam("$paragraphIndex", types.Int64Value(int64(paragraph.ParagraphIndex))),
-		table.ValueParam("$headers", types.JSONValueFromBytes(headersJSON)),
+		table.ValueParam("$headers", types.UTF8Value(strings.Join(paragraph.Headers, "\n"))),
 	)
 	if err != nil {
 		return err

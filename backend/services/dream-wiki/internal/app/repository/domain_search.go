@@ -1,6 +1,8 @@
 package repository
 
 import (
+	"strings"
+
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
@@ -40,13 +42,22 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding model
 	for result.NextRow() {
 		var retrievedPageID api.PageID
 		var pageSlug string
-		var paragraphIndex int
+		var paragraphIndex int64
 		var title string
 		var pageContent string
 		var anchorLinkSlug *string
-		var headers []string
+		var headers string
 		var distance float32
-		err = result.FetchRow(&retrievedPageID, &pageSlug, &paragraphIndex, &title, &pageContent, &anchorLinkSlug, &headers, &distance)
+		err = result.FetchRow(
+			&retrievedPageID,
+			&pageSlug,
+			&paragraphIndex,
+			&title,
+			&pageContent,
+			&anchorLinkSlug,
+			&headers,
+			&distance,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -55,10 +66,10 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding model
 			PageId:           retrievedPageID,
 			PageSlug:         pageSlug,
 			PageTitle:        title,
-			ParagraphIndex:   paragraphIndex,
+			ParagraphIndex:   int(paragraphIndex),
 			ParagraphContent: pageContent,
 			AnchorSlug:       anchorLinkSlug,
-			Headers:          headers,
+			Headers:          strings.Split(headers, "\n"),
 		})
 	}
 

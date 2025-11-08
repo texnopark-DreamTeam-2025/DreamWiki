@@ -28,9 +28,9 @@ CREATE TABLE Paragraph (
     paragraph_index  Int64  NOT NULL,
     line_number      Int64  NOT NULL,
     content          Text   NOT NULL,
-    anchor_link_slug Text   NOT NULL,
+    anchor_link_slug Text,
     embedding        String NOT NULL,
-    headers          Json   NOT NULL,
+    headers          String NOT NULL, -- newline separated
     PRIMARY KEY (page_id, paragraph_index)
 );
 
