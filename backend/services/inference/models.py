@@ -12,3 +12,11 @@ class V1EmbeddingResponse(BaseModel):
 
 class V1ErrorResponse(BaseModel):
     error: str
+
+
+class V1StemmingRequest(BaseModel):
+    paragraphs: List[str]
+
+
+class V1StemmingResponse(BaseModel):
+    stems: List[List[str]]

@@ -30,8 +30,8 @@ CREATE TABLE Paragraph (
     content          Text    NOT NULL,
     anchor_link_slug Text    NOT NULL,
     embedding        String  NOT NULL,
-    headers          Json    NOT NULL,
-    is_header        Boolean NOT NULL,
+    headers          String  NOT NULL, -- newline separated
+    is_header        Bool    NOT NULL,
     PRIMARY KEY (page_id, paragraph_index)
 );
 

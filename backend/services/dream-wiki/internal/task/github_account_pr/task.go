@@ -178,11 +178,13 @@ func (t *gitHubAccountPRTask) accountResult(result internals.TaskActionResult) e
 	}
 	if t.state.LlmDetectedProductChanges == nil {
 		res := strings.Split(resCast.ResponseMessage, "\n")
+		t.deps.Logger.Info("{{{{{{{}}}}}}}", resCast.ResponseMessage)
 		t.state.LlmDetectedProductChanges = &res
 		return nil
 	}
 	if t.state.LlmSuggestedSearchQueries == nil {
 		res := strings.Split(resCast.ResponseMessage, "\n")
+		t.deps.Logger.Info("((((((((((((((()))))))))))))))", resCast.ResponseMessage)
 		t.state.LlmSuggestedSearchQueries = &res
 		return nil
 	}
@@ -209,7 +211,7 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 		return t.saveChanges()
 	}
 
-	if t.state.LlmSuggestedSearchQueries == nil {
+	if t.state.LlmSuggestedSearchQueries == nil || len(*t.state.LlmSuggestedSearchQueries) == 0 {
 		if err := t.askLLMForSearchQueries(); err != nil {
 			return fmt.Errorf("failed to ask LLM for search queries: %w", err)
 		}
@@ -220,6 +222,7 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 	maybeRephrased := t.state.LlmRephrasedParagraphContents
 
 	if maybeHotParagraphs == nil {
+		fmt.Println("################################## here")
 		err := t.searchHotParagraphs()
 		if err != nil {
 			return fmt.Errorf("failed to search hot parageaphs: %w", err)
@@ -313,7 +316,6 @@ PR Patch: %s`,
 }
 
 func (t *gitHubAccountPRTask) askLLMForSearchQueries() error {
-	// Create a prompt for the LLM to suggest search queries
 	productChanges := ""
 	if t.state.LlmDetectedProductChanges != nil {
 		for _, change := range *t.state.LlmDetectedProductChanges {
@@ -341,11 +343,13 @@ func (t *gitHubAccountPRTask) askLLMForSearchQueries() error {
 }
 
 func (t *gitHubAccountPRTask) searchHotParagraphs() error {
-	hotParagraphs := make([]internals.ParagraphWithContext, 0)
-
-	if t.state.LlmSuggestedSearchQueries == nil {
+	if t.state.LlmSuggestedSearchQueries == nil || len(*t.state.LlmSuggestedSearchQueries) == 0 {
+		t.deps.Logger.Error("**************** no suggested search queries")
 		return fmt.Errorf("no suggested search queries")
 	}
+	fmt.Println("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
+
+	hp := make([]internals.ParagraphWithContext, 0)
 
 	for _, query := range *t.state.LlmSuggestedSearchQueries {
 		embedding, err := t.deps.InferenceClient.GenerateEmbedding(t.ctx, query)
@@ -354,19 +358,19 @@ func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 			continue
 		}
 
-		results, err := t.repo.SearchByEmbeddingWithContext(query, internals.Embedding(embedding), 1)
+		hotParagraphs, err := t.repo.SearchByEmbeddingWithContext(query, internals.Embedding(embedding), 1)
 		if err != nil {
 			t.deps.Logger.Warn("failed to search by embedding: %v", err)
 			continue
 		}
 
-		for _, result := range results {
-			hotParagraphs = append(hotParagraphs, result)
-		}
+		t.deps.Logger.Info("found %d hot paragraphs for query: %s", len(hotParagraphs), query)
+		t.deps.Logger.Info(hotParagraphs)
+
+		hp = append(hp, hotParagraphs...)
 	}
 
-	hotParagraphs = hotParagraphs[:5]
-	t.state.HotParagraphs = &hotParagraphs
+	t.state.HotParagraphs = &hp
 	temp := make([]string, 0)
 	t.state.LlmRephrasedParagraphContents = &temp
 	return nil
@@ -378,7 +382,14 @@ func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
 	}
 	currentParagraphContent := (*t.state.HotParagraphs)[len(*t.state.LlmRephrasedParagraphContents)].Content
 
-	prompt := `Please rephrase the following documentation paragraphs to better reflect the product changes`
+	prompt := fmt.Sprintf(`Измени это с учётом изменений в коде, чтобы текст соответствовал действительности.
+Я тебе напишу какую-то информацию из корпоративной wiki. Твой ответ должен включать только отредактированную информацию.
+Постарайся внести только те изменения, которые действительно произошли.
+
+Вот информация:
+Описание PR: %s
+PR Patch: %s`,
+		*t.state.PrDescription, *t.state.PrPatch)
 
 	messages := []internals.LLMMessage{
 		{
@@ -424,6 +435,7 @@ func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
 		}
 
 		createdDraftIDs = append(createdDraftIDs, *draftID)
+		break
 	}
 
 	t.state.CreatedDraftIds = &createdDraftIDs

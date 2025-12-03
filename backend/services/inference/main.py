@@ -2,31 +2,42 @@ from fastapi import FastAPI, HTTPException
 from transformers import AutoTokenizer, AutoModel
 import torch
 import numpy as np
-from models import V1EmbeddingRequest, V1EmbeddingResponse, V1ErrorResponse
+from models import (
+    V1EmbeddingRequest,
+    V1EmbeddingResponse,
+    V1ErrorResponse,
+    V1StemmingRequest,
+    V1StemmingResponse
+)
 import logging
+import re
+import nltk
+from nltk.stem import SnowballStemmer
+import pymorphy2
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
+
+russian_chars_regex = re.compile(r'[а-яА-ЯёЁ]')
+
 app = FastAPI(
     title="Inference API",
     description="API Specification for RuBERT Transformer Inference Service",
     version="0.0.1"
 )
 
-# Global variables for model and tokenizer
 model = None
 tokenizer = None
 
+stemmer = None
+morph = None
+
 
 def load_rubert_model():
-    """Load the RuBERT model and tokenizer"""
     global model, tokenizer
     try:
         logger.info("Loading RuBERT model...")
-        # Load the pre-downloaded tokenizer and model
         tokenizer = AutoTokenizer.from_pretrained("/app/rubert", local_files_only=True, use_fast=False)
         model = AutoModel.from_pretrained("/app/rubert", local_files_only=True)
         logger.info("RuBERT model loaded successfully")
@@ -35,10 +46,22 @@ def load_rubert_model():
         raise
 
 
+def load_stemming_tools():
+    global stemmer, morph
+    try:
+        logger.info("Loading stemming tools...")
+        stemmer = SnowballStemmer("russian")
+        morph = pymorphy2.MorphAnalyzer()
+        logger.info("Stemming tools loaded successfully")
+    except Exception as e:
+        logger.error(f"Failed to load stemming tools: {e}")
+        raise
+
+
 @app.on_event("startup")
 async def startup_event():
-    """Load the model on startup"""
     load_rubert_model()
+    load_stemming_tools()
 
 
 @app.post("/v1/create-text-embedding",
@@ -47,25 +70,16 @@ async def startup_event():
           summary="Generate text embeddings using RuBERT transformer",
           operation_id="generateEmbedding")
 async def generate_embedding(request: V1EmbeddingRequest):
-    """
-    Generate text embeddings using RuBERT transformer model.
-
-    - **texts**: List of input texts for embedding generation
-    """
     try:
         if model is None or tokenizer is None:
             raise HTTPException(status_code=500, detail="Model not loaded")
 
-        # Tokenize all input texts
         inputs = tokenizer(request.texts, return_tensors="pt", padding=True, truncation=True, max_length=512)
 
-        # Generate embeddings
         with torch.no_grad():
             outputs = model(**inputs)
-            # Use the mean of the last hidden states as the embedding
             embeddings = outputs.last_hidden_state.mean(dim=1)
 
-        # Convert to list of lists of floats
         embeddings_list = embeddings.tolist()
 
         return V1EmbeddingResponse(embeddings=embeddings_list)
@@ -77,8 +91,41 @@ async def generate_embedding(request: V1EmbeddingRequest):
 
 @app.get("/health", summary="Health check endpoint")
 async def health_check():
-    """Health check endpoint"""
     return {"status": "ok"}
+
+
+def is_russian(word):
+    return bool(russian_chars_regex.fullmatch(word))
+
+
+@app.post("/v1/stemming",
+          response_model=V1StemmingResponse,
+          responses={422: {"model": V1ErrorResponse}, 500: {"model": V1ErrorResponse}},
+          summary="Generate stems for paragraphs",
+          operation_id="generateStems")
+async def generate_stems(request: V1StemmingRequest):
+    try:
+        if stemmer is None or morph is None:
+            raise HTTPException(status_code=500, detail="Stemming tools not loaded")
+
+        result = []
+        for paragraph in request.paragraphs:
+            words = paragraph.split()
+            stems = []
+            for word in words:
+                if is_russian(word):
+                    # REVIEW: implement functions stem_english_word и stem_russian_word
+                    parsed = morph.parse(word)[0]
+                    stems.append(parsed.normal_form)
+                else:
+                    stems.append(stemmer.stem(word))
+            result.append(stems)
+
+        return V1StemmingResponse(stems=result)
+
+    except Exception as e:
+        logger.error(f"Error generating stems: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

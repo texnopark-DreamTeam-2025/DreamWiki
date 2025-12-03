@@ -14,7 +14,7 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	results, err := repo.SearchByEmbedding(req.Query, internals.Embedding(embedding))
+	results, err := repo.SearchByEmbedding(req.Query, internals.Embedding(embedding), 20)
 	if err != nil {
 		return nil, err
 	}

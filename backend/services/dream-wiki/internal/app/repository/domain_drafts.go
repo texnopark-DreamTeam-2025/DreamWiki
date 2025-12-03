@@ -64,7 +64,7 @@ func (r *appRepositoryImpl) GetDraftByID(draftID api.DraftID) (*api.Draft, error
 	FROM Draft d
 	JOIN PageRevision r ON r.revision_id=d.page_revision_id
 	JOIN Page p ON r.page_id = p.page_id
-	-- WHERE d.draft_id = $draftID;
+	WHERE d.draft_id = $draftID;
 	`
 
 	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$draftID", types.UuidValue(draftID)))
@@ -134,7 +134,7 @@ func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.D
 		p.title
 	FROM Draft d
 	JOIN Page p ON d.page_revision_id = p.current_revision_id
-	WHERE (d.created_at, d.draft_id) < ($timeFrom, $idFrom)
+	-- WHERE (d.created_at, d.draft_id) < ($timeFrom, $idFrom)
 	ORDER BY d.created_at DESC, d.draft_id DESC
 	LIMIT $limit;
 	`

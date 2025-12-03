@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
@@ -9,7 +10,7 @@ import (
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
 )
 
-func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding internals.Embedding) ([]internals.SearchResultItem, error) {
+func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding internals.Embedding, limit int) ([]internals.SearchResultItem, error) {
 	yql := `
 		$targetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
 
@@ -19,7 +20,6 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 			par.paragraph_index,
 			page.title,
 			par.content,
-			par.anchor_link_slug,
 			par.headers,
 			Unwrap(Knn::CosineDistance(Unwrap(par.embedding), $targetEmbedding)) As CosineDistance
 		FROM Paragraph par
@@ -45,7 +45,6 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 		var paragraphIndex int64
 		var title string
 		var pageContent string
-		var anchorLinkSlug *string
 		var headers string
 		var distance float32
 		err = result.FetchRow(
@@ -54,7 +53,6 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 			&paragraphIndex,
 			&title,
 			&pageContent,
-			&anchorLinkSlug,
 			&headers,
 			&distance,
 		)
@@ -68,8 +66,8 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 			PageTitle:        title,
 			ParagraphIndex:   int(paragraphIndex),
 			ParagraphContent: pageContent,
-			AnchorSlug:       anchorLinkSlug,
-			Headers:          strings.Split(headers, "\n"),
+			// AnchorSlug:       anchorLinkSlug,
+			Headers: strings.Split(headers, "\n"),
 		})
 	}
 
@@ -77,7 +75,7 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 }
 
 func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbedding internals.Embedding, contextSize int) ([]internals.ParagraphWithContext, error) {
-	initialResults, err := r.SearchByEmbedding(query, queryEmbedding)
+	initialResults, err := r.SearchByEmbedding(query, queryEmbedding, 3)
 	if err != nil {
 		return nil, err
 	}
@@ -141,6 +139,8 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 		merged := mergeOverlappingParagraphs(paragraphs)
 		allParagraphs = append(allParagraphs, merged...)
 	}
+
+	fmt.Printf("HOT PARTDSGLKSDKFLJDJSDJSFDSJKL: %d", len(allParagraphs))
 
 	return allParagraphs, nil
 }

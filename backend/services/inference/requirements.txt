@@ -4,3 +4,5 @@ transformers
 numpy
 pydantic
 protobuf
+nltk
+pymorphy2
