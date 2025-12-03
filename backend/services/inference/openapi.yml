@@ -39,6 +39,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/V1ErrorResponse'
 
+  /v1/stemming:
+    post:
+      summary: Generate stems for paragraphs
+      operationId: generateStems
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/V1StemmingRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1StemmingResponse'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1ErrorResponse'
+
 components:
   schemas:
     V1EmbeddingRequest:
@@ -74,3 +104,27 @@ components:
           description: Error message
       required:
         - error
+
+    V1StemmingRequest:
+      type: object
+      properties:
+        paragraphs:
+          type: array
+          items:
+            type: string
+          description: List of input paragraphs for stemming
+      required:
+        - paragraphs
+
+    V1StemmingResponse:
+      type: object
+      properties:
+        stems:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+          description: List of generated stems for each paragraph
+      required:
+        - stems

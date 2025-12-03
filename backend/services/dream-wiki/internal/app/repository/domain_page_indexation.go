@@ -13,6 +13,7 @@ import (
 func (r *appRepositoryImpl) RemovePageIndexation(pageID api.PageID) error {
 	yql := `
 		DELETE FROM Paragraph WHERE page_id=$pageID;
+		DELETE FROM Term WHERE page_id=$pageID;
 	`
 
 	result, err := r.ydbClient.InTX().Execute(yql,
@@ -59,6 +60,31 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		table.ValueParam("$paragraphIndex", types.Int64Value(int64(paragraph.ParagraphIndex))),
 		table.ValueParam("$headers", types.UTF8Value(strings.Join(paragraph.Headers, "\n"))),
 		table.ValueParam("$isHeader", types.BoolValue(paragraph.IsHeader)),
+	)
+	if err != nil {
+		return err
+	}
+	defer result.Close()
+
+	return nil
+}
+
+func (r *appRepositoryImpl) AddTerm(term string, pageID api.PageID, paragraphIndex int64, timesIn int64) error {
+	yql := `
+		INSERT INTO Term (term, page_id, paragraph_index, times_in)
+		VALUES (
+			$term,
+			$pageID,
+			$paragraphIndex,
+			$timesIn
+		);
+	`
+
+	result, err := r.ydbClient.InTX().Execute(yql,
+		table.ValueParam("$term", types.TextValue(term)),
+		table.ValueParam("$pageID", types.UuidValue(pageID)),
+		table.ValueParam("$paragraphIndex", types.Int64Value(paragraphIndex)),
+		table.ValueParam("$timesIn", types.Int64Value(timesIn)),
 	)
 	if err != nil {
 		return err

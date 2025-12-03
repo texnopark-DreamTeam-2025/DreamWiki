@@ -12,11 +12,13 @@ import (
 type (
 	inferenceClientImpl struct {
 		client *inference_client_gen.ClientWithResponses
+		config *config.Config
 	}
 
 	InferenceClient interface {
 		GenerateEmbedding(ctx context.Context, text string) (internals.Embedding, error)
 		GenerateEmbeddings(ctx context.Context, texts []string) ([]internals.Embedding, error)
+		GenerateStems(ctx context.Context, paragraphs []string) ([][]string, error)
 	}
 )
 
@@ -25,7 +27,7 @@ func NewInferenceClient(config *config.Config) (InferenceClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &inferenceClientImpl{client}, nil
+	return &inferenceClientImpl{client: client, config: config}, nil
 }
 
 func (c *inferenceClientImpl) GenerateEmbedding(ctx context.Context, text string) (internals.Embedding, error) {
@@ -56,4 +58,17 @@ func (c *inferenceClientImpl) GenerateEmbeddings(ctx context.Context, texts []st
 		embeddings[i] = internals.Embedding(embedding)
 	}
 	return embeddings, nil
+}
+
+func (c *inferenceClientImpl) GenerateStems(ctx context.Context, paragraphs []string) ([][]string, error) {
+	resp, err := c.client.GenerateStemsWithResponse(ctx, inference_client_gen.GenerateStemsJSONRequestBody{
+		Paragraphs: paragraphs,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp.JSON200 == nil {
+		return nil, fmt.Errorf("failed to generate stems")
+	}
+	return resp.JSON200.Stems, nil
 }

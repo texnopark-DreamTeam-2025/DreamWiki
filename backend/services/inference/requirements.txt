@@ -5,4 +5,4 @@ numpy
 pydantic
 protobuf
 nltk
-pymorphy2
+pymorphy3

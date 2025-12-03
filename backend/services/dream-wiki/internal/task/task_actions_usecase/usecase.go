@@ -266,12 +266,32 @@ func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRep
 		return err
 	}
 
+	stems, err := u.deps.InferenceClient.GenerateStems(u.ctx, contentStrings)
+	if err != nil {
+		return err
+	}
+
 	for i, paragraph := range paragraphs {
 		paragraph.Embedding = embeddings[i]
 
 		err = repo.AddIndexedParagraph(paragraph)
 		if err != nil {
 			return err
+		}
+
+		termCount := make(map[string]int64)
+		for _, stem := range stems[i] {
+			termCount[stem]++
+		}
+
+		for term, count := range termCount {
+			if count == 0 {
+				continue
+			}
+			err = repo.AddTerm(term, pageID, int64(paragraph.ParagraphIndex), count)
+			if err != nil {
+				return fmt.Errorf("failed to add term %s for page %s: %w", term, pageID, err)
+			}
 		}
 	}
 
