@@ -1,6 +1,9 @@
 package usecase
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
@@ -14,13 +17,31 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	repo := repository.NewAppRepository(u.ctx, u.deps)
 	defer repo.Rollback()
 
-	results, err := repo.SearchByEmbedding(req.Query, internals.Embedding(embedding), 20)
+	embeddingResults, err := repo.SearchByEmbedding(req.Query, internals.Embedding(embedding), 5)
 	if err != nil {
 		return nil, err
 	}
 
-	apiResults := make([]api.SearchResultItem, len(results))
-	for i, result := range results {
+	terms := strings.Fields(req.Query)
+	termResults, err := repo.SearchByTerms(terms, 5)
+	if err != nil {
+		return nil, err
+	}
+
+	results := append(embeddingResults, termResults...)
+
+	seen := make(map[string]bool)
+	uniqueResults := make([]internals.SearchResultItem, 0)
+	for _, result := range results {
+		key := fmt.Sprintf("%s-%d", result.PageId, result.ParagraphIndex)
+		if !seen[key] {
+			seen[key] = true
+			uniqueResults = append(uniqueResults, result)
+		}
+	}
+
+	apiResults := make([]api.SearchResultItem, len(uniqueResults))
+	for i, result := range uniqueResults {
 		apiResults[i] = api.SearchResultItem{
 			PageId:      result.PageId,
 			Title:       result.PageTitle,

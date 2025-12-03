@@ -48,6 +48,7 @@ type (
 		// domain_search.go
 		SearchByEmbedding(query string, queryEmbedding internals.Embedding, limit int) ([]internals.SearchResultItem, error)
 		SearchByEmbeddingWithContext(query string, queryEmbedding internals.Embedding, contextSize int) ([]internals.ParagraphWithContext, error)
+		SearchByTerms(terms []string, limit int) ([]internals.SearchResultItem, error)
 
 		// domain_tasks.go
 		GetTaskByID(taskID api.TaskID) (*api.TaskDigest, *internals.TaskState, error)

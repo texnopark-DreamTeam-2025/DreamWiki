@@ -229,7 +229,7 @@ func (r *resultImpl) RowCount() int {
 
 func (r *resultImpl) FetchExactlyOne(values ...any) error {
 	rowCount := r.RowCount()
-	if rowCount == 0 {
+	if rowCount <= 0 {
 		r.log.Error("no rows")
 		return models.ErrNoRows
 	}
