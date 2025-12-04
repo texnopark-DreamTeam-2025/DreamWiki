@@ -193,51 +193,64 @@ func (t *gitHubAccountPRTask) accountResult(result internals.TaskActionResult) e
 	return nil
 }
 
-func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) error {
-	t.accountResult(result)
-
+func (t *gitHubAccountPRTask) GetCurrentAccountStage() internals.CurrentAccountStage {
 	if t.state.PrPatch == nil || t.state.PrDescription == nil {
-		if err := t.fetchPRData(); err != nil {
-			return fmt.Errorf("failed to fetch PR data: %w", err)
-		}
+		return internals.FetchPrData
 	}
 
 	if t.state.LlmDetectedProductChanges == nil {
-		if err := t.askLLMForProductChanges(); err != nil {
-			return fmt.Errorf("failed to ask LLM for product changes: %w", err)
-		}
-		return t.saveChanges()
+		return internals.DetectProductChanges
 	}
 
 	if t.state.LlmSuggestedSearchQueries == nil || len(*t.state.LlmSuggestedSearchQueries) == 0 {
+		return internals.GenerateSearchQueries
+	}
+
+	if t.state.HotParagraphs == nil {
+		return internals.SearchDocumentation
+	}
+
+	if t.state.LlmRephrasedParagraphContents == nil || len(*t.state.LlmRephrasedParagraphContents) != len(*t.state.HotParagraphs) {
+		return internals.RephraseDocumentation
+	}
+
+	if t.state.CreatedDraftIds == nil || len(*t.state.CreatedDraftIds) == 0 {
+		return internals.CreateDrafts
+	}
+
+	return internals.CreateDrafts
+}
+
+func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) error {
+	t.accountResult(result)
+
+	switch t.GetCurrentAccountStage() {
+	case internals.FetchPrData:
+		if err := t.fetchPRData(); err != nil {
+			return fmt.Errorf("failed to fetch PR data: %w", err)
+		}
+	case internals.DetectProductChanges:
+		if err := t.askLLMForProductChanges(); err != nil {
+			return fmt.Errorf("failed to ask LLM for product changes: %w", err)
+		}
+	case internals.GenerateSearchQueries:
 		if err := t.askLLMForSearchQueries(); err != nil {
 			return fmt.Errorf("failed to ask LLM for search queries: %w", err)
 		}
-		return t.saveChanges()
-	}
-
-	maybeHotParagraphs := t.state.HotParagraphs
-	maybeRephrased := t.state.LlmRephrasedParagraphContents
-
-	if maybeHotParagraphs == nil {
+	case internals.SearchDocumentation:
 		err := t.searchHotParagraphs()
 		if err != nil {
-			return fmt.Errorf("failed to search hot parageaphs: %w", err)
+			return fmt.Errorf("failed to search hot paragraphs: %w", err)
 		}
 
 		if err := t.startLLMSearchAndRephrase(); err != nil {
 			return fmt.Errorf("failed to perform search and rephrase: %w", err)
 		}
-		return t.saveChanges()
-	}
-
-	if maybeRephrased != nil && len(*maybeRephrased) != len(*maybeHotParagraphs) {
+	case internals.RephraseDocumentation:
 		if err := t.startLLMSearchAndRephrase(); err != nil {
 			return fmt.Errorf("failed to perform search and rephrase: %w", err)
 		}
-	}
-
-	if t.state.LlmRephrasedParagraphContents != nil && len(*t.state.LlmRephrasedParagraphContents) > 0 {
+	case internals.CreateDrafts:
 		if err := t.createDraftsWithRephrasedParagraphs(); err != nil {
 			return fmt.Errorf("failed to create drafts with rephrased paragraphs: %w", err)
 		}

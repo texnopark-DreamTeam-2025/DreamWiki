@@ -55,6 +55,16 @@ components:
         - finished
         - failed
 
+    CurrentAccountStage:
+      type: string
+      enum:
+        - fetch_pr_data
+        - detect_product_changes
+        - generate_search_queries
+        - search_documentation
+        - rephrase_documentation
+        - create_drafts
+
     TaskStateGitHubAccountPR:
       type: object
       properties:
