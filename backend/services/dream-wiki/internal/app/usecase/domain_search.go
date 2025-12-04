@@ -28,6 +28,8 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 		return nil, err
 	}
 
+	u.log.Info("Search: ", len(termResults), " term results, ", len(embeddingResults), " embedding results")
+
 	results := append(embeddingResults, termResults...)
 
 	seen := make(map[string]bool)

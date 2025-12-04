@@ -178,13 +178,11 @@ func (t *gitHubAccountPRTask) accountResult(result internals.TaskActionResult) e
 	}
 	if t.state.LlmDetectedProductChanges == nil {
 		res := strings.Split(resCast.ResponseMessage, "\n")
-		t.deps.Logger.Info("{{{{{{{}}}}}}}", resCast.ResponseMessage)
 		t.state.LlmDetectedProductChanges = &res
 		return nil
 	}
 	if t.state.LlmSuggestedSearchQueries == nil {
 		res := strings.Split(resCast.ResponseMessage, "\n")
-		t.deps.Logger.Info("((((((((((((((()))))))))))))))", resCast.ResponseMessage)
 		t.state.LlmSuggestedSearchQueries = &res
 		return nil
 	}
@@ -222,7 +220,6 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 	maybeRephrased := t.state.LlmRephrasedParagraphContents
 
 	if maybeHotParagraphs == nil {
-		fmt.Println("################################## here")
 		err := t.searchHotParagraphs()
 		if err != nil {
 			return fmt.Errorf("failed to search hot parageaphs: %w", err)
@@ -244,6 +241,7 @@ func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) 
 		if err := t.createDraftsWithRephrasedParagraphs(); err != nil {
 			return fmt.Errorf("failed to create drafts with rephrased paragraphs: %w", err)
 		}
+		t.repo.SetTaskStatus(t.taskID, api.Done)
 	}
 
 	return t.saveChanges()
@@ -299,6 +297,7 @@ func (t *gitHubAccountPRTask) askLLMForProductChanges() error {
 Обозначь максимум 2 изменения. Если значимых продуктовых изменений
 не было, просто напиши NO_CHANGES и ничего больше не пиши.
 Не учитывай исправление опечаток или что-то схожее.
+Постарайся описать детали. Например, если изменилась цена или изменилось какое-то бизнес-правило, скажи это прямо.
 
 Вот информация:
 Описание PR: %s
@@ -344,10 +343,8 @@ func (t *gitHubAccountPRTask) askLLMForSearchQueries() error {
 
 func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 	if t.state.LlmSuggestedSearchQueries == nil || len(*t.state.LlmSuggestedSearchQueries) == 0 {
-		t.deps.Logger.Error("**************** no suggested search queries")
 		return fmt.Errorf("no suggested search queries")
 	}
-	fmt.Println("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
 
 	hp := make([]internals.ParagraphWithContext, 0)
 
@@ -385,6 +382,7 @@ func (t *gitHubAccountPRTask) startLLMSearchAndRephrase() error {
 	prompt := fmt.Sprintf(`Измени это с учётом изменений в коде, чтобы текст соответствовал действительности.
 Я тебе напишу какую-то информацию из корпоративной wiki. Твой ответ должен включать только отредактированную информацию.
 Постарайся внести только те изменения, которые действительно произошли.
+Строго нельзя вносить что-то от себя. Если ты не уверен в том, что вносишь, лучше не вноси вообще никаких изменений
 
 Вот информация:
 Описание PR: %s
@@ -426,7 +424,11 @@ func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
 			continue
 		}
 
-		newContent := strings.Replace(page.Content, paragraph.Content, rephrasedParagraphs[i], 1)
+		newContent := strings.Replace(page.Content, paragraph.Content, rephrasedParagraphs[i], 1000)
+
+		if newContent == paragraph.Content {
+			continue
+		}
 
 		draftID, err := t.repo.CreateDraft(paragraph.PageId, page.Title, newContent)
 		if err != nil {
@@ -439,6 +441,11 @@ func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
 	}
 
 	t.state.CreatedDraftIds = &createdDraftIDs
+
+	err := t.repo.SetTaskStatus(t.taskID, api.Done)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

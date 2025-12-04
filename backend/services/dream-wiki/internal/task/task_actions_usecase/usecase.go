@@ -2,19 +2,15 @@ package task_actions_usecase
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"runtime"
-	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/indexing"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/ycloud_client_gen"
 )
 
 type (
@@ -133,202 +129,6 @@ func (u *taskActionUsecaseImpl) executeNewTaskAction(repo repository.AppReposito
 		TaskActionType: internals.NewTask,
 	}
 	err = result.FromTaskActionResultNewTask(newTaskResult)
-	if err != nil {
-		return fmt.Errorf("failed to create task action result: %w", err)
-	}
-
-	err = repo.CreateTaskActionResult(actionID, result)
-	if err != nil {
-		return fmt.Errorf("failed to create task action result: %w", err)
-	}
-
-	err = repo.EnqueueTaskActionResult(actionID)
-	if err != nil {
-		return fmt.Errorf("failed to enqueue task action result: %w", err)
-	}
-
-	return nil
-}
-
-func (u *taskActionUsecaseImpl) executeAskLLMAction(repo repository.AppRepository, actionID internals.TaskActionID, taskAction *internals.TaskAction) error {
-	askLLMAction, err := taskAction.AsTaskActionAskLLM()
-	if err != nil {
-		return fmt.Errorf("failed to parse task action as TaskActionAskLLM: %w", err)
-	}
-
-	var messages []ycloud_client_gen.Message
-	for _, msg := range askLLMAction.Messages {
-		messages = append(messages, ycloud_client_gen.Message{
-			Role: ycloud_client_gen.MessageRole(msg.Role),
-			Text: msg.Content,
-		})
-	}
-
-	operationID, err := u.deps.YCloudClient.StartAsyncLLMRequest(u.ctx, messages)
-	if err != nil {
-		return fmt.Errorf("failed to start async LLM request: %w", err)
-	}
-
-	timeout := time.After(3 * time.Minute)
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-
-	var operation *ycloud_client_gen.Operation
-pollingLoop:
-	for {
-		select {
-		case <-timeout:
-			return fmt.Errorf("timeout while waiting for LLM response")
-		case <-ticker.C:
-			operation, err = u.deps.YCloudClient.GetLLMResponse(u.ctx, *operationID)
-			u.log.Info(operation)
-			if err != nil {
-				return fmt.Errorf("failed to get LLM response: %w", err)
-			}
-			if operation == nil {
-				return fmt.Errorf("operation is nil")
-			}
-
-			if operation.Done {
-				break pollingLoop
-			}
-		}
-	}
-
-	err = repo.SetTaskActionStatus(actionID, internals.Finished)
-	if err != nil {
-		return fmt.Errorf("failed to set task action status to finished: %w", err)
-	}
-
-	responseBytes, err := json.Marshal(operation)
-	if err != nil {
-		return err
-	}
-	rawResponse := make(map[string]any)
-	err = json.Unmarshal(responseBytes, &rawResponse)
-	if err != nil {
-		return err
-	}
-
-	if operation.Response == nil {
-		return fmt.Errorf("response is nil")
-	}
-
-	if len(operation.Response.Alternatives) == 0 {
-		return fmt.Errorf("no alternatives")
-	}
-
-	result := internals.TaskActionResult{}
-	askLLMResult := internals.TaskActionResultAskLLM{
-		TaskActionType:  internals.AskLlm,
-		ResponseMessage: operation.Response.Alternatives[0].Message.Text,
-		ServerResponse:  rawResponse,
-	}
-	err = result.FromTaskActionResultAskLLM(askLLMResult)
-	if err != nil {
-		return fmt.Errorf("failed to create task action result: %w", err)
-	}
-
-	err = repo.CreateTaskActionResult(actionID, result)
-	if err != nil {
-		return fmt.Errorf("failed to create task action result: %w", err)
-	}
-
-	err = repo.EnqueueTaskActionResult(actionID)
-	if err != nil {
-		return fmt.Errorf("failed to enqueue task action result: %w", err)
-	}
-
-	return nil
-}
-
-func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRepository, pageID api.PageID) error {
-	err := repo.RemovePageIndexation(pageID)
-	if err != nil {
-		return err
-	}
-
-	page, _, err := repo.GetPageByID(pageID)
-	if err != nil {
-		return err
-	}
-
-	paragraphs := indexing.SplitPageToParagraphs(pageID, page.Content)
-
-	contentStrings := make([]string, len(paragraphs))
-	for i, paragraph := range paragraphs {
-		contentStrings[i] = paragraph.Content
-	}
-
-	embeddings, err := u.deps.InferenceClient.GenerateEmbeddings(u.ctx, contentStrings)
-	if err != nil {
-		return err
-	}
-
-	stems, err := u.deps.InferenceClient.GenerateStems(u.ctx, contentStrings)
-	if err != nil {
-		return err
-	}
-
-	for i, paragraph := range paragraphs {
-		paragraph.Embedding = embeddings[i]
-
-		err = repo.AddIndexedParagraph(paragraph)
-		if err != nil {
-			return err
-		}
-
-		termCount := make(map[string]int64)
-		for _, stem := range stems[i] {
-			termCount[stem]++
-		}
-
-		terms := make([]internals.Term, 0, len(termCount))
-		for term, count := range termCount {
-			if count == 0 {
-				continue
-			}
-			terms = append(terms, internals.Term{
-				Term:           term,
-				PageId:         pageID,
-				ParagraphIndex: int64(paragraph.ParagraphIndex),
-				TimesIn:        count,
-			})
-		}
-
-		if len(terms) > 0 {
-			err = repo.AddTerms(terms)
-			if err != nil {
-				return fmt.Errorf("failed to add terms for page %s: %w", pageID, err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (u *taskActionUsecaseImpl) executeIndexatePageAction(repo repository.AppRepository, actionID internals.TaskActionID, taskAction *internals.TaskAction) error {
-	indexatePageAction, err := taskAction.AsTaskActionIndexatePage()
-	if err != nil {
-		return fmt.Errorf("failed to parse task action as TaskActionIndexatePage: %w", err)
-	}
-
-	err = u.indexatePageInTransaction(repo, indexatePageAction.PageId)
-	if err != nil {
-		return fmt.Errorf("failed to indexate page: %w", err)
-	}
-
-	err = repo.SetTaskActionStatus(actionID, internals.Finished)
-	if err != nil {
-		return fmt.Errorf("failed to set task action status to finished: %w", err)
-	}
-
-	result := internals.TaskActionResult{}
-	indexatePageResult := internals.TaskActionResultIndexatePage{
-		TaskActionType: internals.IndexatePage,
-		PageId:         indexatePageAction.PageId,
-	}
-	err = result.FromTaskActionResultIndexatePage(indexatePageResult)
 	if err != nil {
 		return fmt.Errorf("failed to create task action result: %w", err)
 	}
