@@ -187,12 +187,12 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 	termDocFreq := make(map[string]int64)
 	for docFreqResult.NextRow() {
 		var term string
-		var docFreq int64
+		var docFreq uint64
 		err = docFreqResult.FetchRow(&term, &docFreq)
 		if err != nil {
 			return nil, err
 		}
-		termDocFreq[term] = docFreq
+		termDocFreq[term] = int64(docFreq)
 	}
 
 	// Get paragraphs containing terms

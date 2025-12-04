@@ -246,7 +246,12 @@ func (r *resultImpl) FetchExactlyOne(values ...any) error {
 }
 
 func (r *resultImpl) FetchRow(values ...any) error {
-	return r.rows[r.rowIdx].Scan(values...)
+	err := r.rows[r.rowIdx].Scan(values...)
+	if err != nil {
+		r.log.Error(err)
+		return err
+	}
+	return nil
 }
 
 func (r *resultImpl) Close() {

@@ -70,22 +70,44 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 }
 
 func (r *appRepositoryImpl) AddTerm(term string, pageID api.PageID, paragraphIndex int64, timesIn int64) error {
+	terms := []internals.Term{
+		{
+			Term:           term,
+			PageId:         pageID,
+			ParagraphIndex: paragraphIndex,
+			TimesIn:        timesIn,
+		},
+	}
+	return r.AddTerms(terms)
+}
+
+func (r *appRepositoryImpl) AddTerms(terms []internals.Term) error {
+	if len(terms) == 0 {
+		return nil
+	}
+
 	yql := `
 		INSERT INTO Term (term, page_id, paragraph_index, times_in)
-		VALUES (
-			$term,
-			$pageID,
-			$paragraphIndex,
-			$timesIn
-		);
+		VALUES
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql,
-		table.ValueParam("$term", types.TextValue(term)),
-		table.ValueParam("$pageID", types.UuidValue(pageID)),
-		table.ValueParam("$paragraphIndex", types.Int64Value(paragraphIndex)),
-		table.ValueParam("$timesIn", types.Int64Value(timesIn)),
-	)
+	var valueParams []table.ParameterOption
+	var values []string
+
+	for i, term := range terms {
+		values = append(values, fmt.Sprintf("($term%d, $pageID%d, $paragraphIndex%d, $timesIn%d)", i, i, i, i))
+
+		valueParams = append(valueParams,
+			table.ValueParam(fmt.Sprintf("$term%d", i), types.TextValue(term.Term)),
+			table.ValueParam(fmt.Sprintf("$pageID%d", i), types.UuidValue(term.PageId)),
+			table.ValueParam(fmt.Sprintf("$paragraphIndex%d", i), types.Int64Value(term.ParagraphIndex)),
+			table.ValueParam(fmt.Sprintf("$timesIn%d", i), types.Int64Value(term.TimesIn)),
+		)
+	}
+
+	yql += strings.Join(values, ", ")
+
+	result, err := r.ydbClient.InTX().Execute(yql, valueParams...)
 	if err != nil {
 		return err
 	}

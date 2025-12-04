@@ -351,3 +351,22 @@ components:
       type: array
       items:
         type: string
+
+    Term:
+      type: object
+      properties:
+        term:
+          type: string
+        page_id:
+          $ref: '#/components/schemas/PageID'
+        paragraph_index:
+          type: integer
+          format: int64
+        times_in:
+          type: integer
+          format: int64
+      required:
+        - term
+        - page_id
+        - paragraph_index
+        - times_in

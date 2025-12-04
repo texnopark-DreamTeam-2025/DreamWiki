@@ -195,7 +195,6 @@ pollingLoop:
 		}
 	}
 
-	// Save result
 	err = repo.SetTaskActionStatus(actionID, internals.Finished)
 	if err != nil {
 		return fmt.Errorf("failed to set task action status to finished: %w", err)
@@ -284,13 +283,23 @@ func (u *taskActionUsecaseImpl) indexatePageInTransaction(repo repository.AppRep
 			termCount[stem]++
 		}
 
+		terms := make([]internals.Term, 0, len(termCount))
 		for term, count := range termCount {
 			if count == 0 {
 				continue
 			}
-			err = repo.AddTerm(term, pageID, int64(paragraph.ParagraphIndex), count)
+			terms = append(terms, internals.Term{
+				Term:           term,
+				PageId:         pageID,
+				ParagraphIndex: int64(paragraph.ParagraphIndex),
+				TimesIn:        count,
+			})
+		}
+
+		if len(terms) > 0 {
+			err = repo.AddTerms(terms)
 			if err != nil {
-				return fmt.Errorf("failed to add term %s for page %s: %w", term, pageID, err)
+				return fmt.Errorf("failed to add terms for page %s: %w", pageID, err)
 			}
 		}
 	}

@@ -34,6 +34,7 @@ type (
 		RemovePageIndexation(pageID api.PageID) error
 		AddIndexedParagraph(paragraph internals.ParagraphWithEmbedding) error
 		AddTerm(term string, pageID api.PageID, paragraphIndex int64, timesIn int64) error
+		AddTerms(terms []internals.Term) error
 
 		// domain_pages.go
 		GetPageBySlug(yWikiSlug string) (*api.Page, error)

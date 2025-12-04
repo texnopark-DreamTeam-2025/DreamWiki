@@ -116,7 +116,6 @@ func main() {
 
 	serverErr := make(chan error, 1)
 
-	// Create a context for the application
 	appCtx, appCancel := context.WithCancel(context.Background())
 	defer appCancel()
 
@@ -149,21 +148,17 @@ func main() {
 			zap.String("signal", sig.String()),
 		)
 
-		// Create shutdown context with timeout
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		// Shutdown HTTP server
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			logger.Error("server shutdown error", zap.Error(err))
 			cancel()
 			os.Exit(1)
 		}
 
-		// Cancel the application context to signal topic readers to stop
 		appCancel()
 
-		// Close topic readers
 		if err := rd.Close(shutdownCtx); err != nil {
 			logger.Error("topic readers shutdown error", zap.Error(err))
 		}

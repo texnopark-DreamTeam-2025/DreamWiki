@@ -2,6 +2,7 @@ package topic_reader
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -25,14 +26,16 @@ type (
 		TaskActionResultsTopicReader *topicreader.Reader
 		log                          logger.Logger
 		deps                         *deps.Deps
+		onReaderClose                chan struct{}
 	}
 )
 
 func NewTopicReader(ctx context.Context, deps *deps.Deps) (*TopicReaders, error) {
 	ctx, cancel := context.WithCancel(ctx)
 
-	topic := deps.YDBDriver.Topic()
-	taskActionsTopicReader, err := topic.StartReader("dream_wiki",
+	topic1 := deps.YDBDriver.Topic()
+	taskActionsTopicReader, err := topic1.StartReader(
+		"dream_wiki",
 		topicoptions.ReadTopic("TaskActionToExecute"),
 		topicoptions.WithReaderOperationTimeout(time.Second),
 	)
@@ -41,7 +44,10 @@ func NewTopicReader(ctx context.Context, deps *deps.Deps) (*TopicReaders, error)
 		return nil, err
 	}
 
-	taskActionResultsTopicReader, err := topic.StartReader("dream_wiki", topicoptions.ReadTopic("TaskActionResultReady"),
+	topic2 := deps.YDBDriver.Topic()
+	taskActionResultsTopicReader, err := topic2.StartReader(
+		"dream_wiki",
+		topicoptions.ReadTopic("TaskActionResultReady"),
 		topicoptions.WithReaderOperationTimeout(time.Second),
 	)
 	if err != nil {
@@ -57,18 +63,23 @@ func NewTopicReader(ctx context.Context, deps *deps.Deps) (*TopicReaders, error)
 		TaskActionResultsTopicReader: taskActionResultsTopicReader,
 		log:                          deps.Logger,
 		deps:                         deps,
+		onReaderClose:                make(chan struct{}, 2),
 	}, nil
 }
 
 func (t *TopicReaders) Close(ctx context.Context) error {
-	err := t.TaskActionsTopicReader.Close(ctx)
-	if err != nil {
-		return err
-	}
-
 	t.cancel()
 
-	return t.TaskActionResultsTopicReader.Close(ctx)
+	for range 2 {
+		select {
+		case <-t.onReaderClose:
+			continue
+		case <-ctx.Done():
+			return fmt.Errorf("cant close readers, by timeout")
+		}
+	}
+
+	return nil
 }
 
 func (t *TopicReaders) ReadMessages() {
@@ -76,18 +87,23 @@ func (t *TopicReaders) ReadMessages() {
 	go t.readTaskActionResultMessages()
 }
 
-func readTopic(ctx context.Context, reader *topicreader.Reader, log logger.Logger, onMessage func(int64)) {
+func readTopic(ctx context.Context, reader *topicreader.Reader, onReaderClose *chan struct{}, log logger.Logger, onMessage func(int64)) {
+	closeReader := func() {
+		log.Info("context cancelled, stopping topic reader")
+		reader.Close(context.Background())
+		*onReaderClose <- struct{}{}
+	}
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("context cancelled, stopping topic reader")
+			closeReader()
 			return
 		default:
+			log.Info("Ready to get message")
 			mess, err := reader.ReadMessage(ctx)
 			if err != nil {
-				// Check if context was cancelled
 				if ctx.Err() != nil {
-					log.Info("context cancelled, stopping topic reader")
+					closeReader()
 					return
 				}
 				log.Error("failed to read message", err)
@@ -141,7 +157,7 @@ func (t *TopicReaders) readTaskActionMessages() {
 		}
 	}
 
-	readTopic(t.ctx, t.TaskActionsTopicReader, t.log, processTaskActionMessage)
+	readTopic(t.ctx, t.TaskActionsTopicReader, &t.onReaderClose, t.log, processTaskActionMessage)
 }
 
 func (t *TopicReaders) failTaskAndCommit(repo repository.AppRepository, taskID api.TaskID, taskActionID int64) {
@@ -206,5 +222,5 @@ func (t *TopicReaders) readTaskActionResultMessages() {
 		t.log.Info("successfully processed task action result", "action_id", taskActionID)
 	}
 
-	readTopic(t.ctx, t.TaskActionResultsTopicReader, t.log, processTaskActionResultMessage)
+	readTopic(t.ctx, t.TaskActionResultsTopicReader, &t.onReaderClose, t.log, processTaskActionResultMessage)
 }

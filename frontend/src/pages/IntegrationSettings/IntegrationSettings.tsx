@@ -46,7 +46,7 @@ export default function IntegrationSettings() {
       setPageUrl("");
       // Увеличиваем счетчик проиндексированных страниц
       setIndexedPagesCount((prev) => prev + 1);
-      showSuccess("Успешно", "Страница успешно добавлена!");
+      showSuccess("Успешно", "Создана задача на индексирование страницы");
     } catch (error) {
       console.error("Ошибка добавления страницы:", error);
       showError("Ошибка", "Произошла ошибка при добавлении страницы.");
@@ -88,7 +88,7 @@ export default function IntegrationSettings() {
       }
 
       console.log("PR успешно проанализирован:", response.data);
-      showSuccess("Успешно", "PR успешно проанализирован!");
+      showSuccess("Успешно", "Создана задача на обновление информации на основе PR");
     } catch (error) {
       console.error("Ошибка анализа PR:", error);
       showError("Ошибка", "Произошла ошибка при анализе PR.");
