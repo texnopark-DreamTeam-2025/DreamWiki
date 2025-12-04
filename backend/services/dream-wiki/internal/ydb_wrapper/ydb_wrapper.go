@@ -79,9 +79,11 @@ var (
 )
 
 func NewYDBWrapper(ctx context.Context, deps *deps.Deps, withTransaction bool) YDBWrapper {
+	driver, _ := ydb.Open(ctx, deps.Config.YDBDSN)
+
 	result := &ydbWrapperImpl{
 		ctx: ctx,
-		db:  deps.YDBDriver,
+		db:  driver,
 		log: deps.Logger,
 	}
 	if withTransaction {
@@ -111,6 +113,7 @@ func (y *ydbWrapperImpl) beginTX() {
 
 	go func() {
 		y.commitError <- y.db.Query().DoTx(y.ctx, action)
+		y.db.Close(context.Background())
 	}()
 	tx := <-txRetriever
 	y.tx = &tx
