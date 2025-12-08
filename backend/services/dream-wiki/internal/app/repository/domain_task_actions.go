@@ -35,7 +35,7 @@ func (r *appRepositoryImpl) CreateTaskAction(taskID api.TaskID, actionState inte
 		table.ValueParam("$action", types.JSONValueFromBytes(actionBytes)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (r *appRepositoryImpl) CreateTaskActionResult(actionID internals.TaskAction
 		table.ValueParam("$result", types.JSONValueFromBytes(resultBytes)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}
@@ -83,8 +83,8 @@ func (r *appRepositoryImpl) CreateTaskActionResult(actionID internals.TaskAction
 }
 
 func (r *appRepositoryImpl) EnqueueTaskAction(actionID internals.TaskActionID) error {
-	topicClient := r.ydbClient.TopicClient()
-	writer, err := topicClient.StartTransactionalWriter(r.ydbClient.GetTX(), "TaskActionToExecute")
+	topicClient := r.tx.TopicClient()
+	writer, err := topicClient.StartTransactionalWriter(r.tx.GetTX(), "TaskActionToExecute")
 	if err != nil {
 		return err
 	}
@@ -98,8 +98,8 @@ func (r *appRepositoryImpl) EnqueueTaskAction(actionID internals.TaskActionID) e
 }
 
 func (r *appRepositoryImpl) EnqueueTaskActionResult(actionID internals.TaskActionID) error {
-	topicClient := r.ydbClient.TopicClient()
-	writer, err := topicClient.StartTransactionalWriter(r.ydbClient.GetTX(), "TaskActionResultReady")
+	topicClient := r.tx.TopicClient()
+	writer, err := topicClient.StartTransactionalWriter(r.tx.GetTX(), "TaskActionResultReady")
 	if err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (r *appRepositoryImpl) GetTaskActionByID(actionID internals.TaskActionID) (
 	WHERE task_action_id = $actionID;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$actionID", types.Int64Value(actionID)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$actionID", types.Int64Value(actionID)))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -166,7 +166,7 @@ func (r *appRepositoryImpl) GetTaskActionResultByID(actionID internals.TaskActio
 	WHERE task_action_id = $actionID;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$actionID", types.Int64Value(actionID)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$actionID", types.Int64Value(actionID)))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -207,7 +207,7 @@ func (r *appRepositoryImpl) SetTaskActionStatus(actionID internals.TaskActionID,
 		table.ValueParam("$newStatus", types.TextValue(string(newStatus))),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}

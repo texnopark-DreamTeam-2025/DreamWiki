@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/db_adapter"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/ydb_wrapper"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
@@ -72,9 +72,9 @@ type (
 	}
 
 	appRepositoryImpl struct {
-		ctx       context.Context
-		ydbClient ydb_wrapper.YDBWrapper
-		log       logger.Logger
+		ctx context.Context
+		tx  db_adapter.Transaction
+		log logger.Logger
 	}
 )
 
@@ -82,18 +82,18 @@ var (
 	_ AppRepository = &appRepositoryImpl{}
 )
 
-func NewAppRepository(ctx context.Context, deps *deps.Deps) AppRepository {
+func NewAppRepository(ctx context.Context, deps *deps.RepositoryDeps) AppRepository {
 	return &appRepositoryImpl{
-		ctx:       ctx,
-		log:       deps.Logger,
-		ydbClient: ydb_wrapper.NewYDBWrapper(ctx, deps, true),
+		ctx: ctx,
+		log: deps.Deps.Logger,
+		tx:  deps.TX,
 	}
 }
 
 func (r *appRepositoryImpl) Commit() error {
-	return r.ydbClient.Commit()
+	return r.tx.Commit()
 }
 
 func (r *appRepositoryImpl) Rollback() {
-	r.ydbClient.Rollback()
+	r.tx.Rollback()
 }

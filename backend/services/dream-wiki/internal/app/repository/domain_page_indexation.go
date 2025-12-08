@@ -16,7 +16,7 @@ func (r *appRepositoryImpl) RemovePageIndexation(pageID api.PageID) error {
 		DELETE FROM Term WHERE page_id=$pageID;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql,
+	result, err := r.tx.InTX().Execute(yql,
 		table.ValueParam("$pageID", types.UuidValue(pageID)),
 	)
 	if err != nil {
@@ -51,7 +51,7 @@ func (r *appRepositoryImpl) AddIndexedParagraph(paragraph internals.ParagraphWit
 		return fmt.Errorf("embedding is empty for paragraph with page_id: %s, line_number: %d", paragraph.PageId, paragraph.LineNumber)
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql,
+	result, err := r.tx.InTX().Execute(yql,
 		table.ValueParam("$pageID", types.UuidValue(paragraph.PageId)),
 		table.ValueParam("$lineNumber", types.Int64Value(int64(paragraph.LineNumber))),
 		table.ValueParam("$content", types.TextValue(paragraph.Content)),
@@ -107,7 +107,7 @@ func (r *appRepositoryImpl) AddTerms(terms []internals.Term) error {
 
 	yql += strings.Join(values, ", ")
 
-	result, err := r.ydbClient.InTX().Execute(yql, valueParams...)
+	result, err := r.tx.InTX().Execute(yql, valueParams...)
 	if err != nil {
 		return err
 	}

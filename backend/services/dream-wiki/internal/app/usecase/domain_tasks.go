@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_factory"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
@@ -25,8 +24,8 @@ func makeTaskDescription(taskDigest api.TaskDigest, state internals.TaskState) s
 }
 
 func (u *appUsecaseImpl) ListTasks(cursor *api.Cursor) (tasks []api.TaskDigest, newCursor *api.NextInfo, err error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
-	defer repo.Rollback()
+	repo := u.createReadOnlyRepository()
+	defer repo.Commit()
 
 	taskDigests, taskStates, newCursor, err := repo.ListTasks(cursor, 20)
 	if err != nil {
@@ -65,8 +64,8 @@ func (u *appUsecaseImpl) CancelTask(taskID api.TaskID) error {
 }
 
 func (u *appUsecaseImpl) GetTaskDetails(taskID api.TaskID) (api.Task, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
-	defer repo.Rollback()
+	repo := u.createReadOnlyRepository()
+	defer repo.Commit()
 
 	taskDigest, taskState, err := repo.GetTaskByID(taskID)
 	if err != nil {
@@ -97,16 +96,14 @@ func (u *appUsecaseImpl) GetTaskDetails(taskID api.TaskID) (api.Task, error) {
 }
 
 func (u *appUsecaseImpl) GetTaskInternalState(taskID api.TaskID) (*api.V1TasksInternalStateGetResponse, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
-	defer repo.Rollback()
+	repo := u.createReadOnlyRepository()
+	defer repo.Commit()
 
-	// Get task digest and state from repository
 	taskDigest, taskState, err := repo.GetTaskByID(taskID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Convert taskState to RawJSON
 	taskStateBytes, err := json.Marshal(taskState)
 	if err != nil {
 		return nil, err
@@ -117,7 +114,6 @@ func (u *appUsecaseImpl) GetTaskInternalState(taskID api.TaskID) (*api.V1TasksIn
 		return nil, err
 	}
 
-	// Create and return the internal state response
 	response := &api.V1TasksInternalStateGetResponse{
 		Actions:   []api.RawJSON{}, // TODO: include actions in future
 		TaskId:    taskDigest.TaskId,
@@ -132,7 +128,7 @@ func (u *appUsecaseImpl) RecreateTask(taskID api.TaskID) (*api.TaskID, error) {
 }
 
 func (u *appUsecaseImpl) CreatePageReindexationTask(pageIDs []api.PageID) (*api.TaskID, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadWriteRepository()
 	defer repo.Rollback()
 
 	pageTitles := make(map[string]string)

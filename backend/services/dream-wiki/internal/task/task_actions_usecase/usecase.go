@@ -51,7 +51,7 @@ func (u *taskActionUsecaseImpl) failTaskActionAndTask(repo repository.AppReposit
 }
 
 func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) (err error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := repository.NewAppRepository(u.ctx, &deps.RepositoryDeps{})
 	defer repo.Rollback()
 
 	defer func() {

@@ -13,7 +13,7 @@ func (r *appRepositoryImpl) DeleteAllPages() error {
 		DELETE FROM Page;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql)
+	result, err := r.tx.InTX().Execute(yql)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func (r *appRepositoryImpl) GetPageBySlug(yWikiSlug string) (*api.Page, error) {
 	WHERE p.ywiki_slug=$yWikiSlug;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (r *appRepositoryImpl) CreatePage(yWikiSlug string, title string, content s
 		table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
 	yql := `
 	DELETE FROM Page WHERE ywiki_slug=$yWikiSlug;`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$yWikiSlug", types.TextValue(yWikiSlug)))
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (r *appRepositoryImpl) DeletePageBySlug(yWikiSlug string) error {
 func (r *appRepositoryImpl) GetAllPageDigests() ([]api.PageDigest, error) {
 	yql := `SELECT page_id, title FROM Page`
 
-	result, err := r.ydbClient.InTX().Execute(yql)
+	result, err := r.tx.InTX().Execute(yql)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +136,7 @@ func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent str
 	FROM Page
 	WHERE page_id = $pageID;`
 
-	result1, err := r.ydbClient.InTX().Execute(yql1, table.ValueParam("$pageID", types.UuidValue(pageID)))
+	result1, err := r.tx.InTX().Execute(yql1, table.ValueParam("$pageID", types.UuidValue(pageID)))
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent str
 		table.ValueParam("$content", types.TextValue(newContent)),
 	}
 
-	result2, err := r.ydbClient.InTX().Execute(yql2, parameters...)
+	result2, err := r.tx.InTX().Execute(yql2, parameters...)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func (r *appRepositoryImpl) AppendPageRevision(pageID api.PageID, newContent str
 		table.ValueParam("$revisionID", types.Int64Value(revisionID)),
 	}
 
-	result3, err := r.ydbClient.InTX().Execute(yql3, parameters3...)
+	result3, err := r.tx.InTX().Execute(yql3, parameters3...)
 	if err != nil {
 		return nil, err
 	}
@@ -216,7 +216,7 @@ func (r *appRepositoryImpl) GetPageByID(pageID api.PageID) (*api.Page, *internal
 	WHERE p.page_id=$pageID;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$pageID", types.UuidValue(pageID)))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -257,7 +257,7 @@ func (r *appRepositoryImpl) SetPageTitle(pageID api.PageID, newTitle string) err
 		table.ValueParam("$newTitle", types.TextValue(newTitle)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}

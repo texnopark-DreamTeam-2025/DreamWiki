@@ -1,4 +1,4 @@
-package ydb_wrapper
+package db_adapter
 
 import (
 	"context"
@@ -6,16 +6,30 @@ import (
 	"sync/atomic"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
 	"github.com/ydb-platform/ydb-go-sdk/v3"
 	"github.com/ydb-platform/ydb-go-sdk/v3/query"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/topic"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicoptions"
+)
+
+type TransactionMode = int
+
+const (
+	SnapshotReadOnly TransactionMode = iota
+	SerializableReadWrite
 )
 
 type (
-	YDBWrapper interface {
+	DBAdapter interface {
+		NewTransaction(ctx context.Context, mode TransactionMode) Transaction
+		NewTopicReader(topicName string, messageCallback TopicReaderCallback, options ...topicoptions.TopicOption) TopicReader
+		Close()
+	}
+
+	Transaction interface {
 		Commit() error
 		Rollback()
 		GetTX() table.TransactionIdentifier
@@ -44,11 +58,25 @@ type (
 		Close()
 	}
 
-	ydbWrapperImpl struct {
-		db  *ydb.Driver
+	TopicReader interface {
+		ReadMessages(ctx context.Context) error
+	}
+
+	TopicReaderCallback = func(message []byte)
+)
+
+type (
+	dbAdapterImpl struct {
+		db     *ydb.Driver
+		config *config.Config
+		log    logger.Logger
+	}
+
+	transactionImpl struct {
 		log logger.Logger
 		ctx context.Context
 		tx  *query.TxActor
+		db  *ydb.Driver
 
 		// success, commitError and closed used in transaction commit/rollback mechanics.
 		success     chan bool
@@ -70,61 +98,131 @@ type (
 		rowIdx        int
 		closeCallback func()
 	}
+
+	topicReaderImpl struct {
+		db              *ydb.Driver
+		topicName       string
+		messageCallback TopicReaderCallback
+		options         []topicoptions.TopicOption
+		log             logger.Logger
+	}
 )
 
 var (
-	_ YDBWrapper = &ydbWrapperImpl{}
-	_ Actor      = &actorImpl{}
-	_ ResultSet  = &resultImpl{}
+	_ DBAdapter   = &dbAdapterImpl{}
+	_ TopicReader = &topicReaderImpl{}
+	_ Transaction = &transactionImpl{}
+	_ Actor       = &actorImpl{}
+	_ ResultSet   = &resultImpl{}
 )
 
-func NewYDBWrapper(ctx context.Context, deps *deps.Deps, withTransaction bool) YDBWrapper {
-	driver, _ := ydb.Open(ctx, deps.Config.YDBDSN)
-
-	result := &ydbWrapperImpl{
-		ctx: ctx,
-		db:  driver,
-		log: deps.Logger,
+func NewDBAdapter(driver *ydb.Driver, config *config.Config, log logger.Logger) DBAdapter {
+	return &dbAdapterImpl{
+		db:     driver,
+		config: config,
+		log:    log,
 	}
-	if withTransaction {
-		result.beginTX()
-	}
-	return result
 }
 
-func (y *ydbWrapperImpl) beginTX() {
-	y.success = make(chan bool)
-	y.commitError = make(chan error)
-	txRetriever := make(chan query.TxActor)
+func (d *dbAdapterImpl) NewTransaction(ctx context.Context, mode TransactionMode) Transaction {
+	transactionWrapper := &transactionImpl{
+		ctx:         ctx,
+		log:         d.log,
+		db:          d.db,
+		success:     make(chan bool),
+		commitError: make(chan error),
+	}
+	txRetrievingChannel := make(chan query.TxActor)
 
 	action := func(ctx context.Context, tx query.TxActor) error {
-		txRetriever <- tx
-		y.log.Infof("YDB transaction %s started", tx.ID())
+		txRetrievingChannel <- tx
+		d.log.Infof("YDB transaction %s started", tx.ID())
 
-		shouldCommit := <-y.success
-		close(y.success)
+		shouldCommit := <-transactionWrapper.success
+		close(transactionWrapper.success)
 		if shouldCommit {
-			y.log.Infof("YDB transaction %s committed", tx.ID())
+			d.log.Infof("YDB transaction %s committed", tx.ID())
 			return nil
 		}
-		y.log.Infof("YDB transaction %s rolled back", tx.ID())
+		d.log.Infof("YDB transaction %s rolled back", tx.ID())
 		return fmt.Errorf("transaction rolled back")
 	}
 
 	go func() {
-		y.commitError <- y.db.Query().DoTx(y.ctx, action)
-		y.db.Close(context.Background())
+		transactionWrapper.commitError <- d.db.Query().DoTx(ctx, action)
 	}()
-	tx := <-txRetriever
-	y.tx = &tx
-	close(txRetriever)
+	tx := <-txRetrievingChannel
+	transactionWrapper.tx = &tx
+	close(txRetrievingChannel)
+
+	return transactionWrapper
 }
 
-func (y *ydbWrapperImpl) TopicClient() topic.Client {
+func (d *dbAdapterImpl) Close() {
+	d.db.Close(context.Background())
+}
+
+func (d *dbAdapterImpl) NewTopicReader(topicName string, messageCallback TopicReaderCallback, options ...topicoptions.TopicOption) TopicReader {
+	return &topicReaderImpl{
+		db:              d.db,
+		topicName:       topicName,
+		messageCallback: messageCallback,
+		options:         options,
+		log:             d.log,
+	}
+}
+
+func (y *transactionImpl) TopicClient() topic.Client {
 	return y.db.Topic()
 }
 
-func (y *ydbWrapperImpl) Commit() error {
+func (t *topicReaderImpl) ReadMessages(ctx context.Context) error {
+	topicClient := t.db.Topic()
+	reader, err := topicClient.StartReader("dream_wiki", topicoptions.ReadTopic(t.topicName))
+	if err != nil {
+		return err
+	}
+	defer reader.Close(context.Background())
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			mess, err := reader.ReadMessage(ctx)
+			if err != nil {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				t.log.Error("failed to read message", err)
+				continue
+			}
+
+			// Commit the message immediately to avoid reprocessing
+			commitError := reader.Commit(mess.Context(), mess)
+			if commitError != nil {
+				t.log.Error("failed to commit message", commitError)
+				continue
+			}
+
+			messageContent := make([]byte, 1024)
+			n, readError := mess.Read(messageContent)
+			if readError != nil {
+				t.log.Error("failed to get message data", "error", readError)
+				continue
+			}
+			if n == 0 {
+				t.log.Error("zero message length")
+				continue
+			}
+			messageContent = messageContent[:n]
+
+			t.messageCallback(messageContent)
+		}
+	}
+}
+
+func (y *transactionImpl) Commit() error {
 	if n := atomic.AddInt32(&(y.closed), 1); n == 1 {
 		y.success <- true
 		return <-y.commitError
@@ -132,18 +230,18 @@ func (y *ydbWrapperImpl) Commit() error {
 	return nil
 }
 
-func (y *ydbWrapperImpl) Rollback() {
+func (y *transactionImpl) Rollback() {
 	if n := atomic.AddInt32(&(y.closed), 1); n == 1 {
 		y.success <- false
 		<-y.commitError
 	}
 }
 
-func (y *ydbWrapperImpl) GetTX() table.TransactionIdentifier {
+func (y *transactionImpl) GetTX() table.TransactionIdentifier {
 	return *y.tx
 }
 
-func (y *ydbWrapperImpl) InTX() Actor {
+func (y *transactionImpl) InTX() Actor {
 	if y.tx == nil {
 		panic("YDB wrapper has no TX. Maybe you forgot set flag?")
 	}
@@ -162,7 +260,7 @@ func (y *ydbWrapperImpl) InTX() Actor {
 	return &actor
 }
 
-func (y *ydbWrapperImpl) OutsideTX() Actor {
+func (y *transactionImpl) OutsideTX() Actor {
 	txRetriever := make(chan query.TxActor)
 	actorInstance := actorImpl{
 		ctx:            y.ctx,
@@ -170,15 +268,12 @@ func (y *ydbWrapperImpl) OutsideTX() Actor {
 		tx:             nil,
 	}
 
-	action := func(ctx context.Context, tx query.TxActor) error {
-		txRetriever <- tx
-		<-actorInstance.closingChannel
-		close(actorInstance.closingChannel)
+	action := func(ctx context.Context, tx query.Session) error {
 		return nil
 	}
 
 	go func() {
-		_ = y.db.Query().DoTx(y.ctx, action)
+		_ = y.db.Query().Do(y.ctx, action)
 	}()
 
 	tx := <-txRetriever

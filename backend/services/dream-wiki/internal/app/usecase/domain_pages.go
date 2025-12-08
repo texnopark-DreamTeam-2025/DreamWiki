@@ -1,12 +1,11 @@
 package usecase
 
 import (
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
 func (u *appUsecaseImpl) GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeItem, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadOnlyRepository()
 	defer repo.Rollback()
 
 	items, err := repo.GetAllPageDigests()
@@ -27,7 +26,7 @@ func (u *appUsecaseImpl) GetPagesTree(activePagesIDs []api.PageID) ([]api.TreeIt
 }
 
 func (u *appUsecaseImpl) GetDiagnosticInfo(req api.V1DiagnosticInfoGetRequest) (*api.V1DiagnosticInfoGetResponse, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadOnlyRepository()
 	defer repo.Rollback()
 
 	page, _, err := repo.GetPageByID(req.PageId)

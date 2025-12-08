@@ -1,15 +1,12 @@
 package usecase
 
 import (
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 )
 
 func (u *appUsecaseImpl) CreateDraft(originalPageID api.PageID) (*api.DraftDigest, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadWriteRepository()
 	defer repo.Rollback()
-
-	u.log.Info("PAGE ID: #############", originalPageID)
 
 	page, _, err := repo.GetPageByID(originalPageID)
 	if err != nil {
@@ -35,7 +32,7 @@ func (u *appUsecaseImpl) CreateDraft(originalPageID api.PageID) (*api.DraftDiges
 }
 
 func (u *appUsecaseImpl) DeleteDraft(draftID api.DraftID) error {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadWriteRepository()
 	defer repo.Rollback()
 
 	err := repo.RemoveDraft(draftID)
@@ -47,7 +44,7 @@ func (u *appUsecaseImpl) DeleteDraft(draftID api.DraftID) error {
 }
 
 func (u *appUsecaseImpl) GetDraft(draftID api.DraftID) (*api.Draft, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadOnlyRepository()
 	defer repo.Rollback()
 
 	draft, err := repo.GetDraftByID(draftID)
@@ -59,7 +56,7 @@ func (u *appUsecaseImpl) GetDraft(draftID api.DraftID) (*api.Draft, error) {
 }
 
 func (u *appUsecaseImpl) ApplyDraft(draftID api.DraftID) error {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadWriteRepository()
 	defer repo.Rollback()
 
 	draft, err := repo.GetDraftByID(draftID)
@@ -81,7 +78,7 @@ func (u *appUsecaseImpl) ApplyDraft(draftID api.DraftID) error {
 }
 
 func (u *appUsecaseImpl) ListDrafts(cursor *string) ([]api.DraftDigest, *api.NextInfo, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadOnlyRepository()
 	defer repo.Rollback()
 
 	var apiCursor *api.Cursor
@@ -102,7 +99,7 @@ func (u *appUsecaseImpl) ListDrafts(cursor *string) ([]api.DraftDigest, *api.Nex
 }
 
 func (u *appUsecaseImpl) UpdateDraft(draftID api.DraftID, newContent *string, newTitle *string) error {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadWriteRepository()
 	defer repo.Rollback()
 
 	if newContent != nil {

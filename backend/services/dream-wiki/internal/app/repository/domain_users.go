@@ -16,7 +16,7 @@ func (r *appRepositoryImpl) GetUserByLogin(username string) (*models.User, error
 	FROM User WHERE username=$username;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$username", types.TextValue(username)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$username", types.TextValue(username)))
 	if err != nil {
 		return nil, err
 	}

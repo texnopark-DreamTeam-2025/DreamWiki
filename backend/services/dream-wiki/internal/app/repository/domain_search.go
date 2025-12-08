@@ -32,7 +32,7 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 
 	yqlEmbedding := embeddingToYDBList(queryEmbedding)
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$queryEmbedding", yqlEmbedding),
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$queryEmbedding", yqlEmbedding),
 		table.ValueParam("$limit", types.Uint64Value(uint64(limit))),
 	)
 	if err != nil {
@@ -102,7 +102,7 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 			ORDER BY paragraph_index
 		`
 
-		result, err := r.ydbClient.InTX().Execute(yql,
+		result, err := r.tx.InTX().Execute(yql,
 			table.ValueParam("$page_id", types.UuidValue(result.PageId)),
 			table.ValueParam("$start_index", types.Int32Value(startIndex)),
 			table.ValueParam("$end_index", types.Int32Value(endIndex)))
@@ -152,7 +152,7 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 
 	// Get total document count
 	totalDocsQuery := `SELECT Count(DISTINCT page_id) AS total FROM Paragraph`
-	totalDocsResult, err := r.ydbClient.InTX().Execute(totalDocsQuery)
+	totalDocsResult, err := r.tx.InTX().Execute(totalDocsQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 		GROUP BY term
 	`
 
-	docFreqResult, err := r.ydbClient.InTX().Execute(docFreqQuery, table.ValueParam("$terms", yqlTerms))
+	docFreqResult, err := r.tx.InTX().Execute(docFreqQuery, table.ValueParam("$terms", yqlTerms))
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +204,7 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 		WHERE t.term IN $terms
 	`
 
-	paragraphsResult, err := r.ydbClient.InTX().Execute(paragraphsQuery, table.ValueParam("$terms", yqlTerms))
+	paragraphsResult, err := r.tx.InTX().Execute(paragraphsQuery, table.ValueParam("$terms", yqlTerms))
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +338,7 @@ func (r *appRepositoryImpl) SearchByTermsWithContext(terms []string, contextSize
 		ORDER BY paragraph_index
 	`
 
-		result, err := r.ydbClient.InTX().Execute(yql,
+		result, err := r.tx.InTX().Execute(yql,
 			table.ValueParam("$page_id", types.UuidValue(result.PageId)),
 			table.ValueParam("$start_index", types.Int32Value(startIndex)),
 			table.ValueParam("$end_index", types.Int32Value(endIndex)))

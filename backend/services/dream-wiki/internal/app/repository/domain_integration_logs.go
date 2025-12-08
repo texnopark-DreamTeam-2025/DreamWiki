@@ -50,7 +50,7 @@ func (r *appRepositoryImpl) WriteIntegrationLogField(integrationID api.Integrati
 	yql := `INSERT INTO IntegrationLogField (integration_id, log_text, created_at)
 	VALUES ($integrationID, $logText, CurrentUtcDatetime())`
 
-	result, err := r.ydbClient.OutsideTX().Execute(yql,
+	result, err := r.tx.OutsideTX().Execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(string(integrationID))),
 		table.ValueParam("$logText", types.TextValue(logText)),
 	)
@@ -77,7 +77,7 @@ func (r *appRepositoryImpl) GetIntegrationLogFields(integrationID api.Integratio
 
 	timeFrom, idFrom := decodeIntegrationLogsCursor(cursor)
 
-	result, err := r.ydbClient.InTX().Execute(yql,
+	result, err := r.tx.InTX().Execute(yql,
 		table.ValueParam("$integrationID", types.TextValue(string(integrationID))),
 		table.ValueParam("$limit", types.Uint64Value(limit)),
 		table.ValueParam("$timeFrom", types.TimestampValueFromTime(timeFrom)),

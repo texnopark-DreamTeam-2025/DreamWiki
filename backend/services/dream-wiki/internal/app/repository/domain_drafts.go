@@ -67,7 +67,7 @@ func (r *appRepositoryImpl) GetDraftByID(draftID api.DraftID) (*api.Draft, error
 	WHERE d.draft_id = $draftID;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$draftID", types.UuidValue(draftID)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$draftID", types.UuidValue(draftID)))
 	if err != nil {
 		return nil, err
 	}
@@ -142,12 +142,12 @@ func (r *appRepositoryImpl) ListDrafts(cursor *api.Cursor, limit int64) ([]api.D
 	timeFrom, idFrom := decodeDraftsCursor(cursor)
 
 	parameters := []table.ParameterOption{
-		table.ValueParam("$limit", types.Uint64Value(uint64(limit+1))), // Fetch one extra to check if there are more
+		table.ValueParam("$limit", types.Uint64Value(uint64(limit))),
 		table.ValueParam("$timeFrom", types.TimestampValueFromTime(timeFrom)),
 		table.ValueParam("$idFrom", types.UuidValue(idFrom)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -195,7 +195,7 @@ func (r *appRepositoryImpl) RemoveDraft(draftID api.DraftID) error {
 	DELETE FROM Draft WHERE draft_id = $draftID;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$draftID", types.UuidValue(draftID)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$draftID", types.UuidValue(draftID)))
 	if err != nil {
 		return err
 	}
@@ -216,7 +216,7 @@ func (r *appRepositoryImpl) SetDraftBaseRevision(draftID api.DraftID, newRevisio
 		table.ValueParam("$newRevisionID", types.Int64Value(newRevisionID)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func (r *appRepositoryImpl) SetDraftContent(draftID api.DraftID, newContent stri
 		table.ValueParam("$newContent", types.TextValue(newContent)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (r *appRepositoryImpl) SetDraftStatus(draftID api.DraftID, newStatus api.Dr
 		table.ValueParam("$newStatus", types.TextValue(string(newStatus))),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,7 @@ func (r *appRepositoryImpl) SetDraftTitle(draftID api.DraftID, newTitle string) 
 		table.ValueParam("$newTitle", types.TextValue(newTitle)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}
@@ -289,14 +289,13 @@ func (r *appRepositoryImpl) SetDraftTitle(draftID api.DraftID, newTitle string) 
 }
 
 func (r *appRepositoryImpl) CreateDraft(pageID api.PageID, draftTitle string, draftContent string) (*api.DraftID, error) {
-	// First, get the current revision ID for the page
 	pageYql := `
 	SELECT current_revision_id
 	FROM Page
 	WHERE page_id = $pageID;
 	`
 
-	pageResult, err := r.ydbClient.InTX().Execute(pageYql, table.ValueParam("$pageID", types.UuidValue(pageID)))
+	pageResult, err := r.tx.InTX().Execute(pageYql, table.ValueParam("$pageID", types.UuidValue(pageID)))
 	if err != nil {
 		return nil, err
 	}
@@ -307,10 +306,25 @@ func (r *appRepositoryImpl) CreateDraft(pageID api.PageID, draftTitle string, dr
 		return nil, err
 	}
 
-	// Create the draft
 	yql := `
-	INSERT INTO Draft (draft_id, page_revision_id, status, draft_title, content, created_at, updated_at)
-	VALUES (RandomUuid(4), $pageRevisionID, 'active', $draftTitle, $content, CurrentUtcDatetime(), CurrentUtcDatetime())
+	INSERT INTO Draft (
+		draft_id,
+		page_revision_id,
+		status,
+		draft_title,
+		content,
+		created_at,
+		updated_at
+	)
+	VALUES (
+		RandomUuid(4),
+		$pageRevisionID,
+		'active',
+		$draftTitle,
+		$content,
+		CurrentUtcDatetime(),
+		CurrentUtcDatetime()
+	)
 	RETURNING draft_id;
 	`
 
@@ -320,7 +334,7 @@ func (r *appRepositoryImpl) CreateDraft(pageID api.PageID, draftTitle string, dr
 		table.ValueParam("$content", types.TextValue(draftContent)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return nil, err
 	}

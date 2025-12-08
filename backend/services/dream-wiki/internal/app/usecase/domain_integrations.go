@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
@@ -13,7 +12,7 @@ import (
 func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 	slug := extractYWikiSlugFromURL(pageURL)
 
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadWriteRepository()
 	defer repo.Rollback()
 
 	err := repo.WriteIntegrationLogField("ywiki", fmt.Sprintf("Fetching page with slug: %s", slug))
@@ -72,14 +71,14 @@ func (u *appUsecaseImpl) FetchPageFromYWiki(pageURL string) error {
 }
 
 func (u *appUsecaseImpl) GetIntegrationLogs(integrationID api.IntegrationID, cursor *string) (fields []api.IntegrationLogField, nextInfo *api.NextInfo, err error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadOnlyRepository()
 	defer repo.Rollback()
 
 	return repo.GetIntegrationLogFields(integrationID, cursor, 50)
 }
 
 func (u *appUsecaseImpl) GithubAccountPRAsync(prURL string) (*api.TaskID, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadWriteRepository()
 	defer repo.Rollback()
 
 	taskState := internals.TaskStateGitHubAccountPR{

@@ -6,16 +6,21 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ycloud_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/db_adapter"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
-	"github.com/ydb-platform/ydb-go-sdk/v3"
 )
 
 type Deps struct {
-	YDBDriver       *ydb.Driver
+	YDBDriver       db_adapter.DBAdapter
 	Config          *config.Config
 	Logger          logger.Logger
 	InferenceClient inference_client.InferenceClient
 	YWikiClient     ywiki_client.YWikiClient
 	GitHubClient    github_client.GitHubClient
 	YCloudClient    ycloud_client.YCloudClient
+}
+
+type RepositoryDeps struct {
+	TX   db_adapter.Transaction
+	Deps *Deps
 }

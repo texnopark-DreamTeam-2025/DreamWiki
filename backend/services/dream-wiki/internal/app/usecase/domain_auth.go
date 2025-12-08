@@ -5,20 +5,17 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/models"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func (u *appUsecaseImpl) generateJWTToken(userID string, username string) (string, error) {
-	// Create a new token object
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"id":       userID,
 		"username": username,
-		"exp":      time.Now().Add(time.Hour * 240).Unix(), // Token expires in 240 hours
+		"exp":      time.Now().Add(time.Hour * 240).Unix(),
 	})
 
-	// Sign and get the complete encoded token as a string
 	tokenString, err := token.SignedString([]byte(u.deps.Config.JWTSecretKey))
 	if err != nil {
 		return "", err
@@ -28,7 +25,7 @@ func (u *appUsecaseImpl) generateJWTToken(userID string, username string) (strin
 }
 
 func (u *appUsecaseImpl) Login(req api.V1LoginRequest) (*api.V1LoginResponse, error) {
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadOnlyRepository()
 	defer repo.Rollback()
 
 	user, err := repo.GetUserByLogin(req.Username)

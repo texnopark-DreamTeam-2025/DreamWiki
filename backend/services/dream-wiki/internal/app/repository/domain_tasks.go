@@ -48,7 +48,7 @@ func (r *appRepositoryImpl) CreateTask(taskState internals.TaskState) (*api.Task
 		return nil, err
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$state", types.JSONValueFromBytes(stateBytes)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$state", types.JSONValueFromBytes(stateBytes)))
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (r *appRepositoryImpl) GetTaskByID(taskID api.TaskID) (*api.TaskDigest, *in
 	WHERE task_id = $taskID;
 	`
 
-	result, err := r.ydbClient.InTX().Execute(yql, table.ValueParam("$taskID", types.Int64Value(taskID)))
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$taskID", types.Int64Value(taskID)))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -125,7 +125,7 @@ func (r *appRepositoryImpl) ListTasks(cursor *api.Cursor, limit int64) ([]api.Ta
 
 	idUpperLimit := decodeTasksCursor(cursor)
 
-	result, err := r.ydbClient.InTX().Execute(yql,
+	result, err := r.tx.InTX().Execute(yql,
 		table.ValueParam("$idUpperLimit", types.Int64Value(idUpperLimit)),
 		table.ValueParam("$limit", types.Uint64Value(uint64(limit))),
 	)
@@ -191,7 +191,7 @@ func (r *appRepositoryImpl) SetTaskState(taskID api.TaskID, newState internals.T
 		table.ValueParam("$newState", types.JSONValueFromBytes(stateBytes)),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (r *appRepositoryImpl) SetTaskStatus(taskID api.TaskID, newStatus api.TaskS
 		table.ValueParam("$newStatus", types.TextValue(string(newStatus))),
 	}
 
-	result, err := r.ydbClient.InTX().Execute(yql, parameters...)
+	result, err := r.tx.InTX().Execute(yql, parameters...)
 	if err != nil {
 		return err
 	}

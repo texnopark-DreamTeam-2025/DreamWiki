@@ -16,6 +16,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ycloud_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/db_adapter"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/auth"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
@@ -75,9 +76,10 @@ func main() {
 	if err != nil {
 		logger.Fatalf("failed to initialize github client: %v", err)
 	}
+	dbAdapter := db_adapter.NewDBAdapter(ydbDriver, appConfig, logger)
 
 	deps := deps.Deps{
-		YDBDriver:       ydbDriver,
+		YDBDriver:       dbAdapter,
 		Config:          appConfig,
 		Logger:          logger,
 		InferenceClient: inferenceClient,

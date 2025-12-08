@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 )
@@ -14,7 +13,7 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	if err != nil {
 		return nil, err
 	}
-	repo := repository.NewAppRepository(u.ctx, u.deps)
+	repo := u.createReadOnlyRepository()
 	defer repo.Rollback()
 
 	embeddingResults, err := repo.SearchByEmbedding(req.Query, internals.Embedding(embedding), 5)
