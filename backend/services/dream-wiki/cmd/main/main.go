@@ -13,6 +13,7 @@ import (
 	dreamwikihttpapi "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/dreamwiki_http_api"
 	dreamwikitaskactionresultstopicreader "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/dreamwiki_task_action_results_topic_reader"
 	dreamwikitaskactionstopicreader "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/dreamwiki_task_actions_topic_reader"
+	staletaskfailer "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/stale_task_failer"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/db_adapter"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -83,11 +84,13 @@ func main() {
 	taskActionsTopicReader := dreamwikitaskactionstopicreader.NewDreamWikiTaskActionsTopicReader(&deps)
 	taskActionResultsTopicReader := dreamwikitaskactionresultstopicreader.NewDreamWikiTaskActionResultsTopicReader(&deps)
 	httpAPI := dreamwikihttpapi.NewDreamWikiHTTPAPI(&deps)
+	staleTaskFailer := staletaskfailer.NewStaleTaskFailer(&deps)
 
 	err = component.RunComponents(
 		taskActionsTopicReader,
 		taskActionResultsTopicReader,
 		httpAPI,
+		staleTaskFailer,
 	)
 	if err != nil {
 		logger.Error("one or more components shutted down with error: %v", err)

@@ -222,3 +222,28 @@ func (r *appRepositoryImpl) SetTaskStatus(taskID api.TaskID, newStatus api.TaskS
 
 	return nil
 }
+
+func (r *appRepositoryImpl) GetStaleTaskIDs() ([]api.TaskID, error) {
+	yql := `
+	SELECT task_id
+	FROM Task
+	WHERE status = 'executing' AND DateTime::ToMinutes(CurrentUtcDatetime() - updated_at) > 60;
+	`
+
+	result, err := r.tx.InTX().Execute(yql)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	taskIDs := make([]api.TaskID, 0)
+	for result.NextRow() {
+		var taskID api.TaskID
+		if err := result.FetchRow(&taskID); err != nil {
+			return nil, err
+		}
+		taskIDs = append(taskIDs, taskID)
+	}
+
+	return taskIDs, nil
+}

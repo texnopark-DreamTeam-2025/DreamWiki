@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/db_adapter"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
@@ -51,7 +52,11 @@ func (u *taskActionUsecaseImpl) failTaskActionAndTask(repo repository.AppReposit
 }
 
 func (u *taskActionUsecaseImpl) ExecuteAction(actionID internals.TaskActionID) (err error) {
-	repo := repository.NewAppRepository(u.ctx, &deps.RepositoryDeps{})
+	tx := u.deps.YDBDriver.NewTransaction(u.ctx, db_adapter.SerializableReadWrite)
+	repo := repository.NewAppRepository(u.ctx, &deps.RepositoryDeps{
+		TX:   tx,
+		Deps: u.deps,
+	})
 	defer repo.Rollback()
 
 	defer func() {

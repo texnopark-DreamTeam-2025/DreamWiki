@@ -57,6 +57,7 @@ type (
 		CreateTask(taskState internals.TaskState) (*api.TaskID, error)
 		SetTaskStatus(taskID api.TaskID, newStatus api.TaskStatus) error
 		SetTaskState(taskID api.TaskID, newState internals.TaskState) error
+		GetStaleTaskIDs() ([]api.TaskID, error)
 
 		// domain_task_actions.go
 		CreateTaskAction(taskID api.TaskID, actionState internals.TaskAction) (*internals.TaskActionID, error)
