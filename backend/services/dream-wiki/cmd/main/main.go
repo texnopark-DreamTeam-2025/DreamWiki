@@ -3,30 +3,21 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/delivery"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/github_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/inference_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ycloud_client"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/client/ywiki_client"
+	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/component"
+	dreamwikihttpapi "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/dreamwiki_http_api"
+	dreamwikitaskactionresultstopicreader "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/dreamwiki_task_action_results_topic_reader"
+	dreamwikitaskactionstopicreader "github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/dreamwiki_task_actions_topic_reader"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/config"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/db_adapter"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/auth"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/cors"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/logging"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/middleware/panic"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/topic_reader"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/db"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/utils/logger"
-	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -77,6 +68,7 @@ func main() {
 		logger.Fatalf("failed to initialize github client: %v", err)
 	}
 	dbAdapter := db_adapter.NewDBAdapter(ydbDriver, appConfig, logger)
+	defer dbAdapter.Close()
 
 	deps := deps.Deps{
 		YDBDriver:       dbAdapter,
@@ -88,83 +80,16 @@ func main() {
 		YCloudClient:    yCloudClient,
 	}
 
-	appDelivery := delivery.NewAppDelivery(&deps)
+	taskActionsTopicReader := dreamwikitaskactionstopicreader.NewDreamWikiTaskActionsTopicReader(&deps)
+	taskActionResultsTopicReader := dreamwikitaskactionresultstopicreader.NewDreamWikiTaskActionResultsTopicReader(&deps)
+	httpAPI := dreamwikihttpapi.NewDreamWikiHTTPAPI(&deps)
 
-	router := mux.NewRouter()
-
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	}).Methods("GET")
-
-	apiRouter := router.PathPrefix("/api").Subrouter()
-
-	strictHandler := api.NewStrictHandler(appDelivery, []api.StrictMiddlewareFunc{})
-	api.HandlerWithOptions(strictHandler, api.GorillaServerOptions{
-		BaseRouter: apiRouter,
-	})
-
-	router.Use(panic.PanicMiddleware(logger))
-	router.Use(auth.AuthMiddleware(&deps))
-	router.Use(logging.LoggingMiddleware(logger))
-	routerWithCORS := cors.CORSMiddleware(router)
-
-	port := ":" + appConfig.ServerPort
-	server := &http.Server{
-		Addr:              port,
-		ReadHeaderTimeout: 1 * time.Second,
-		Handler:           routerWithCORS,
-	}
-
-	serverErr := make(chan error, 1)
-
-	appCtx, appCancel := context.WithCancel(context.Background())
-	defer appCancel()
-
-	go func() {
-		logger.Info("starting HTTP server",
-			zap.String("address", server.Addr),
-		)
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("server error", zap.Error(err))
-			serverErr <- err
-		}
-	}()
-
-	rd, err := topic_reader.NewTopicReader(appCtx, &deps)
+	err = component.RunComponents(
+		taskActionsTopicReader,
+		taskActionResultsTopicReader,
+		httpAPI,
+	)
 	if err != nil {
-		logger.Error("failed to create topic reader", zap.Error(err))
-		os.Exit(1)
-	}
-	rd.ReadMessages()
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	select {
-	case err := <-serverErr:
-		logger.Error("failed to start server", zap.Error(err))
-		os.Exit(1)
-	case sig := <-quit:
-		logger.Info("server is shutting down",
-			zap.String("signal", sig.String()),
-		)
-
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		if err := server.Shutdown(shutdownCtx); err != nil {
-			logger.Error("server shutdown error", zap.Error(err))
-			cancel()
-			os.Exit(1)
-		}
-
-		appCancel()
-
-		if err := rd.Close(shutdownCtx); err != nil {
-			logger.Error("topic readers shutdown error", zap.Error(err))
-		}
-
-		logger.Info("server stopped")
+		logger.Error("one or more components shutted down with error: %v", err)
 	}
 }
