@@ -9,6 +9,9 @@ import { ThemeProvider, ToasterComponent, ToasterProvider } from "@gravity-ui/ui
 import { toaster } from "@gravity-ui/uikit/toaster-singleton";
 import { client } from "./client/client.gen.ts";
 import { AuthProvider } from "./contexts/AuthContext.tsx";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
 
 client.setConfig(
   createConfig({
@@ -20,12 +23,14 @@ client.setConfig(
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider theme="light">
-      <ToasterProvider toaster={toaster}>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
-        <ToasterComponent />
-      </ToasterProvider>
+      <QueryClientProvider client={queryClient}>
+        <ToasterProvider toaster={toaster}>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+          <ToasterComponent />
+        </ToasterProvider>
+      </QueryClientProvider>
     </ThemeProvider>
   </StrictMode>
 );

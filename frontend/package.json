@@ -21,6 +21,7 @@
     "@hey-api/client-axios": "^0.9.1",
     "@hey-api/openapi-ts": "^0.82.5",
     "@monaco-editor/react": "^4.7.0",
+    "@tanstack/react-query": "^5.90.12",
     "axios": "^1.12.2",
     "monaco-editor": "^0.54.0",
     "react": "^18.2.0",
