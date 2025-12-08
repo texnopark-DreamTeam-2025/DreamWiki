@@ -638,7 +638,7 @@ components:
         actions:
           type: array
           items:
-            $ref: '#/components/schemas/RawJSON'
+            $ref: '#/components/schemas/TaskActionWithResult'
       required:
         - task_id
         - task_state
@@ -973,6 +973,28 @@ components:
       required:
         - only_my_tasks
         - only_active
+
+    TaskActionWithResult:
+      type: object
+      properties:
+        task_action_id:
+          type: integer
+          format: int64
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        task_action:
+          $ref: '#/components/schemas/RawJSON'
+        task_action_result:
+          $ref: '#/components/schemas/RawJSON'
+      required:
+        - task_action_id
+        - created_at
+        - task_action
+
 
     NextInfo:
       type: object

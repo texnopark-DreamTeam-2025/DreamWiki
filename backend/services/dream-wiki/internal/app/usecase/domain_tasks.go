@@ -104,6 +104,11 @@ func (u *appUsecaseImpl) GetTaskInternalState(taskID api.TaskID) (*api.V1TasksIn
 		return nil, err
 	}
 
+	taskActions, err := repo.GetTaskActionsByTaskID(taskID)
+	if err != nil {
+		return nil, err
+	}
+
 	taskStateBytes, err := json.Marshal(taskState)
 	if err != nil {
 		return nil, err
@@ -115,7 +120,7 @@ func (u *appUsecaseImpl) GetTaskInternalState(taskID api.TaskID) (*api.V1TasksIn
 	}
 
 	response := &api.V1TasksInternalStateGetResponse{
-		Actions:   []api.RawJSON{}, // TODO: include actions in future
+		Actions:   taskActions,
 		TaskId:    taskDigest.TaskId,
 		TaskState: taskStateRaw,
 	}

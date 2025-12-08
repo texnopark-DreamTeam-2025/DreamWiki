@@ -217,3 +217,69 @@ func (r *appRepositoryImpl) SetTaskActionStatus(actionID internals.TaskActionID,
 
 	return nil
 }
+
+func (r *appRepositoryImpl) GetTaskActionsByTaskID(taskID api.TaskID) ([]api.TaskActionWithResult, error) {
+	yql := `
+	SELECT
+		ta.task_action_id as task_action_id,
+		ta.task_id as task_id,
+		ta.status as status,
+		ta.action as action,
+		ta.created_at as created_at,
+		ta.updated_at as updated_at,
+		tar.result as result,
+		tar.created_at as result_created_at
+	FROM TaskAction as ta
+	LEFT JOIN TaskActionResult as tar ON ta.task_action_id = tar.task_action_id
+	WHERE ta.task_id = $taskID
+	ORDER BY ta.task_action_id;
+	`
+
+	result, err := r.tx.InTX().Execute(yql, table.ValueParam("$taskID", types.Int64Value(taskID)))
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	taskActions := make([]api.TaskActionWithResult, 0)
+
+	for result.NextRow() {
+		var taskActionID internals.TaskActionID
+		var taskID api.TaskID
+		var status string
+		var actionBytes []byte
+		var createdAt time.Time
+		var updatedAt time.Time
+		var resultBytes []byte
+		var resultCreatedAt *time.Time
+
+		if err := result.FetchRow(&taskActionID, &taskID, &status, &actionBytes, &createdAt, &updatedAt, &resultBytes, &resultCreatedAt); err != nil {
+			return nil, err
+		}
+
+		taskActionRaw := map[string]any{}
+		if err := json.Unmarshal(actionBytes, &taskActionRaw); err != nil {
+			return nil, err
+		}
+
+		var taskActionResultRaw *api.RawJSON
+		if len(resultBytes) > 0 {
+			taskActionResultRaw = &api.RawJSON{}
+			if err := json.Unmarshal(resultBytes, taskActionResultRaw); err != nil {
+				return nil, err
+			}
+		}
+
+		taskActionWithResult := api.TaskActionWithResult{
+			TaskActionId:     taskActionID,
+			CreatedAt:        createdAt,
+			UpdatedAt:        &updatedAt,
+			TaskAction:       taskActionRaw,
+			TaskActionResult: taskActionResultRaw,
+		}
+
+		taskActions = append(taskActions, taskActionWithResult)
+	}
+
+	return taskActions, nil
+}

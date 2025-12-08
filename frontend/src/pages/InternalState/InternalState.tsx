@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getTaskInternalState } from "@/client";
 import type { RawJson } from "@/client";
+import { MonacoEditor } from "@/components/MonacoEditor/MonacoEditor";
 import styles from "./InternalState.module.scss";
 
 export const InternalState = () => {
@@ -53,23 +54,13 @@ export const InternalState = () => {
       <h1>Internal State for Task #{taskId}</h1>
 
       <div className={styles.section}>
-        <h2>Task State</h2>
-        <pre className={styles.jsonDisplay}>{JSON.stringify(taskState, null, 2)}</pre>
-      </div>
-
-      <div className={styles.section}>
-        <h2>Actions</h2>
-        {actions.length === 0 ? (
-          <div className={styles.noActions}>No actions</div>
-        ) : (
-          <div className={styles.actionsList}>
-            {actions.map((action, index) => (
-              <div key={index} className={styles.actionItem}>
-                <pre className={styles.jsonDisplay}>{JSON.stringify(action, null, 2)}</pre>
-              </div>
-            ))}
-          </div>
-        )}
+        <h2>Task State and Actions</h2>
+        <MonacoEditor
+          value={JSON.stringify({ task_state: taskState, actions }, null, 2)}
+          language="json"
+          height="600px"
+          readOnly={true}
+        />
       </div>
     </div>
   );

@@ -62,6 +62,7 @@ type (
 		// domain_task_actions.go
 		CreateTaskAction(taskID api.TaskID, actionState internals.TaskAction) (*internals.TaskActionID, error)
 		GetTaskActionByID(actionID internals.TaskActionID) (*internals.TaskAction, *internals.TaskActionAdditionalInfo, error)
+		GetTaskActionsByTaskID(taskID api.TaskID) ([]api.TaskActionWithResult, error)
 		EnqueueTaskAction(actionID internals.TaskActionID) error
 		SetTaskActionStatus(actionID internals.TaskActionID, newStatus internals.TaskActionStatus) error
 		CreateTaskActionResult(actionID internals.TaskActionID, result internals.TaskActionResult) error
