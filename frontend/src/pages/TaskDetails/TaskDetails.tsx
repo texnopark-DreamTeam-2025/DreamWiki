@@ -129,16 +129,14 @@ export const TaskDetails = () => {
           </Label>
         </Flex>
         <Button onClick={handleViewInternalState} size="m">
-          View Internal State
+          Посмотреть JSON
         </Button>
       </Flex>
 
-      <Card theme="normal" size="l">
-        <Flex direction="column" gap="3">
-          <Text variant="header-2">Description</Text>
-          <Text variant="body-1">{task.task_digest.description}</Text>
-        </Flex>
-      </Card>
+      <Flex direction="column" gap="3">
+        <Text variant="header-2">Описание</Text>
+        <Text variant="body-1">{task.task_digest.description}</Text>
+      </Flex>
 
       <Flex direction="column" gap="4">
         <Text variant="header-2">Subtasks</Text>

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { getTaskInternalState } from "@/client";
 import type { RawJson } from "@/client";
 import { MonacoEditor } from "@/components/MonacoEditor/MonacoEditor";
-import styles from "./InternalState.module.scss";
+import { ActionBar } from "@gravity-ui/navigation";
+import { Breadcrumbs, Flex, Text } from "@gravity-ui/uikit";
 
 export const InternalState = () => {
   const { taskId } = useParams<{ taskId: string }>();
+  const navigate = useNavigate();
   const [taskState, setTaskState] = useState<RawJson | null>(null);
   const [actions, setActions] = useState<RawJson[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,26 +44,46 @@ export const InternalState = () => {
   }, [taskId]);
 
   if (loading) {
-    return <div className={styles.loading}>Loading internal state...</div>;
+    return (
+      <Flex direction="column" alignItems="center" justifyContent="center" style={{ height: "100vh" }}>
+        <Text variant="body-2">Loading internal state...</Text>
+      </Flex>
+    );
   }
 
   if (error) {
-    return <div className={styles.error}>{error}</div>;
+    return (
+      <Flex direction="column" alignItems="center" justifyContent="center" style={{ height: "100vh" }}>
+        <Text variant="body-2" color="danger">
+          {error}
+        </Text>
+      </Flex>
+    );
   }
 
   return (
-    <div className={styles.internalState}>
-      <h1>Internal State for Task #{taskId}</h1>
+    <Flex direction="column" gap="4">
+      <ActionBar>
+        <Flex alignItems="center" direction="row" width="100%">
+          <Breadcrumbs style={{ width: "100%" }} showRoot>
+            <Breadcrumbs.Item href="/tasks" onClick={() => navigate("/tasks")}>Задачи</Breadcrumbs.Item>
+            <Breadcrumbs.Item href={`/task/${taskId}`} onClick={() => navigate(`/task/${taskId}`)}>Задача #{taskId}</Breadcrumbs.Item>
+            <Breadcrumbs.Item>Internal State</Breadcrumbs.Item>
+          </Breadcrumbs>
+        </Flex>
+      </ActionBar>
 
-      <div className={styles.section}>
-        <h2>Task State and Actions</h2>
+      <Text variant="header-1">Internal State for Task #{taskId}</Text>
+
+      <Flex direction="column" gap="2">
+        <Text variant="header-2">Task State and Actions</Text>
         <MonacoEditor
           value={JSON.stringify({ task_state: taskState, actions }, null, 2)}
           language="json"
           height="600px"
           readOnly={true}
         />
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 };

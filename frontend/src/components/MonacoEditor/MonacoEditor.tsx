@@ -26,10 +26,8 @@ export const MonacoEditor = ({
   const [isEditorReady, setIsEditorReady] = useState(false);
 
   useEffect(() => {
-    // Настройка Monaco Editor после загрузки
     if (isEditorReady) {
       import("monaco-editor").then((monaco) => {
-        // Базовые настройки для TypeScript/JavaScript
         monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
           noSemanticValidation: true,
           noSyntaxValidation: false,
@@ -41,12 +39,10 @@ export const MonacoEditor = ({
   const handleEditorDidMount = (editor: any) => {
     setIsEditorReady(true);
 
-    // Вызываем onMount из родительского компонента
     if (onMount) {
       onMount(editor);
     }
 
-    // Добавляем обработчик скролла если передан
     if (onScroll) {
       editor.onDidScrollChange(() => {
         onScroll(editor);
@@ -75,6 +71,7 @@ export const MonacoEditor = ({
           lineNumbersMinChars: 3,
           fontSize: 14,
           fontFamily: 'JetBrains Mono, Monaco, Consolas, "Courier New", monospace',
+          fontWeight: 'normal',
           automaticLayout: true,
           contextmenu: true,
           selectOnLineNumbers: true,
