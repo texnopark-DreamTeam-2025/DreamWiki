@@ -2,6 +2,7 @@ package component
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"os/signal"
@@ -47,7 +48,7 @@ func RunComponents(components ...Component) error {
 			componentsStillRunning := atomic.AddInt64(&componentsRunning, -1)
 			componentsStopped := int64(len(components)) - componentsStillRunning
 
-			if err != nil {
+			if err != nil && !errors.Is(err, context.Canceled) {
 				log.Printf("Component %s stopped (%d/%d), with error: %s", component.Name(), int(componentsStopped), len(components), err.Error())
 				tryWriteErrorInChannel(errCh, err)
 			} else {

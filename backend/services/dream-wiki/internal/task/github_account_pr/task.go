@@ -224,12 +224,14 @@ func (t *gitHubAccountPRTask) GetCurrentAccountStage() internals.CurrentAccountS
 func (t *gitHubAccountPRTask) OnActionResult(result internals.TaskActionResult) error {
 	t.accountResult(result)
 
-	switch t.GetCurrentAccountStage() {
+	currentStage := t.GetCurrentAccountStage()
+	fmt.Printf("Current stage is %s\n", currentStage)
+
+	switch currentStage {
 	case internals.FetchPrData:
 		if err := t.fetchPRData(); err != nil {
 			return fmt.Errorf("failed to fetch PR data: %w", err)
 		}
-	case internals.DetectProductChanges:
 		if err := t.askLLMForProductChanges(); err != nil {
 			return fmt.Errorf("failed to ask LLM for product changes: %w", err)
 		}
@@ -311,9 +313,13 @@ func (t *gitHubAccountPRTask) askLLMForProductChanges() error {
 не было, просто напиши NO_CHANGES и ничего больше не пиши.
 Не учитывай исправление опечаток или что-то схожее.
 Постарайся описать детали. Например, если изменилась цена или изменилось какое-то бизнес-правило, скажи это прямо.
+Если это важно для бизнеса, назови детали. К примеру, если изменилась цена на какой-то товар, скажи,
+на какой товар и какая цена изменилась
 
 Вот информация:
+
 Описание PR: %s
+
 PR Patch: %s`,
 		*t.state.PrDescription, *t.state.PrPatch)
 
@@ -339,6 +345,9 @@ func (t *gitHubAccountPRTask) askLLMForSearchQueries() error {
 У компании есть база знаний, по которой есть семантический поиск. Надо сформировать поисковые запросы, которые могут
 найти такие фрагменты базы знаний, которые теоретически надо изменить при внесении изменений в продукт.
 Сформулируй как можно меньше запросов. Максимум - 3 запроса.
+
+Запросы должны искать ту сущность, которая изменилась. Например, если изменилась цена
+на какой-то товар, надо искать что-то типа "стоимость товара".
 
 Вот продуктовые изменения:
 %s
@@ -450,7 +459,6 @@ func (t *gitHubAccountPRTask) createDraftsWithRephrasedParagraphs() error {
 		}
 
 		createdDraftIDs = append(createdDraftIDs, *draftID)
-		break
 	}
 
 	t.state.CreatedDraftIds = &createdDraftIDs

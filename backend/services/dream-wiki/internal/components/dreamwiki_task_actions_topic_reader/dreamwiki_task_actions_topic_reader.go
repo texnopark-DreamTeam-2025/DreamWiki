@@ -2,6 +2,7 @@ package dreamwikitaskactionstopicreader
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/components/component"
@@ -49,17 +50,12 @@ func (d *DreamWikiTaskActionsTopicReader) Run(ctx context.Context) error {
 		errCh <- d.reader.ReadMessages(ctx)
 	}()
 
-	select {
-	case <-ctx.Done():
-		d.deps.Logger.Info("task actions topic reader is shutting down")
-		return nil
-	case err := <-errCh:
-		if err != nil {
-			d.deps.Logger.Error("task actions topic reader error", "error", err)
-			return err
-		}
-		return nil
+	err := <-errCh
+	if err != nil && !errors.Is(err, context.Canceled) {
+		d.deps.Logger.Error("task actions topic reader error", "error", err)
+		return err
 	}
+	return nil
 }
 
 func (d *DreamWikiTaskActionsTopicReader) Name() string {

@@ -53,7 +53,7 @@ export const TaskDetails = () => {
   const getSubtaskStatusColor = (status: TaskStatus) => {
     switch (status) {
       case "done":
-        return "positive";
+        return "success";
       case "failed_by_error":
       case "failed_by_timeout":
         return "danger";

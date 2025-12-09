@@ -10,6 +10,7 @@ import (
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table"
 	"github.com/ydb-platform/ydb-go-sdk/v3/table/types"
+	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicoptions"
 	"github.com/ydb-platform/ydb-go-sdk/v3/topic/topicwriter"
 )
 
@@ -84,7 +85,7 @@ func (r *appRepositoryImpl) CreateTaskActionResult(actionID internals.TaskAction
 
 func (r *appRepositoryImpl) EnqueueTaskAction(actionID internals.TaskActionID) error {
 	topicClient := r.tx.TopicClient()
-	writer, err := topicClient.StartTransactionalWriter(r.tx.GetTX(), "TaskActionToExecute")
+	writer, err := topicClient.StartTransactionalWriter(r.tx.GetTX(), "TaskActionToExecute", topicoptions.WithWriterWaitServerAck(true))
 	if err != nil {
 		return err
 	}
@@ -99,7 +100,7 @@ func (r *appRepositoryImpl) EnqueueTaskAction(actionID internals.TaskActionID) e
 
 func (r *appRepositoryImpl) EnqueueTaskActionResult(actionID internals.TaskActionID) error {
 	topicClient := r.tx.TopicClient()
-	writer, err := topicClient.StartTransactionalWriter(r.tx.GetTX(), "TaskActionResultReady")
+	writer, err := topicClient.StartTransactionalWriter(r.tx.GetTX(), "TaskActionResultReady", topicoptions.WithWriterWaitServerAck(true))
 	if err != nil {
 		return err
 	}

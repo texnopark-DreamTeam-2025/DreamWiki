@@ -68,7 +68,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf("failed to initialize github client: %v", err)
 	}
-	dbAdapter := db_adapter.NewDBAdapter(ydbDriver, appConfig, logger)
+	dbAdapter := db_adapter.NewDBAdapter(appConfig, logger)
 	defer dbAdapter.Close()
 
 	deps := deps.Deps{

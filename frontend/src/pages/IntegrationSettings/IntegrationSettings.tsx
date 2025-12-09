@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Select, Button } from "@gravity-ui/uikit";
+import { Select, Button, Flex, Text } from "@gravity-ui/uikit";
 import { ywikiAddPage, githubAccountPr } from "@/client";
 import { useToast } from "@/hooks/useToast";
 import { MonacoEditor } from "@/components/MonacoEditor";
-import styles from "./IntegrationSettings.module.scss";
 
 export default function IntegrationSettings() {
   const { showSuccess, showError } = useToast();
@@ -132,10 +131,10 @@ export default function IntegrationSettings() {
   const isYandexWiki = currentIntegration === "YandexWiki";
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.title}>Настройки интеграций</div>
-        <div className={styles.selectWrapper}>
+    <Flex direction="column" gap="5" style={{ padding: '20px' }}>
+      <Flex justifyContent="space-between" alignItems="center">
+        <Text variant="header-1">Настройки интеграций</Text>
+        <div style={{ width: '340px' }}>
           <Select
             value={selectedIntegration}
             onUpdate={setSelectedIntegration}
@@ -144,22 +143,37 @@ export default function IntegrationSettings() {
             width={340}
           />
         </div>
-      </div>
+      </Flex>
 
       {isYandexWiki ? (
-        <div className={styles.wikiSection}>
-          <div className={styles.sectionTitle}>Добавьте новую страницу</div>
-          <div className={styles.inputGroup}>
-            <div className={styles.inputWrapper}>
-              <div className={styles.inputContent}>
-                <input
-                  type="text"
-                  className={styles.selectText}
-                  placeholder="Введите ссылку на страницу"
-                  value={pageUrl}
-                  onChange={(e) => setPageUrl(e.target.value)}
-                />
-              </div>
+        <Flex direction="column" gap="4" style={{ width: '593px' }}>
+          <Text variant="subheader-2">Добавьте новую страницу</Text>
+          <Flex gap="2">
+            <div style={{
+              border: '1px solid rgba(0, 0, 0, 0.3)',
+              borderRadius: '6px',
+              padding: '2px 8px',
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <input
+                type="text"
+                placeholder="Введите ссылку на страницу"
+                value={pageUrl}
+                onChange={(e) => setPageUrl(e.target.value)}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontFamily: 'var(--text-body-1-font-family, "Inter-Regular", sans-serif)',
+                  fontSize: 'var(--text-body-1-font-size, 13px)',
+                  lineHeight: 'var(--text-body-1-line-height, 18px)',
+                  fontWeight: 'var(--text-body-1-font-weight, 400)',
+                  color: 'var(--var-g-color-text-primary, rgba(0, 0, 0, 0.85))'
+                }}
+              />
             </div>
             <Button
               view="normal"
@@ -170,12 +184,12 @@ export default function IntegrationSettings() {
             >
               {isAddingPage ? "Добавляем..." : "Добавить"}
             </Button>
-          </div>
+          </Flex>
 
-          <div className={styles.indexStatus}>
-            <div className={styles.sectionTitle}>Состояние индекса</div>
-            <div className={styles.statusInfo}>
-              <div className={styles.statusText}>{indexedPagesCount} страниц проиндексировано</div>
+          <Flex direction="column" gap="3">
+            <Text variant="subheader-2">Состояние индекса</Text>
+            <Flex justifyContent="space-between" alignItems="center">
+              <Text variant="body-1">{indexedPagesCount} страниц проиндексировано</Text>
               <Button
                 view="flat"
                 size="s"
@@ -185,23 +199,38 @@ export default function IntegrationSettings() {
               >
                 {isUpdating ? "Обновляем..." : "обновить"}
               </Button>
-            </div>
-          </div>
-        </div>
+            </Flex>
+          </Flex>
+        </Flex>
       ) : (
-        <div className={styles.pullRequestSection}>
-          <div className={styles.sectionTitle}>Внести изменения на основе кода Pull-Request-а</div>
-          <div className={styles.inputGroup}>
-            <div className={styles.inputWrapper}>
-              <div className={styles.inputContent}>
-                <input
-                  type="text"
-                  className={styles.selectText}
-                  placeholder="Введите ссылку на PR"
-                  value={prUrl}
-                  onChange={(e) => setPrUrl(e.target.value)}
-                />
-              </div>
+        <Flex direction="column" gap="4" style={{ width: '593px' }}>
+          <Text variant="subheader-2">Внести изменения на основе кода Pull-Request-а</Text>
+          <Flex gap="2">
+            <div style={{
+              border: '1px solid rgba(0, 0, 0, 0.3)',
+              borderRadius: '6px',
+              padding: '2px 8px',
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <input
+                type="text"
+                placeholder="Введите ссылку на PR"
+                value={prUrl}
+                onChange={(e) => setPrUrl(e.target.value)}
+                style={{
+                  flex: 1,
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  fontFamily: 'var(--text-body-1-font-family, "Inter-Regular", sans-serif)',
+                  fontSize: 'var(--text-body-1-font-size, 13px)',
+                  lineHeight: 'var(--text-body-1-line-height, 18px)',
+                  fontWeight: 'var(--text-body-1-font-weight, 400)',
+                  color: 'var(--var-g-color-text-primary, rgba(0, 0, 0, 0.85))'
+                }}
+              />
             </div>
             <Button
               view="normal"
@@ -212,26 +241,28 @@ export default function IntegrationSettings() {
             >
               {isAnalyzing ? "Анализируем..." : "Проанализировать"}
             </Button>
-          </div>
-        </div>
+          </Flex>
+        </Flex>
       )}
 
-      <div className={styles.parametersSection}>
-        <div className={styles.sectionLabel}>Параметры</div>
-        <div className={styles.editorWrapper}>
+      <Flex direction="column" gap="3" style={{ width: '654px' }}>
+        <Text variant="body-1">Параметры</Text>
+        <div style={{
+          height: '400px',
+          overflow: 'hidden'
+        }}>
           <MonacoEditor
             value={configContent}
             onChange={(value) => setConfigContent(value || "")}
             language="json"
-            height="400px"
+            height="100%"
             theme="light"
             readOnly={false}
           />
         </div>
-        <div className={styles.placeholder}></div>
-      </div>
+      </Flex>
 
-      <div className={styles.actionsSection}>
+      <Flex gap="5">
         <Button
           view="outlined"
           size="m"
@@ -250,7 +281,7 @@ export default function IntegrationSettings() {
         >
           {isLoading ? "Применяем..." : "Применить"}
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

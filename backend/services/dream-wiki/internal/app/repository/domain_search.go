@@ -109,6 +109,7 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 		if err != nil {
 			return nil, err
 		}
+		defer result.Close()
 
 		for result.NextRow() {
 			var pageID api.PageID
@@ -118,7 +119,6 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 
 			err = result.FetchRow(&pageID, &lineNumber, &content, &paragraphIndex)
 			if err != nil {
-				result.Close()
 				return nil, err
 			}
 
@@ -132,7 +132,6 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 
 			allRetrievedParagraphs = append(allRetrievedParagraphs, paragraphWithContext)
 		}
-		result.Close()
 	}
 
 	pageParagraphs := groupParagraphsByPages(allRetrievedParagraphs)
@@ -345,6 +344,7 @@ func (r *appRepositoryImpl) SearchByTermsWithContext(terms []string, contextSize
 		if err != nil {
 			return nil, err
 		}
+		defer result.Close()
 
 		for result.NextRow() {
 			var pageID api.PageID
@@ -354,7 +354,6 @@ func (r *appRepositoryImpl) SearchByTermsWithContext(terms []string, contextSize
 
 			err = result.FetchRow(&pageID, &lineNumber, &content, &paragraphIndex)
 			if err != nil {
-				result.Close()
 				return nil, err
 			}
 
@@ -368,7 +367,6 @@ func (r *appRepositoryImpl) SearchByTermsWithContext(terms []string, contextSize
 
 			allRetrievedParagraphs = append(allRetrievedParagraphs, paragraphWithContext)
 		}
-		result.Close()
 	}
 
 	pageParagraphs := groupParagraphsByPages(allRetrievedParagraphs)

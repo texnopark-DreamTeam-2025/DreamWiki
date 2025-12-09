@@ -2,6 +2,7 @@ package task_common
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
@@ -75,5 +76,6 @@ func (t *taskImpl) GetStatus() api.TaskStatus {
 }
 
 func (t *taskImpl) OnActionResult(result internals.TaskActionResult) error {
+	fmt.Println("ON ACTION RESULT")
 	return t.taskLogic.OnActionResult(result)
 }

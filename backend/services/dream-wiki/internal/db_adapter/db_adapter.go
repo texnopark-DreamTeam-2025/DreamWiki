@@ -67,7 +67,6 @@ type (
 
 type (
 	dbAdapterImpl struct {
-		db     *ydb.Driver
 		config *config.Config
 		log    logger.Logger
 	}
@@ -116,19 +115,22 @@ var (
 	_ ResultSet   = &resultImpl{}
 )
 
-func NewDBAdapter(driver *ydb.Driver, config *config.Config, log logger.Logger) DBAdapter {
+func NewDBAdapter(config *config.Config, log logger.Logger) DBAdapter {
 	return &dbAdapterImpl{
-		db:     driver,
 		config: config,
 		log:    log,
 	}
 }
 
 func (d *dbAdapterImpl) NewTransaction(ctx context.Context, mode TransactionMode) Transaction {
+	driver, err := ydb.Open(ctx, d.config.YDBDSN)
+	if err != nil {
+		panic(err.Error())
+	}
 	transactionWrapper := &transactionImpl{
+		db:          driver,
 		ctx:         ctx,
 		log:         d.log,
-		db:          d.db,
 		success:     make(chan bool),
 		commitError: make(chan error),
 	}
@@ -149,7 +151,7 @@ func (d *dbAdapterImpl) NewTransaction(ctx context.Context, mode TransactionMode
 	}
 
 	go func() {
-		transactionWrapper.commitError <- d.db.Query().DoTx(ctx, action)
+		transactionWrapper.commitError <- driver.Query().DoTx(ctx, action)
 	}()
 	tx := <-txRetrievingChannel
 	transactionWrapper.tx = &tx
@@ -159,12 +161,15 @@ func (d *dbAdapterImpl) NewTransaction(ctx context.Context, mode TransactionMode
 }
 
 func (d *dbAdapterImpl) Close() {
-	d.db.Close(context.Background())
 }
 
 func (d *dbAdapterImpl) NewTopicReader(topicName string, messageCallback TopicReaderCallback, options ...topicoptions.TopicOption) TopicReader {
+	driver, err := ydb.Open(context.Background(), d.config.YDBDSN)
+	if err != nil {
+		panic(err.Error())
+	}
 	return &topicReaderImpl{
-		db:              d.db,
+		db:              driver,
 		topicName:       topicName,
 		messageCallback: messageCallback,
 		options:         options,
@@ -182,43 +187,47 @@ func (t *topicReaderImpl) ReadMessages(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer reader.Close(context.Background())
+	defer func() {
+		err := reader.Close(context.Background())
+		if err != nil {
+			t.log.Error("failed to close reader", "error", err)
+		} else {
+			t.log.Info("reader closed")
+		}
+	}()
 
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			mess, err := reader.ReadMessage(ctx)
-			if err != nil {
-				if ctx.Err() != nil {
-					return ctx.Err()
-				}
-				t.log.Error("failed to read message", err)
-				continue
+		mess, err := reader.ReadMessage(ctx)
+		if err != nil {
+			if ctx.Err() != nil {
+				return ctx.Err()
 			}
-
-			// Commit the message immediately to avoid reprocessing
-			commitError := reader.Commit(mess.Context(), mess)
-			if commitError != nil {
-				t.log.Error("failed to commit message", commitError)
-				continue
-			}
-
-			messageContent := make([]byte, 1024)
-			n, readError := mess.Read(messageContent)
-			if readError != nil {
-				t.log.Error("failed to get message data", "error", readError)
-				continue
-			}
-			if n == 0 {
-				t.log.Error("zero message length")
-				continue
-			}
-			messageContent = messageContent[:n]
-
-			t.messageCallback(messageContent)
+			t.log.Error("failed to read message", err)
+			continue
 		}
+
+		// Commit the message immediately to avoid reprocessing
+		commitError := reader.Commit(mess.Context(), mess)
+		if commitError != nil {
+			t.log.Error("failed to commit message", commitError)
+			continue
+		}
+
+		messageContent := make([]byte, 1024)
+		n, readError := mess.Read(messageContent)
+		if readError != nil {
+			t.log.Error("failed to get message data", "error", readError)
+			continue
+		}
+		if n == 0 {
+			t.log.Error("zero message length")
+			continue
+		}
+
+		t.log.Debugf("Got message on queue %s: %s", t.topicName, string(messageContent))
+		messageContent = messageContent[:n]
+
+		t.messageCallback(messageContent)
 	}
 }
 

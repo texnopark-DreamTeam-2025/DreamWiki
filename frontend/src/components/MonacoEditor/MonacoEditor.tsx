@@ -73,7 +73,7 @@ export const MonacoEditor = ({
           fontFamily: 'JetBrains Mono, Monaco, Consolas, "Courier New", monospace',
           fontWeight: 'normal',
           automaticLayout: true,
-          contextmenu: true,
+          contextmenu: false,
           selectOnLineNumbers: true,
           roundedSelection: false,
           cursorStyle: "line",

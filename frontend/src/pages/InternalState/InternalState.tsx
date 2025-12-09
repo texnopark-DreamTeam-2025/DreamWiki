@@ -75,15 +75,12 @@ export const InternalState = () => {
 
       <Text variant="header-1">Internal State for Task #{taskId}</Text>
 
-      <Flex direction="column" gap="2">
-        <Text variant="header-2">Task State and Actions</Text>
-        <MonacoEditor
-          value={JSON.stringify({ task_state: taskState, actions }, null, 2)}
-          language="json"
-          height="600px"
-          readOnly={true}
-        />
-      </Flex>
+      <MonacoEditor
+        value={JSON.stringify({ task_state: taskState, actions }, null, 2)}
+        language="json"
+        height="600px"
+        readOnly={true}
+      />
     </Flex>
   );
 };
