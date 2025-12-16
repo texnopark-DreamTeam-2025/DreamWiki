@@ -29,16 +29,30 @@ PRODUCT_DISCOUNTS = {
     "cheese": 0.25,
 }
 
+IS_SEASONAL_DISCOUNTING_ENABLED = True
+
+MAX_TOTAL_DISCOUNT = 0.2
+
+SEASONAL_DISCOUNTS = {
+    "apple": 0.04,
+    "orange": 0.02,
+}
+
 app = Flask(__name__)
 
 
 def calculate_product_cost(product_name: str, quantity: float) -> Tuple[float, float]:
     unit_price = PRODUCT_PRICES.get(product_name, 0.0)
-    discount_rate = PRODUCT_DISCOUNTS.get(product_name, 0.0)
+
+    common_discount = PRODUCT_DISCOUNTS.get(product_name, 0.0)
+    seasonal_discount = SEASONAL_DISCOUNTS.get(product_name, 0.0)
+
+    total_discount = max(common_discount + seasonal_discount, MAX_TOTAL_DISCOUNT)
+
 
     total_price = unit_price * quantity
 
-    discount_amount = total_price * discount_rate
+    discount_amount = total_price * total_discount
 
     discounted_price = total_price - discount_amount
 
