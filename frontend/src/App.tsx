@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import AsideBar from "@/components/AsideBar";
-import SearchDone from "@/pages/SearchDone";
 import Document from "@/pages/Document/Document";
 import IntegrationSettings from "@/pages/IntegrationSettings";
 import IntegrationLogs from "@/pages/IntegrationLogs";
@@ -14,6 +13,8 @@ import { HomePage } from "@/pages/HomePage";
 import { TasksList } from "@/pages/TasksList";
 import { TaskDetails } from "@/pages/TaskDetails";
 import { InternalState } from "@/pages/InternalState";
+import Search from "./modules/Search/Search";
+import "./styles.css";
 
 function App() {
   return (
@@ -40,15 +41,7 @@ function App() {
             path="/search"
             element={
               <ProtectedRoute>
-                <SearchDone />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/search-done"
-            element={
-              <ProtectedRoute>
-                <SearchDone />
+                <Search />
               </ProtectedRoute>
             }
           />

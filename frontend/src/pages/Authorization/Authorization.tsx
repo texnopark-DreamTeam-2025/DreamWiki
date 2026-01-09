@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, TextInput, Flex, Text } from "@gravity-ui/uikit";
+import { Button, TextInput, Flex, Text, Label } from "@gravity-ui/uikit";
 import { login } from "@/client/sdk.gen";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -26,10 +26,7 @@ export default function Authorization() {
       });
 
       if (response.data) {
-        // Use the auth context to handle login
         authLogin(response.data.token);
-
-        // Redirect to home page
         navigate("/");
       } else {
         setError("Invalid response from server");
@@ -43,58 +40,48 @@ export default function Authorization() {
   };
 
   return (
-    <Flex justifyContent="center" alignItems="center" style={{ height: '100%', padding: 20 }}>
+    <Flex justifyContent="center" alignItems="center" className="p-4 h-full">
       <Flex
         direction="column"
+        className="p-6"
         style={{
-          width: '100%',
+          width: "100%",
           maxWidth: 400,
-          padding: 30,
           borderRadius: 8,
-          backgroundColor: 'var(--g-color-base-background)',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
+          backgroundColor: "var(--g-color-base-background)",
+          boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
         }}
       >
-        <Text variant="display-1" style={{ textAlign: 'center', marginBottom: 24 }}>
-          Authorization
+        <Text variant="display-1" className="mb-4 text-center">
+          Авторизация
         </Text>
         <form onSubmit={handleSubmit}>
-          <Flex direction="column" style={{ marginBottom: 20 }}>
-            <TextInput
-              label="Username"
-              value={username}
-              onUpdate={setUsername}
-              disabled={loading}
-            />
+          <Flex direction="column" className="mb-4">
+            <Label>Логин</Label>
+            <TextInput value={username} onUpdate={setUsername} disabled={loading} />
           </Flex>
-          <Flex direction="column" style={{ marginBottom: 20 }}>
-            <TextInput
-              label="Password"
-              type="password"
-              value={password}
-              onUpdate={setPassword}
-              disabled={loading}
-            />
+          <Flex direction="column" className="mb-4">
+            <Label>Пароль</Label>
+            <TextInput type="password" value={password} onUpdate={setPassword} disabled={loading} />
           </Flex>
           {error && (
             <Flex
               justifyContent="center"
               alignItems="center"
+              className="mb-4 p-2"
               style={{
-                color: 'var(--g-color-text-danger)',
-                textAlign: 'center',
-                marginBottom: 16,
-                padding: 8,
+                color: "var(--g-color-text-danger)",
+                textAlign: "center",
                 borderRadius: 4,
-                backgroundColor: 'var(--g-color-base-danger-light)'
+                backgroundColor: "var(--g-color-base-danger-light)",
               }}
             >
               {error}
             </Flex>
           )}
-          <Flex justifyContent="center" style={{ marginTop: 24 }}>
+          <Flex justifyContent="center" className="mt-4">
             <Button type="submit" loading={loading} size="l" width="max">
-              Sign In
+              Войти
             </Button>
           </Flex>
         </form>

@@ -131,10 +131,10 @@ export default function IntegrationSettings() {
   const isYandexWiki = currentIntegration === "YandexWiki";
 
   return (
-    <Flex direction="column" gap="5" style={{ padding: '20px' }}>
-      <Flex justifyContent="space-between" alignItems="center">
+    <Flex direction="column" gap="5" className="p-4">
+      <Flex justifyContent="space-between" alignItems="top">
         <Text variant="header-1">Настройки интеграций</Text>
-        <div style={{ width: '340px' }}>
+        <div className="w-[340px]">
           <Select
             value={selectedIntegration}
             onUpdate={setSelectedIntegration}
@@ -146,7 +146,7 @@ export default function IntegrationSettings() {
       </Flex>
 
       {isYandexWiki ? (
-        <Flex direction="column" gap="4" style={{ width: '593px' }}>
+        <Flex direction="column" gap="4" className="w-[593px]">
           <Text variant="subheader-2">Добавьте новую страницу</Text>
           <Flex gap="2">
             <div style={{
@@ -203,7 +203,7 @@ export default function IntegrationSettings() {
           </Flex>
         </Flex>
       ) : (
-        <Flex direction="column" gap="4" style={{ width: '593px' }}>
+        <Flex direction="column" gap="4" className="w-[593px]">
           <Text variant="subheader-2">Внести изменения на основе кода Pull-Request-а</Text>
           <Flex gap="2">
             <div style={{
@@ -245,7 +245,7 @@ export default function IntegrationSettings() {
         </Flex>
       )}
 
-      <Flex direction="column" gap="3" style={{ width: '654px' }}>
+      <Flex direction="column" gap="3" className="w-[654px]">
         <Text variant="body-1">Параметры</Text>
         <div style={{
           height: '400px',

@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import fs from "fs";
+import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,7 +23,7 @@ export default defineConfig({
       Public: path.resolve(__dirname, "public"),
     },
   },
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   build: {
     outDir: "../infra/nginx/frontend-dist",
   },

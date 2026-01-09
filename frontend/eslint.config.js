@@ -16,13 +16,13 @@ export default defineConfig([
       tseslint.configs.recommended,
       reactHooks.configs["recommended-latest"],
       reactRefresh.configs.vite,
-      prettierConfig, // Отключает конфликтующие с Prettier правила
+      prettierConfig,
     ],
     plugins: {
       prettier,
     },
     rules: {
-      "prettier/prettier": "error", // Показывает ошибки форматирования Prettier как ESLint ошибки
+      "prettier/prettier": "error",
     },
     languageOptions: {
       ecmaVersion: 2020,

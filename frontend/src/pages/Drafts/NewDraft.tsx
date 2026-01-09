@@ -107,7 +107,7 @@ export default function NewDraft() {
         <Text variant="header-1">Создать черновик</Text>
       </Box>
 
-      <Flex style={{ flex: 1 }} dir="column" gap={4}>
+      <Flex className="flex-1" dir="column" gap={4}>
         <Text variant="body-2">Выберите страницу для создания черновика:</Text>
 
         <Select

@@ -1,59 +1,54 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { listTasks } from "@/client";
-import type { TaskDigest, TaskStatus } from "@/client";
+import type { TaskStatus } from "@/client";
 import { useNavigate } from "react-router-dom";
 import { Flex, Card, Progress, Text, Loader, Label, Box } from "@gravity-ui/uikit";
-import { useCallback, useRef, useEffect } from 'react';
-
-const TASKS_PER_PAGE = 20;
+import { useCallback, useRef } from "react";
 
 export const TasksList = () => {
   const navigate = useNavigate();
   const observer = useRef<IntersectionObserver | null>(null);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError
-  } = useInfiniteQuery({
-    queryKey: ['tasks'],
-    queryFn: async ({ pageParam }) => {
-      const response = await listTasks({
-        body: {
-          filters: {
-            only_my_tasks: false,
-            only_active: false,
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
+    useInfiniteQuery({
+      queryKey: ["tasks"],
+      queryFn: async ({ pageParam }) => {
+        const response = await listTasks({
+          body: {
+            filters: {
+              only_my_tasks: false,
+              only_active: false,
+            },
+            cursor: pageParam,
           },
-          cursor: pageParam
-        },
-      });
+        });
 
-      return response.data;
-    },
-    getNextPageParam: (lastPage) => {
-      if (lastPage?.next_info?.has_more) {
-        return lastPage.next_info.cursor;
-      }
-      return undefined;
-    },
-    initialPageParam: undefined as string | undefined,
-  });
-
-  const lastTaskElementRef = useCallback((node: HTMLDivElement | null) => {
-    if (isLoading || isFetchingNextPage) return;
-    if (observer.current) observer.current.disconnect();
-
-    observer.current = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && hasNextPage) {
-        fetchNextPage();
-      }
+        return response.data;
+      },
+      getNextPageParam: (lastPage) => {
+        if (lastPage?.next_info?.has_more) {
+          return lastPage.next_info.cursor;
+        }
+        return undefined;
+      },
+      initialPageParam: undefined as string | undefined,
     });
 
-    if (node) observer.current.observe(node);
-  }, [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]);
+  const lastTaskElementRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isLoading || isFetchingNextPage) return;
+      if (observer.current) observer.current.disconnect();
+
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasNextPage) {
+          fetchNextPage();
+        }
+      });
+
+      if (node) observer.current.observe(node);
+    },
+    [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage]
+  );
 
   const getTaskStatusColor = (status: TaskStatus) => {
     switch (status) {
@@ -86,10 +81,10 @@ export const TasksList = () => {
     }
   };
 
-  const tasks = data?.pages.flatMap(page => page?.tasks || []) || [];
+  const tasks = data?.pages.flatMap((page) => page?.tasks || []) || [];
 
   return (
-    <Flex direction="column" gap="4">
+    <Flex direction="column" gap="4" className="p-4">
       <Text variant="header-1">Задачи</Text>
       {isLoading && <Loader />}
       {isError && <Text>Error loading tasks</Text>}
@@ -100,12 +95,13 @@ export const TasksList = () => {
             if (tasks.length === index + 1) {
               return (
                 <div ref={lastTaskElementRef} key={task.task_id}>
-                  <Card
-                    theme="normal"
-                    size="l"
-                    style={{ cursor: "pointer", padding: 10 }}
-                  >
-                    <Flex direction="column" gap="3" onClick={() => navigate(`/task/${task.task_id}`)}>
+                  <Card theme="normal" size="l">
+                    <Flex
+                      direction="column"
+                      gap="3"
+                      onClick={() => navigate(`/task/${task.task_id}`)}
+                      className="p-4"
+                    >
                       <Flex justifyContent="space-between" alignItems="center">
                         <Text variant="header-2">#{task.task_id}</Text>
                         <Label theme={getTaskStatusColor(task.status) as any} size="m">
@@ -133,13 +129,12 @@ export const TasksList = () => {
               );
             } else {
               return (
-                <Card
-                  key={task.task_id}
-                  theme="normal"
-                  size="l"
-                  style={{ cursor: "pointer", padding: 10 }}
-                >
-                  <Flex direction="column" gap="3" onClick={() => navigate(`/task/${task.task_id}`)}>
+                <Card key={task.task_id} theme="normal" size="l" className="p-s cursor-pointer">
+                  <Flex
+                    direction="column"
+                    gap="3"
+                    onClick={() => navigate(`/task/${task.task_id}`)}
+                  >
                     <Flex justifyContent="space-between" alignItems="center">
                       <Text variant="header-2">#{task.task_id}</Text>
                       <Label theme={getTaskStatusColor(task.status) as any} size="m">
@@ -167,7 +162,7 @@ export const TasksList = () => {
             }
           })}
           {isFetchingNextPage && (
-            <Flex justifyContent="center" alignItems="center" style={{ padding: '20px' }}>
+            <Flex justifyContent="center" alignItems="center" className="p-4">
               <Loader />
             </Flex>
           )}

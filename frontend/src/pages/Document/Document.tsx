@@ -1,14 +1,6 @@
-/**
- * Компонент для отображения документов
- *
- * Использует реальные API вызовы:
- * - getDiagnosticInfo для загрузки данных документа
- * - pagesTreeGet для загрузки дерева навигации
- */
-
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TabProvider, TabList, Tab, TabPanel, Button, Text } from "@gravity-ui/uikit";
+import { TabProvider, TabList, Tab, TabPanel, Button, Text, Flex } from "@gravity-ui/uikit";
 import { FileText, ChartColumn, Clock } from "@gravity-ui/icons";
 import {
   getDiagnosticInfo,
@@ -22,7 +14,6 @@ import { TreeNavigation } from "@/components/TreeNavigation";
 import type { TreeNode } from "@/components/TreeNavigation/types";
 import { MonacoEditor } from "@/components/MonacoEditor";
 import { useToast } from "@/hooks/useToast";
-import styles from "./Document.module.scss";
 
 type TabId = "content" | "diagnostics" | "history" | "statistics";
 
@@ -89,7 +80,6 @@ export default function Document() {
         const convertedTree = res.data.tree.map(convertTreeItemToTreeNode);
         setTreeData(convertedTree);
 
-        // Устанавливаем expanded узлы на основе данных из API
         const expanded = collectExpandedNodes(convertedTree);
         setExpandedNodes(expanded);
       }
@@ -101,7 +91,6 @@ export default function Document() {
     }
   }, []); // Убираем все зависимости
 
-  // Функция для переключения раскрытия узла
   const toggleNodeExpansion = useCallback((nodeId: string, event: React.MouseEvent) => {
     event.stopPropagation();
     setExpandedNodes((prev) => {
@@ -129,9 +118,7 @@ export default function Document() {
     [navigate]
   );
 
-  // Обработчик монтирования Monaco Editor
   const handleEditorMount = useCallback((editor: any) => {
-    // Настраиваем автоматическое изменение размера
     const resizeObserver = new ResizeObserver(() => {
       if (editor) {
         editor.layout();
@@ -143,7 +130,6 @@ export default function Document() {
       resizeObserver.observe(editorDomNode.parentElement);
     }
 
-    // Принудительно обновляем размер через небольшую задержку
     setTimeout(() => {
       if (editor) {
         editor.layout();
@@ -168,7 +154,6 @@ export default function Document() {
     }
   };
 
-  // Функция для загрузки данных документа
   const loadDocument = useCallback(async (pageId: string) => {
     setLoading(true);
     setPage(undefined);
@@ -213,19 +198,27 @@ export default function Document() {
 
   if (loading || treeLoading) {
     return (
-      <div className={styles.container}>
-        <div className={styles.sidebar}>
-          <h3 className={styles.sidebarTitle}>База знаний</h3>
+      <Flex gap="4" direction="row" className="h-screen">
+        <Flex
+          gap="4"
+          direction="column"
+          className="p-4"
+          style={{
+            width: "300px",
+            borderRight: "1px solid var(--g-color-line-generic)",
+            overflowY: "auto",
+          }}
+        >
+          <Text variant="header-2">База знаний</Text>
           {treeLoading ? (
-            <div
-              style={{
-                padding: "20px",
-                textAlign: "center",
-                color: "var(--g-color-text-secondary)",
-              }}
+            <Flex
+              direction="row"
+              justifyContent="center"
+              alignItems="center"
+              className="p-5"
             >
-              Загрузка дерева...
-            </div>
+              <Text color="secondary">Загрузка дерева...</Text>
+            </Flex>
           ) : (
             <TreeNavigation
               data={treeData}
@@ -235,27 +228,33 @@ export default function Document() {
               onNodeToggle={toggleNodeExpansion}
             />
           )}
-        </div>
-        <div className={styles.mainContent}>
-          <div
-            style={{
-              padding: "40px",
-              textAlign: "center",
-              color: "var(--g-color-text-secondary)",
-            }}
-          >
-            {loading ? "Загрузка документа..." : "Загрузка..."}
-          </div>
-        </div>
-      </div>
+        </Flex>
+        <Flex
+          direction="row"
+          justifyContent="center"
+          alignItems="center"
+          className="flex-1"
+        >
+          <Text color="secondary">{loading ? "Загрузка документа..." : "Загрузка..."}</Text>
+        </Flex>
+      </Flex>
     );
   }
 
   if (!page) {
     return (
-      <div className={styles.container}>
-        <div className={styles.sidebar}>
-          <h3 className={styles.sidebarTitle}>База знаний</h3>
+      <Flex gap="4" direction="row" className="h-screen">
+        <Flex
+          gap="4"
+          direction="column"
+          className="p-4"
+          style={{
+            width: "300px",
+            borderRight: "1px solid var(--g-color-line-generic)",
+            overflowY: "auto",
+          }}
+        >
+          <Text variant="header-2">База знаний</Text>
           <TreeNavigation
             data={treeData}
             selectedNode={selectedNode}
@@ -263,27 +262,33 @@ export default function Document() {
             onNodeSelect={handleNodeSelect}
             onNodeToggle={toggleNodeExpansion}
           />
-        </div>
-        <div className={styles.mainContent}>
-          <div
-            style={{
-              padding: "40px",
-              textAlign: "center",
-              color: "var(--g-color-text-secondary)",
-            }}
-          >
-            Документ не найден
-          </div>
-        </div>
-      </div>
+        </Flex>
+        <Flex
+          direction="row"
+          justifyContent="center"
+          alignItems="center"
+          className="flex-1"
+        >
+          <Text color="secondary">Документ не найден</Text>
+        </Flex>
+      </Flex>
     );
   }
 
   return (
-    <div className={styles.container}>
+    <Flex gap="4" direction="row" className="h-screen">
       {/* Левая панель с деревом */}
-      <div className={styles.sidebar}>
-        <h3 className={styles.sidebarTitle}>База знаний</h3>
+      <Flex
+        gap="4"
+        direction="column"
+        className="p-4"
+        style={{
+          width: "300px",
+          borderRight: "1px solid var(--g-color-line-generic)",
+          overflowY: "auto",
+        }}
+      >
+        <Text variant="header-2">База знаний</Text>
         <TreeNavigation
           data={treeData}
           selectedNode={selectedNode}
@@ -291,13 +296,13 @@ export default function Document() {
           onNodeSelect={handleNodeSelect}
           onNodeToggle={toggleNodeExpansion}
         />
-      </div>
+      </Flex>
 
       {/* Правая панель с контентом */}
-      <div className={styles.mainContent}>
+      <Flex direction="column" className="flex-1">
         <TabProvider value={activeTab} onUpdate={(value) => setActiveTab(value as TabId)}>
           {/* Вкладки */}
-          <div className={styles.tabsContainer}>
+          <Flex direction="row" className="px-4">
             <TabList size="l">
               <Tab value="content" icon={<FileText />}>
                 Содержимое
@@ -312,15 +317,32 @@ export default function Document() {
                 Статистика
               </Tab>
             </TabList>
-          </div>
+          </Flex>
 
           {/* Контент вкладок */}
-          <div className={styles.tabContent}>
-            <TabPanel value="content">
-              <div className={styles.contentPanel}>
-                <div className={styles.contentHeader}>{/* Здесь можно добавить кнопки */}</div>
-                <h1 className={styles.contentTitle}>{page.page.title}</h1>
-                <div className={styles.monacoContainer}>
+          <Flex direction="column" className="flex-1">
+            <TabPanel value="content" className="h-full">
+              <Flex
+                direction="column"
+                className="p-4 flex-1 h-full box-border"
+              >
+                <Flex direction="row" justifyContent="space-between" alignItems="center">
+                  {/* Здесь можно добавить кнопки */}
+                </Flex>
+                <Text variant="header-1" className="mb-4">
+                  {page.page.title}
+                </Text>
+                <Flex
+                  direction="column"
+                  style={{
+                    border: "1px solid var(--g-color-line-generic)",
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    backgroundColor: "var(--g-color-base-background)",
+                    flex: 1,
+                    minHeight: 0,
+                  }}
+                >
                   <MonacoEditor
                     value={page.page.content || ""}
                     language="markdown"
@@ -329,62 +351,67 @@ export default function Document() {
                     theme="light"
                     onMount={handleEditorMount}
                   />
-                </div>
-              </div>
+                </Flex>
+              </Flex>
             </TabPanel>
 
             <TabPanel value="diagnostics">
-              <div className={styles.contentPanel}>
-                <div className={styles.diagnosticsHeader}>
+              <Flex direction="column" className="p-5 flex-1">
+                <Flex direction="row" justifyContent="space-between" alignItems="center">
                   <Text variant="header-2">Диагностическая информация</Text>
                   <Button onClick={handleReindex} disabled={reindexLoading}>
                     {reindexLoading ? "Запуск..." : "Принудительно переиндексировать"}
                   </Button>
-                </div>
-                <div
-                  style={{
-                    padding: "40px",
-                    textAlign: "center",
-                    color: "var(--g-color-text-secondary)",
-                  }}
+                </Flex>
+                <Flex
+                  direction="row"
+                  justifyContent="center"
+                  alignItems="center"
+                  className="flex-1"
                 >
-                  <p>Раздел в разработке</p>
-                </div>
-              </div>
+                  <Text color="secondary">Раздел в разработке</Text>
+                </Flex>
+              </Flex>
             </TabPanel>
 
             <TabPanel value="history">
-              <div className={styles.contentPanel}>
-                <div
-                  style={{
-                    padding: "40px",
-                    textAlign: "center",
-                    color: "var(--g-color-text-secondary)",
-                  }}
+              <Flex direction="column" className="p-5 flex-1">
+                <Flex
+                  direction="row"
+                  justifyContent="center"
+                  alignItems="center"
+                  className="flex-1"
                 >
-                  <h2>История страниц</h2>
-                  <p>Раздел в разработке</p>
-                </div>
-              </div>
+                  <Flex direction="column" alignItems="center">
+                    <Text variant="header-2" className="mb-4">
+                      История страниц
+                    </Text>
+                    <Text color="secondary">Раздел в разработке</Text>
+                  </Flex>
+                </Flex>
+              </Flex>
             </TabPanel>
 
             <TabPanel value="statistics">
-              <div className={styles.contentPanel}>
-                <div
-                  style={{
-                    padding: "40px",
-                    textAlign: "center",
-                    color: "var(--g-color-text-secondary)",
-                  }}
+              <Flex direction="column" className="p-5 flex-1">
+                <Flex
+                  direction="row"
+                  justifyContent="center"
+                  alignItems="center"
+                  className="flex-1"
                 >
-                  <h2>Статистика</h2>
-                  <p>Раздел в разработке</p>
-                </div>
-              </div>
+                  <Flex direction="column" alignItems="center">
+                    <Text variant="header-2" className="mb-4">
+                      Статистика
+                    </Text>
+                    <Text color="secondary">Раздел в разработке</Text>
+                  </Flex>
+                </Flex>
+              </Flex>
             </TabPanel>
-          </div>
+          </Flex>
         </TabProvider>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }

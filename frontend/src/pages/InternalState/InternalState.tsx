@@ -45,7 +45,7 @@ export const InternalState = () => {
 
   if (loading) {
     return (
-      <Flex direction="column" alignItems="center" justifyContent="center" style={{ height: "100vh" }}>
+      <Flex direction="column" alignItems="center" justifyContent="center" className="h-screen">
         <Text variant="body-2">Loading internal state...</Text>
       </Flex>
     );
@@ -53,7 +53,7 @@ export const InternalState = () => {
 
   if (error) {
     return (
-      <Flex direction="column" alignItems="center" justifyContent="center" style={{ height: "100vh" }}>
+      <Flex direction="column" alignItems="center" justifyContent="center" className="h-screen">
         <Text variant="body-2" color="danger">
           {error}
         </Text>
@@ -65,7 +65,7 @@ export const InternalState = () => {
     <Flex direction="column" gap="4">
       <ActionBar>
         <Flex alignItems="center" direction="row" width="100%">
-          <Breadcrumbs style={{ width: "100%" }} showRoot>
+          <Breadcrumbs className="w-full" showRoot>
             <Breadcrumbs.Item href="/tasks" onClick={() => navigate("/tasks")}>Задачи</Breadcrumbs.Item>
             <Breadcrumbs.Item href={`/task/${taskId}`} onClick={() => navigate(`/task/${taskId}`)}>Задача #{taskId}</Breadcrumbs.Item>
             <Breadcrumbs.Item>Internal State</Breadcrumbs.Item>

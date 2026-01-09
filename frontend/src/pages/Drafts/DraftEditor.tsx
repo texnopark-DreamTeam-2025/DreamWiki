@@ -151,7 +151,7 @@ export default function DraftEditor() {
 
   if (loading) {
     return (
-      <Flex direction="column" alignItems="center" justifyContent="center" style={{ flex: 1, gap: 16 }}>
+      <Flex direction="column" alignItems="center" justifyContent="center" className="flex-1 gap-4">
         <Loader size="m" />
         <Text>Загрузка черновика...</Text>
       </Flex>
@@ -160,7 +160,7 @@ export default function DraftEditor() {
 
   if (!draft) {
     return (
-      <Flex direction="column" alignItems="center" justifyContent="center" style={{ flex: 1, gap: 16 }}>
+      <Flex direction="column" alignItems="center" justifyContent="center" className="flex-1 gap-4">
         <Text>Черновик не найден</Text>
         <Button view="action" size="m" onClick={() => navigate("/drafts")}>
           Вернуться к списку черновиков
@@ -170,13 +170,13 @@ export default function DraftEditor() {
   }
 
   return (
-    <Flex direction="column" style={{ padding: 24, height: "100%" }}>
-      <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: 24 }}>
+    <Flex direction="column" className="p-6 h-full">
+      <Flex justifyContent="space-between" alignItems="center" className="mb-6">
         <TextInput
           value={title}
           onUpdate={setTitle}
           placeholder="Введите заголовок"
-          style={{ flex: 1, marginRight: 16 }}
+          className="flex-1 mr-4"
         />
         <Flex gap={2}>
           <Button
@@ -209,7 +209,7 @@ export default function DraftEditor() {
         </Flex>
       </Flex>
 
-      <div style={{ flex: 1 }}>
+      <div className="flex-1">
         <DiffEditor
           height="100%"
           language="markdown"

@@ -43,7 +43,6 @@ export const TaskDetails = () => {
     if (!taskId) return;
 
     try {
-      // Navigate to internal state page
       navigate(`/task/${taskId}/internal-state`);
     } catch (err) {
       console.error("Error navigating to internal state:", err);
@@ -114,7 +113,7 @@ export const TaskDetails = () => {
     <Flex direction="column" gap="5">
       <ActionBar>
         <Flex alignItems="center" dir="horizontal" width="100%">
-          <Breadcrumbs style={{ width: "100%" }} showRoot>
+          <Breadcrumbs className="w-full" showRoot>
             <Breadcrumbs.Item onClick={() => navigate("/tasks")}>Задачи</Breadcrumbs.Item>
             <Breadcrumbs.Item>Задача #{task.task_digest.task_id}</Breadcrumbs.Item>
           </Breadcrumbs>
@@ -156,7 +155,7 @@ export const TaskDetails = () => {
                     </Label>
                   </Flex>
                   {subtask.subsubtasks.length > 0 && (
-                    <Flex direction="column" gap="2" style={{ paddingLeft: 16 }}>
+                    <Flex direction="column" gap="2" className="pl-4">
                       {subtask.subsubtasks.map((subsubtask, subIndex) => (
                         <Flex
                           key={subIndex}

@@ -93,7 +93,7 @@ export default function IntegrationLogs() {
       const clientHeight = editor.getLayoutInfo().height;
 
       // Load more data when approaching the end (95% scroll)
-      if (scrollTop + clientHeight >= scrollHeight * 0.95) {
+      if (scrollTop + clientHeight >= scrollHeight * 0.8) {
         loadMoreLogs();
       }
     },
@@ -103,8 +103,8 @@ export default function IntegrationLogs() {
   const editorContent = formatLogs(logs);
 
   return (
-    <Flex direction="column" gap="4" height="100vh">
-      <Flex justifyContent="space-between" alignItems="center">
+    <Flex direction="column" gap="4" className="h-screen p-4">
+      <Flex justifyContent="space-between" alignItems="top">
         <Text variant="header-1">Журнал интеграций</Text>
         <Box width="200px">
           <Select

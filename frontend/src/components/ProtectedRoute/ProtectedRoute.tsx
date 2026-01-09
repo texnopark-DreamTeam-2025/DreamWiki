@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }, [isAuthenticated, isLoading, navigate]);
 
   if (isLoading) {
-    return <div style={{ padding: "20px" }}>Загрузка...</div>;
+    return <div className="p-4">Загрузка...</div>;
   }
 
   if (!isAuthenticated) {

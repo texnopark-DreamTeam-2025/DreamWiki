@@ -63,8 +63,8 @@ export default function Drafts() {
   };
 
   return (
-    <Flex direction="column" style={{ padding: 24, height: "100%" }}>
-      <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: 24 }}>
+    <Flex direction="column" className="p-4 h-full">
+      <Flex justifyContent="space-between" alignItems="center" className="mb-6">
         <Text variant="header-1">Черновики</Text>
         <Button view="action" size="m" onClick={handleCreateDraft}>
           Создать черновик
@@ -76,19 +76,19 @@ export default function Drafts() {
           direction="column"
           alignItems="center"
           justifyContent="center"
-          style={{ flex: 1, gap: 16 }}
+          className="flex-1 gap-4"
         >
           <Loader size="m" />
           <Text>Загрузка черновиков...</Text>
         </Flex>
       ) : (
-        <Flex direction="column" style={{ flex: 1 }}>
+        <Flex direction="column" className="flex-1">
           {drafts.length === 0 ? (
             <Flex
               direction="column"
               alignItems="center"
               justifyContent="center"
-              style={{ flex: 1, gap: 16, textAlign: "center" }}
+              className="gap-4 flex-1 text-center"
             >
               <Text color="secondary">У вас пока нет черновиков</Text>
               <Button view="action" size="m" onClick={handleCreateDraft}>
