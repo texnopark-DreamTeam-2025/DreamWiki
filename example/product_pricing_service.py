@@ -47,8 +47,9 @@ def calculate_product_cost(product_name: str, quantity: float) -> Tuple[float, f
     common_discount = PRODUCT_DISCOUNTS.get(product_name, 0.0)
     seasonal_discount = SEASONAL_DISCOUNTS.get(product_name, 0.0)
 
-    total_discount = max(common_discount + seasonal_discount, MAX_TOTAL_DISCOUNT)
+    accumulated_discount = max(common_discount, seasonal_discount)
 
+    total_discount = max(accumulated_discount, MAX_TOTAL_DISCOUNT)
 
     total_price = unit_price * quantity
 
