@@ -15,7 +15,7 @@ import type { TreeNode } from "@/components/TreeNavigation/types";
 import { MonacoEditor } from "@/components/MonacoEditor";
 import { useToast } from "@/hooks/useToast";
 
-type TabId = "content" | "diagnostics" | "history" | "statistics";
+type TabId = "content" | "actions" | "history" | "statistics";
 
 const convertTreeItemToTreeNode = (item: TreeItem): TreeNode => {
   return {
@@ -211,12 +211,7 @@ export default function Document() {
         >
           <Text variant="header-2">База знаний</Text>
           {treeLoading ? (
-            <Flex
-              direction="row"
-              justifyContent="center"
-              alignItems="center"
-              className="p-5"
-            >
+            <Flex direction="row" justifyContent="center" alignItems="center" className="p-5">
               <Text color="secondary">Загрузка дерева...</Text>
             </Flex>
           ) : (
@@ -229,12 +224,7 @@ export default function Document() {
             />
           )}
         </Flex>
-        <Flex
-          direction="row"
-          justifyContent="center"
-          alignItems="center"
-          className="flex-1"
-        >
+        <Flex direction="row" justifyContent="center" alignItems="center" className="flex-1">
           <Text color="secondary">{loading ? "Загрузка документа..." : "Загрузка..."}</Text>
         </Flex>
       </Flex>
@@ -263,12 +253,7 @@ export default function Document() {
             onNodeToggle={toggleNodeExpansion}
           />
         </Flex>
-        <Flex
-          direction="row"
-          justifyContent="center"
-          alignItems="center"
-          className="flex-1"
-        >
+        <Flex direction="row" justifyContent="center" alignItems="center" className="flex-1">
           <Text color="secondary">Документ не найден</Text>
         </Flex>
       </Flex>
@@ -307,69 +292,39 @@ export default function Document() {
               <Tab value="content" icon={<FileText />}>
                 Содержимое
               </Tab>
-              <Tab value="diagnostics" icon={<ChartColumn />}>
-                Диагностическая информация
+              <Tab value="actions" icon={<ChartColumn />}>
+                Действия
               </Tab>
               <Tab value="history" icon={<Clock />}>
                 История страниц
               </Tab>
-              <Tab value="statistics" icon={<ChartColumn />}>
-                Статистика
-              </Tab>
             </TabList>
           </Flex>
 
-          {/* Контент вкладок */}
           <Flex direction="column" className="flex-1">
             <TabPanel value="content" className="h-full">
-              <Flex
-                direction="column"
-                className="p-4 flex-1 h-full box-border"
-              >
-                <Flex direction="row" justifyContent="space-between" alignItems="center">
-                  {/* Здесь можно добавить кнопки */}
-                </Flex>
+              <Flex direction="column" className="p-4 flex-1 h-full box-border">
                 <Text variant="header-1" className="mb-4">
                   {page.page.title}
                 </Text>
-                <Flex
-                  direction="column"
-                  style={{
-                    border: "1px solid var(--g-color-line-generic)",
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                    backgroundColor: "var(--g-color-base-background)",
-                    flex: 1,
-                    minHeight: 0,
-                  }}
-                >
-                  <MonacoEditor
-                    value={page.page.content || ""}
-                    language="markdown"
-                    height="100%"
-                    readOnly={true}
-                    theme="light"
-                    onMount={handleEditorMount}
-                  />
-                </Flex>
+                <MonacoEditor
+                  value={page.page.content || ""}
+                  language="markdown"
+                  height="100%"
+                  readOnly={true}
+                  theme="light"
+                  onMount={handleEditorMount}
+                />
               </Flex>
             </TabPanel>
 
-            <TabPanel value="diagnostics">
+            <TabPanel value="actions">
               <Flex direction="column" className="p-5 flex-1">
-                <Flex direction="row" justifyContent="space-between" alignItems="center">
-                  <Text variant="header-2">Диагностическая информация</Text>
+                <Flex direction="column" gap="4">
+                  <Text variant="header-1">Действия</Text>
                   <Button onClick={handleReindex} disabled={reindexLoading}>
                     {reindexLoading ? "Запуск..." : "Принудительно переиндексировать"}
                   </Button>
-                </Flex>
-                <Flex
-                  direction="row"
-                  justifyContent="center"
-                  alignItems="center"
-                  className="flex-1"
-                >
-                  <Text color="secondary">Раздел в разработке</Text>
                 </Flex>
               </Flex>
             </TabPanel>
@@ -385,24 +340,6 @@ export default function Document() {
                   <Flex direction="column" alignItems="center">
                     <Text variant="header-2" className="mb-4">
                       История страниц
-                    </Text>
-                    <Text color="secondary">Раздел в разработке</Text>
-                  </Flex>
-                </Flex>
-              </Flex>
-            </TabPanel>
-
-            <TabPanel value="statistics">
-              <Flex direction="column" className="p-5 flex-1">
-                <Flex
-                  direction="row"
-                  justifyContent="center"
-                  alignItems="center"
-                  className="flex-1"
-                >
-                  <Flex direction="column" alignItems="center">
-                    <Text variant="header-2" className="mb-4">
-                      Статистика
                     </Text>
                     <Text color="secondary">Раздел в разработке</Text>
                   </Flex>

@@ -1,18 +1,19 @@
 package indexing
 
 import (
+	"fmt"
 	"regexp"
-	"strconv"
+	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/api"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/pkg/internals"
+	"golang.org/x/text/unicode/norm"
 )
 
 var (
-	headerRegex     = regexp.MustCompile(`^(#{1,})\s+(.+)$`)
-	anchorSlugReg   = regexp.MustCompile("[^a-z0-9-]+")
-	multipleDashReg = regexp.MustCompile("-+")
+	headerRegex = regexp.MustCompile(`^(#{1,})\s+(.+)$`)
 )
 
 func SplitPageToParagraphs(pageID api.PageID, page string) []internals.ParagraphWithEmbedding {
@@ -52,7 +53,7 @@ func SplitPageToParagraphs(pageID api.PageID, page string) []internals.Paragraph
 				lineNumber := paragraphStartLine + lineIndex
 
 				var anchorSlug *string
-				slug := generateAnchorSlug(headerText)
+				slug := headerToSlug(headerText)
 				anchorSlug = &slug
 
 				paragraphs = append(paragraphs, internals.ParagraphWithEmbedding{
@@ -69,13 +70,7 @@ func SplitPageToParagraphs(pageID api.PageID, page string) []internals.Paragraph
 		}
 
 		for lineIndex, line := range lines {
-			isHeader := false
-			for _, headerLineIndex := range headerLines {
-				if lineIndex == headerLineIndex {
-					isHeader = true
-					break
-				}
-			}
+			isHeader := slices.Contains(headerLines, lineIndex)
 			if !isHeader {
 				nonHeaderLines = append(nonHeaderLines, line)
 			}
@@ -87,7 +82,7 @@ func SplitPageToParagraphs(pageID api.PageID, page string) []internals.Paragraph
 				var anchorSlug *string
 				if len(headers) > 0 {
 					lastHeader := headers[len(headers)-1]
-					slug := generateAnchorSlug(lastHeader)
+					slug := headerToSlug(lastHeader)
 					anchorSlug = &slug
 				}
 
@@ -113,61 +108,78 @@ func SplitPageToParagraphs(pageID api.PageID, page string) []internals.Paragraph
 	return paragraphs
 }
 
-func findLineIndex(lines []string, target string) int {
-	for i, line := range lines {
-		if strings.TrimSpace(line) == strings.TrimSpace(target) {
-			return i
+func headerToSlug(title string) string {
+	re := regexp.MustCompile(`\(([^)]+)\)`)
+	title = re.ReplaceAllStringFunc(title, func(match string) string {
+		inner := strings.TrimSpace(match[1 : len(match)-1])
+		allowed := regexp.MustCompile(`[^\p{L}\p{N}+\-]+`)
+		cleaned := allowed.ReplaceAllString(inner, " ")
+		return " " + cleaned + " "
+	})
+
+	title = norm.NFD.String(title)
+	title = strings.ToLower(title)
+
+	translitMap := map[rune]string{
+		'а': "a",
+		'б': "b",
+		'в': "v",
+		'г': "g",
+		'д': "d",
+		'е': "e",
+		'ё': "yo",
+		'ж': "zh",
+		'з': "z",
+		'и': "i",
+		'й': "j",
+		'к': "k",
+		'л': "l",
+		'м': "m",
+		'н': "n",
+		'о': "o",
+		'п': "p",
+		'р': "r",
+		'с': "s",
+		'т': "t",
+		'у': "u",
+		'ф': "f",
+		'х': "h",
+		'ц': "c",
+		'ч': "ch",
+		'ш': "sh",
+		'щ': "sh",
+		'ъ': "",
+		'ы': "y",
+		'ь': "",
+		'э': "e",
+		'ю': "yu",
+		'я': "ya",
+	}
+
+	var sb strings.Builder
+	for _, r := range title {
+		if repl, ok := translitMap[r]; ok {
+			sb.WriteString(repl)
+		} else if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '+' || r == '-' {
+			sb.WriteRune(r)
+		} else if unicode.IsLetter(r) || unicode.IsNumber(r) {
+			sb.WriteRune(r)
+		} else {
+			sb.WriteRune(' ')
 		}
 	}
-	return 0
-}
+	title = sb.String()
 
-func isHeaderLine(text string) bool {
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if headerRegex.MatchString(line) {
-			return true
-		}
-	}
-	return false
-}
+	space := regexp.MustCompile(`\s+`)
+	title = space.ReplaceAllString(title, " ")
 
-func extractHeaderText(text string) string {
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if matches := headerRegex.FindStringSubmatch(line); len(matches) > 1 {
-			return strings.TrimSpace(matches[2])
-		}
-	}
-	return ""
-}
+	title = strings.ReplaceAll(title, " ", "-")
 
-func generateAnchorSlug(headerText string) string {
-	slug := strings.ToLower(headerText)
-	slug = strings.ReplaceAll(slug, " ", "-")
-	slug = anchorSlugReg.ReplaceAllString(slug, "-")
-	slug = strings.Trim(slug, "-")
-	slug = multipleDashReg.ReplaceAllString(slug, "-")
+	title = strings.Trim(title, "-")
 
-	if slug != "" {
-		return "#" + slug
-	}
-	return "#"
-}
+	dash := regexp.MustCompile(`-+`)
+	title = dash.ReplaceAllString(title, "-")
 
-func isListItemLine(text string) bool {
-	trimmed := strings.TrimSpace(text)
-	if strings.HasPrefix(trimmed, "* ") || strings.HasPrefix(trimmed, "- ") || strings.HasPrefix(trimmed, "+ ") {
-		return true
-	}
-	if len(trimmed) > 2 {
-		parts := strings.SplitN(trimmed, ". ", 2)
-		if len(parts) == 2 {
-			_, err := strconv.Atoi(parts[0])
-			return err == nil
-		}
-	}
-	return false
+	fmt.Println(title)
+	return title
 }

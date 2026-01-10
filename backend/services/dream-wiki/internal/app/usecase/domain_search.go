@@ -29,7 +29,7 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 
 	u.log.Info("Search: ", len(termResults), " term results, ", len(embeddingResults), " embedding results")
 
-	results := append(embeddingResults, termResults...)
+	results := append(termResults, embeddingResults...)
 
 	seen := make(map[string]bool)
 	uniqueResults := make([]internals.SearchResultItem, 0)
@@ -44,13 +44,22 @@ func (u *appUsecaseImpl) Search(req api.V1SearchRequest) (*api.V1SearchResponse,
 	apiResults := make([]api.SearchResultItem, len(uniqueResults))
 	for i, result := range uniqueResults {
 		apiResults[i] = api.SearchResultItem{
-			PageId:      result.PageId,
-			Title:       result.PageTitle,
-			Description: result.ParagraphContent,
+			PageId:          result.PageId,
+			Title:           result.PageTitle,
+			Snippet:         result.ParagraphContent,
+			LineIndex:       result.LineIndex,
+			YwikiAnchorLink: createYWikiAnchorLink(result.AnchorSlug, result.PageSlug),
 		}
 	}
 
 	return &api.V1SearchResponse{
 		ResultItems: apiResults,
 	}, nil
+}
+
+func createYWikiAnchorLink(anchorSlug *string, pageSlug string) string {
+	if anchorSlug == nil {
+		return fmt.Sprintf("https://wiki.yandex.ru/%s", pageSlug)
+	}
+	return fmt.Sprintf("https://wiki.yandex.ru/%s#%s", pageSlug, *anchorSlug)
 }

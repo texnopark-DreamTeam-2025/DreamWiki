@@ -743,13 +743,19 @@ components:
           $ref: '#/components/schemas/PageID'
         title:
           type: string
-        description:
+        snippet:
           type: string
-          description: Описание поискового результата в формате MD
+          description: В формате Markdown
+        ywiki_anchor_link:
+          type: string
+        line_index:
+          type: integer
       required:
         - title
-        - description
+        - snippet
         - page_id
+        - ywiki_anchor_link
+        - line_index
 
     Page:
       type: object

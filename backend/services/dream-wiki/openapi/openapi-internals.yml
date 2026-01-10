@@ -299,12 +299,14 @@ components:
           $ref: '#/components/schemas/PageID'
         page_slug:
           type: string
-        paragraph_index:
+        line_index:
           type: integer
         page_title:
           type: string
         paragraph_content:
           type: string
+        paragraph_index:
+          type: integer
         anchor_slug:
           type: string
         headers:
@@ -312,9 +314,10 @@ components:
       required:
         - page_id
         - page_slug
-        - paragraph_index
+        - line_index
         - page_title
         - paragraph_content
+        - paragraph_index
         - headers
 
     RawJSON:

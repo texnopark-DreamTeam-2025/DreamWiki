@@ -14,21 +14,24 @@ import (
 
 func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding internals.Embedding, limit int) ([]internals.SearchResultItem, error) {
 	yql := `
-		$targetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
+	$targetEmbedding = Knn::ToBinaryStringFloat($queryEmbedding);
 
-		SELECT
-			par.page_id,
-			page.ywiki_slug,
-			par.paragraph_index,
-			page.title,
-			par.content,
-			par.headers,
-			Unwrap(Knn::CosineDistance(Unwrap(par.embedding), $targetEmbedding)) As CosineDistance
-		FROM Paragraph par
-		JOIN Page page USING(page_id)
-		ORDER BY Knn::CosineDistance(embedding, $targetEmbedding)
-		LIMIT $limit;
-	`
+	SELECT
+		par.page_id,
+		page.ywiki_slug,
+		par.paragraph_index,
+		page.title,
+		par.content,
+		par.headers,
+		par.anchor_link_slug,
+		par.line_number,
+		Unwrap(Knn::CosineDistance(Unwrap(par.embedding), $targetEmbedding)) As CosineDistance
+	FROM Paragraph par
+	JOIN Page page USING(page_id)
+	WHERE NOT is_header
+	ORDER BY Knn::CosineDistance(embedding, $targetEmbedding)
+	LIMIT $limit;
+`
 
 	yqlEmbedding := embeddingToYDBList(queryEmbedding)
 
@@ -48,6 +51,8 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 		var title string
 		var pageContent string
 		var headers string
+		var anchorLinkSlug string
+		var lineNumber int64
 		var distance float32
 		err = result.FetchRow(
 			&retrievedPageID,
@@ -56,6 +61,8 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 			&title,
 			&pageContent,
 			&headers,
+			&anchorLinkSlug,
+			&lineNumber,
 			&distance,
 		)
 		if err != nil {
@@ -66,10 +73,11 @@ func (r *appRepositoryImpl) SearchByEmbedding(query string, queryEmbedding inter
 			PageId:           retrievedPageID,
 			PageSlug:         pageSlug,
 			PageTitle:        title,
-			ParagraphIndex:   int(paragraphIndex),
 			ParagraphContent: pageContent,
-			// AnchorSlug:       anchorLinkSlug,
-			Headers: strings.Split(headers, "\n"),
+			AnchorSlug:       &anchorLinkSlug,
+			Headers:          strings.Split(headers, "\n"),
+			ParagraphIndex:   int(paragraphIndex),
+			LineIndex:        int(lineNumber),
 		})
 	}
 
@@ -98,7 +106,10 @@ func (r *appRepositoryImpl) SearchByEmbeddingWithContext(query string, queryEmbe
 				content,
 				paragraph_index
 			FROM Paragraph
-			WHERE page_id = $page_id AND paragraph_index >= $start_index AND paragraph_index <= $end_index
+			WHERE page_id = $page_id
+				AND paragraph_index >= $start_index
+				AND paragraph_index <= $end_index
+				AND NOT is_header
 			ORDER BY paragraph_index
 		`
 
@@ -149,7 +160,6 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 		return []internals.SearchResultItem{}, nil
 	}
 
-	// Get total document count
 	totalDocsQuery := `SELECT Count(DISTINCT page_id) AS total FROM Paragraph`
 	totalDocsResult, err := r.tx.InTX().Execute(totalDocsQuery)
 	if err != nil {
@@ -163,7 +173,6 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 		return nil, err
 	}
 
-	// Get document frequencies for terms
 	termList := make([]types.Value, len(terms))
 	for i, term := range terms {
 		termList[i] = types.TextValue(term)
@@ -171,7 +180,9 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 	yqlTerms := types.ListValue(termList...)
 
 	docFreqQuery := `
-		SELECT term, Count(DISTINCT page_id) AS doc_freq
+		SELECT
+			term,
+			Count(DISTINCT page_id) AS doc_freq
 		FROM Term
 		WHERE term IN $terms
 		GROUP BY term
@@ -194,9 +205,16 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 		termDocFreq[term] = int64(docFreq)
 	}
 
-	// Get paragraphs containing terms
 	paragraphsQuery := `
-		SELECT t.page_id, t.paragraph_index, t.term, t.times_in, p.content, p.headers, page.ywiki_slug, page.title
+		SELECT
+			t.page_id,
+			t.paragraph_index,
+			t.term,
+			t.times_in,
+			p.content,
+			p.headers,
+			page.ywiki_slug,
+			page.title
 		FROM Term t
 		JOIN Paragraph p ON t.page_id = p.page_id AND t.paragraph_index = p.paragraph_index
 		JOIN Page page ON t.page_id = page.page_id
@@ -210,12 +228,7 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 	defer paragraphsResult.Close()
 
 	type paragraphData struct {
-		pageID          api.PageID
-		paragraphIndex  int64
-		content         string
-		headers         string
-		pageSlug        string
-		title           string
+		data            internals.SearchResultItem
 		termFrequencies map[string]int64
 	}
 
@@ -238,27 +251,23 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 		key := fmt.Sprintf("%s_%d", pageID.String(), paragraphIndex)
 		if _, exists := paragraphs[key]; !exists {
 			paragraphs[key] = &paragraphData{
-				pageID:          pageID,
-				paragraphIndex:  paragraphIndex,
-				content:         content,
-				headers:         headers,
-				pageSlug:        pageSlug,
-				title:           title,
+				data: internals.SearchResultItem{
+					PageId:           pageID,
+					ParagraphIndex:   int(paragraphIndex),
+					ParagraphContent: content,
+					Headers:          strings.Split(headers, "\n"),
+					PageSlug:         pageSlug,
+					PageTitle:        title,
+				},
 				termFrequencies: make(map[string]int64),
 			}
 		}
 		paragraphs[key].termFrequencies[term] = timesIn
 	}
 
-	// Calculate TF-IDF scores
 	type scoredParagraph struct {
-		pageID         api.PageID
-		paragraphIndex int64
-		pageSlug       string
-		title          string
-		content        string
-		headers        string
-		score          float64
+		data  internals.SearchResultItem
+		score float64
 	}
 
 	var scoredParagraphs []scoredParagraph
@@ -278,17 +287,11 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 		}
 
 		scoredParagraphs = append(scoredParagraphs, scoredParagraph{
-			pageID:         paragraph.pageID,
-			paragraphIndex: paragraph.paragraphIndex,
-			pageSlug:       paragraph.pageSlug,
-			title:          paragraph.title,
-			content:        paragraph.content,
-			headers:        paragraph.headers,
-			score:          score,
+			data:  paragraph.data,
+			score: score,
 		})
 	}
 
-	// Sort by score and limit results
 	sort.Slice(scoredParagraphs, func(i, j int) bool {
 		return scoredParagraphs[i].score > scoredParagraphs[j].score
 	})
@@ -296,16 +299,9 @@ func (r *appRepositoryImpl) SearchByTerms(terms []string, limit int) ([]internal
 	resultLimit := min(len(scoredParagraphs), limit)
 
 	searchResult := make([]internals.SearchResultItem, 0, resultLimit)
-	for i := 0; i < resultLimit; i++ {
+	for i := range resultLimit {
 		paragraph := scoredParagraphs[i]
-		searchResult = append(searchResult, internals.SearchResultItem{
-			PageId:           paragraph.pageID,
-			PageSlug:         paragraph.pageSlug,
-			PageTitle:        paragraph.title,
-			ParagraphIndex:   int(paragraph.paragraphIndex),
-			ParagraphContent: paragraph.content,
-			Headers:          strings.Split(paragraph.headers, "\n"),
-		})
+		searchResult = append(searchResult, paragraph.data)
 	}
 
 	return searchResult, nil

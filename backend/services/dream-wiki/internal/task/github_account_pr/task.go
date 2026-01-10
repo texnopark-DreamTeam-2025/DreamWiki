@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/app/repository"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/deps"
 	"github.com/texnopark-DreamTeam-2025/DreamWiki/internal/task/task_common"
@@ -389,14 +388,6 @@ func (t *gitHubAccountPRTask) searchHotParagraphs() error {
 
 		hp = append(hp, hotParagraphs...)
 	}
-
-	hp = append(hp, internals.ParagraphWithContext{
-		Content:         "## Расчёт скидок\n\nУ нас есть два типа скидок: сезонные и обычные. Сезонные скидки действуют только тогда, когда выставлен флаг в конфиге. Обычные действуют всегда. Итоговый размер скидки складывается из сезонной и обычной, но не может быть больше MAX_TOTAL_DISCOUNT (20%)",
-		EndLineNumber:   484,
-		PageId:          uuid.MustParse("0a437c2f-55a1-4143-a027-5a920309a151"),
-		ParagraphIndex:  482,
-		StartLineNumber: 482,
-	})
 
 	t.state.HotParagraphs = &hp
 	temp := make([]string, 0)

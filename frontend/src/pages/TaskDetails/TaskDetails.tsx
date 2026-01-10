@@ -146,8 +146,8 @@ export const TaskDetails = () => {
         ) : (
           <Flex direction="column" gap="4">
             {task.subtasks.map((subtask, index) => (
-              <Card key={index} theme="normal" size="l">
-                <Flex direction="column" gap="3">
+              <Card key={index} theme="normal" size="m">
+                <Flex direction="column" gap="3" className="p-2">
                   <Flex justifyContent="space-between" alignItems="center">
                     <Text variant="body-2">{subtask.description}</Text>
                     <Label theme={getSubtaskStatusColor(subtask.status) as any} size="s">

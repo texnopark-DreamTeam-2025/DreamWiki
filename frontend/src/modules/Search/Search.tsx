@@ -91,7 +91,7 @@ export default function Search() {
               onClick={() => handleOpenPage(item.page_id)}
               className={styles.resultItem}
             >
-              <CardInformation title={item.title} description={item.description} />
+              <CardInformation title={item.title} description={item.snippet} yandexWikiLink={item.ywiki_anchor_link} />
             </div>
           ))}
         </div>

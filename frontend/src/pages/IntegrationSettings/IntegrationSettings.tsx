@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Select, Button, Flex, Text } from "@gravity-ui/uikit";
+import { Select, Button, Flex, Text, TextInput } from "@gravity-ui/uikit";
 import { ywikiAddPage, githubAccountPr } from "@/client";
 import { useToast } from "@/hooks/useToast";
 import { MonacoEditor } from "@/components/MonacoEditor";
@@ -149,14 +149,16 @@ export default function IntegrationSettings() {
         <Flex direction="column" gap="4" className="w-[593px]">
           <Text variant="subheader-2">Добавьте новую страницу</Text>
           <Flex gap="2">
-            <div style={{
-              border: '1px solid rgba(0, 0, 0, 0.3)',
-              borderRadius: '6px',
-              padding: '2px 8px',
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center'
-            }}>
+            <div
+              style={{
+                border: "1px solid rgba(0, 0, 0, 0.3)",
+                borderRadius: "6px",
+                padding: "2px 8px",
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <input
                 type="text"
                 placeholder="Введите ссылку на страницу"
@@ -164,14 +166,14 @@ export default function IntegrationSettings() {
                 onChange={(e) => setPageUrl(e.target.value)}
                 style={{
                   flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
+                  border: "none",
+                  outline: "none",
+                  background: "transparent",
                   fontFamily: 'var(--text-body-1-font-family, "Inter-Regular", sans-serif)',
-                  fontSize: 'var(--text-body-1-font-size, 13px)',
-                  lineHeight: 'var(--text-body-1-line-height, 18px)',
-                  fontWeight: 'var(--text-body-1-font-weight, 400)',
-                  color: 'var(--var-g-color-text-primary, rgba(0, 0, 0, 0.85))'
+                  fontSize: "var(--text-body-1-font-size, 13px)",
+                  lineHeight: "var(--text-body-1-line-height, 18px)",
+                  fontWeight: "var(--text-body-1-font-weight, 400)",
+                  color: "var(--var-g-color-text-primary, rgba(0, 0, 0, 0.85))",
                 }}
               />
             </div>
@@ -206,40 +208,20 @@ export default function IntegrationSettings() {
         <Flex direction="column" gap="4" className="w-[593px]">
           <Text variant="subheader-2">Внести изменения на основе кода Pull-Request-а</Text>
           <Flex gap="2">
-            <div style={{
-              border: '1px solid rgba(0, 0, 0, 0.3)',
-              borderRadius: '6px',
-              padding: '2px 8px',
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center'
-            }}>
-              <input
-                type="text"
-                placeholder="Введите ссылку на PR"
-                value={prUrl}
-                onChange={(e) => setPrUrl(e.target.value)}
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  outline: 'none',
-                  background: 'transparent',
-                  fontFamily: 'var(--text-body-1-font-family, "Inter-Regular", sans-serif)',
-                  fontSize: 'var(--text-body-1-font-size, 13px)',
-                  lineHeight: 'var(--text-body-1-line-height, 18px)',
-                  fontWeight: 'var(--text-body-1-font-weight, 400)',
-                  color: 'var(--var-g-color-text-primary, rgba(0, 0, 0, 0.85))'
-                }}
-              />
-            </div>
+            <TextInput
+              type="text"
+              value={prUrl}
+              placeholder="Введите ссылку на PR"
+              onChange={(e) => setPrUrl(e.target.value)}
+            />
             <Button
-              view="normal"
+              view="action"
               size="m"
               onClick={handleAnalyzeLink}
               disabled={!prUrl.trim() || isAnalyzing}
               loading={isAnalyzing}
             >
-              {isAnalyzing ? "Анализируем..." : "Проанализировать"}
+              {isAnalyzing ? "Создаём задачу..." : "Проанализировать"}
             </Button>
           </Flex>
         </Flex>
@@ -247,10 +229,12 @@ export default function IntegrationSettings() {
 
       <Flex direction="column" gap="3" className="w-[654px]">
         <Text variant="body-1">Параметры</Text>
-        <div style={{
-          height: '400px',
-          overflow: 'hidden'
-        }}>
+        <div
+          style={{
+            height: "400px",
+            overflow: "hidden",
+          }}
+        >
           <MonacoEditor
             value={configContent}
             onChange={(value) => setConfigContent(value || "")}

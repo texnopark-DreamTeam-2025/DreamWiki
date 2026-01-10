@@ -129,7 +129,7 @@ export const TasksList = () => {
               );
             } else {
               return (
-                <Card key={task.task_id} theme="normal" size="l" className="p-s cursor-pointer">
+                <Card key={task.task_id} theme="normal" size="m" className="p-2 cursor-pointer">
                   <Flex
                     direction="column"
                     gap="3"
